@@ -2,13 +2,17 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Serviço singleton: monitora o layout do monitor focado via `mmsg watch all-monitors`
+// Serviço singleton: monitora o estado do MangoWC via `mmsg watch all-monitors`.
+// Expõe a lista crua de monitores (cada um com layout_symbol e tags) para a barra
+// montar o indicador de layout e de áreas de trabalho por monitor.
 Scope {
     id: root
 
-    property string currentLayout: "..."
+    // Lista de monitores do último evento do mmsg. Cada item:
+    // { name, active, layout_symbol, tags: [{ index, is_active, is_urgent, layout, client_count }] }
+    property var monitors: []
 
-    // Mapeia siglas → nomes legíveis
+    // Mapeia siglas de layout → nomes legíveis
     readonly property var layoutNames: ({
         "T":  "Tiling",
         "CT": "Center Tiling",
@@ -26,10 +30,18 @@ Scope {
         "VF": "Vertical Fair"
     })
 
-    readonly property string displayName: layoutNames[currentLayout] ?? currentLayout
+    // Procura os dados de um monitor pelo nome (ex: "DP-2"); retorna null se não achar.
+    // Ler root.monitors aqui faz os bindings que chamam esta função re-avaliarem
+    // quando a lista muda.
+    function monitorByName(name) {
+        const list = root.monitors ?? []
+        for (let i = 0; i < list.length; i++)
+            if (list[i].name === name) return list[i]
+        return null
+    }
 
     // Fica assistindo mudanças em tempo real. Cada evento é um JSON por linha:
-    // {"monitors":[{"name":"...","active":true,...,"layout_symbol":"T",...}, ...]}
+    // {"monitors":[{"name":"...","active":true,...,"layout_symbol":"T","tags":[...]}, ...]}
     Process {
         id: watchProc
         command: ["mmsg", "watch", "all-monitors"]
@@ -39,11 +51,7 @@ Scope {
             onRead: line => {
                 try {
                     const data = JSON.parse(line)
-                    const mons = data.monitors ?? []
-                    // O monitor focado (active) define o layout exibido
-                    const mon = mons.find(m => m.active) ?? mons[0]
-                    if (mon && mon.layout_symbol)
-                        root.currentLayout = mon.layout_symbol
+                    root.monitors = data.monitors ?? []
                 } catch (e) {
                     // linha parcial / não-JSON: ignora
                 }
