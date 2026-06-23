@@ -1,18 +1,16 @@
 import Quickshell
-import Quickshell.Io
 import QtQuick
-import QtQuick.Controls
 
 Scope {
     id: root
 
-    // Instancia o serviço de layout
     MangoLayout { id: mangoLayout }
 
     Variants {
         model: Quickshell.screens
         delegate: Component {
             PanelWindow {
+                id: panelWindow
                 property var modelData
                 screen: modelData
                 anchors { top: true; left: true; right: true }
@@ -37,51 +35,77 @@ Scope {
                             font.pixelSize: 13
                         }
 
-                        // Clique esquerdo/direito para trocar layout
                         MouseArea {
                             anchors.fill: parent
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-                            onClicked: mouse => {
-                                // Abre um menu de seleção ao clicar
-                                layoutMenu.popup()
-                            }
+                            onClicked: layoutPopup.visible = !layoutPopup.visible
                         }
+                    }
 
-                        Menu {
-                            id: layoutMenu
+                    // ... outros módulos da sua bar aqui
+                }
 
-                            Repeater {
-                                model: [
-                                    { label: "Tiling",            code: "T"  },
-                                    { label: "Center Tiling",     code: "CT" },
-                                    { label: "Right Tiling",      code: "RT" },
-                                    { label: "Vertical Tiling",   code: "VT" },
-                                    { label: "Scrolling",         code: "S"  },
-                                    { label: "Vertical Scrolling",code: "VS" },
-                                    { label: "Monocle",           code: "M"  },
-                                    { label: "Deck",              code: "K"  },
-                                    { label: "Vertical Deck",     code: "VK" },
-                                    { label: "Grid",              code: "G"  },
-                                    { label: "Vertical Grid",     code: "VG" }
-                                ]
+                PopupWindow {
+                    id: layoutPopup
 
-                                MenuItem {
-                                    text: modelData.label
-                                    onTriggered: {
-                                        const proc = Qt.createQmlObject(
-                                            `import Quickshell.Io; Process {
-                                                command: ["mmsg", "-s", "-l", "${modelData.code}"]
-                                                running: true
-                                            }`, layoutMenu
-                                        )
+                    // Ancorado à janela da barra, logo abaixo dela, alinhado à esquerda
+                    anchor.window: panelWindow
+                    anchor.rect.x: 0
+                    anchor.rect.y: panelWindow.height
+
+                    implicitWidth: 200
+                    implicitHeight: popupCol.implicitHeight
+                    color: "#1e1e2e"
+
+                    visible: false
+                    grabFocus: true  // clicar fora fecha e zera 'visible'
+
+                    Column {
+                        id: popupCol
+                        width: parent.width
+
+                        Repeater {
+                            model: [
+                                { label: "Tiling",            name: "tile"              },
+                                { label: "Center Tiling",     name: "center_tile"       },
+                                { label: "Right Tiling",      name: "right_tile"        },
+                                { label: "Vertical Tiling",   name: "vertical_tile"     },
+                                { label: "Scrolling",         name: "scroller"          },
+                                { label: "Vertical Scrolling",name: "vertical_scroller" },
+                                { label: "Monocle",           name: "monocle"           },
+                                { label: "Deck",              name: "deck"              },
+                                { label: "Vertical Deck",     name: "vertical_deck"     },
+                                { label: "Grid",              name: "grid"              },
+                                { label: "Vertical Grid",     name: "vertical_grid"     }
+                            ]
+
+                            delegate: Rectangle {
+                                id: layoutItem
+                                required property var modelData
+                                width: popupCol.width
+                                height: 32
+                                color: itemArea.containsMouse ? "#313244" : "transparent"
+
+                                Text {
+                                    anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
+                                    text: layoutItem.modelData.label
+                                    color: "#cdd6f4"
+                                    font.pixelSize: 13
+                                }
+
+                                MouseArea {
+                                    id: itemArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    onClicked: {
+                                        // mmsg dispatch espera "func,arg" como UM token só
+                                        Quickshell.execDetached(["mmsg", "dispatch", "setlayout," + layoutItem.modelData.name])
+                                        layoutPopup.visible = false
                                     }
                                 }
                             }
                         }
                     }
-
-                    // ... outros módulos da sua bar aqui
                 }
             }
         }

@@ -1,9 +1,8 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import QtQuick.Controls
 
-// Serviço singleton: monitora o layout atual do MangoWM via mmsg -w -l
+// Serviço singleton: monitora o layout do monitor focado via `mmsg watch all-monitors`
 Scope {
     id: root
 
@@ -21,24 +20,33 @@ Scope {
         "K":  "Deck",
         "VK": "Vertical Deck",
         "G":  "Grid",
-        "VG": "Vertical Grid"
+        "VG": "Vertical Grid",
+        "DW": "Dwindle",
+        "F":  "Fair",
+        "VF": "Vertical Fair"
     })
 
     readonly property string displayName: layoutNames[currentLayout] ?? currentLayout
 
-    // Fica assistindo mudanças de layout em tempo real
+    // Fica assistindo mudanças em tempo real. Cada evento é um JSON por linha:
+    // {"monitors":[{"name":"...","active":true,...,"layout_symbol":"T",...}, ...]}
     Process {
         id: watchProc
-        command: ["mmsg", "-w", "-l"]
+        command: ["mmsg", "watch", "all-monitors"]
         running: true
 
         stdout: SplitParser {
-            onRead: data => {
-                // mmsg -w -l emite linhas como: "layout T" ou só "T"
-                const trimmed = data.trim()
-                const parts = trimmed.split(/\s+/)
-                const code = parts[parts.length - 1]
-                if (code !== "") root.currentLayout = code
+            onRead: line => {
+                try {
+                    const data = JSON.parse(line)
+                    const mons = data.monitors ?? []
+                    // O monitor focado (active) define o layout exibido
+                    const mon = mons.find(m => m.active) ?? mons[0]
+                    if (mon && mon.layout_symbol)
+                        root.currentLayout = mon.layout_symbol
+                } catch (e) {
+                    // linha parcial / não-JSON: ignora
+                }
             }
         }
     }
