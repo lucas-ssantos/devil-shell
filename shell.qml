@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Io
 import QtQuick
 
 Scope {
@@ -16,6 +17,10 @@ Scope {
                 anchors { top: true; left: true; right: true }
                 implicitHeight: 32
                 color: "#1e1e2e"
+
+                // Processo one-shot para trocar o layout (mesmo mecanismo da watch,
+                // que herda o MANGO_INSTANCE_SIGNATURE e resolve o mmsg via PATH)
+                Process { id: setLayoutProc }
 
                 Row {
                     anchors.fill: parent
@@ -99,7 +104,7 @@ Scope {
                                     hoverEnabled: true
                                     onClicked: {
                                         // mmsg dispatch espera "func,arg" como UM token só
-                                        Quickshell.execDetached(["mmsg", "dispatch", "setlayout," + layoutItem.modelData.name])
+                                        setLayoutProc.exec(["mmsg", "dispatch", "setlayout," + layoutItem.modelData.name])
                                         layoutPopup.visible = false
                                     }
                                 }
