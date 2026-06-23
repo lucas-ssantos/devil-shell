@@ -303,12 +303,17 @@ Scope {
                         // 4) fora -> recolhe
                         win.pinned = false
                     }
+                }
 
-                    // scroll sobre a bola troca de workspace (os pontos atualizam pela watch)
+                // ── Captura de scroll (Item no topo; não bloqueia hover/clique) ──
+                Item {
+                    anchors.fill: parent
+                    z: 20
                     WheelHandler {
                         id: wsScroll
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                         onWheel: (event) => {
-                            console.log("WHEEL:", event.angleDelta.y, "overBall:", win.overBall, "active:", win.activeTag)
+                            console.log("WHEEL:", event.angleDelta.y, "active:", win.activeTag)
                             const total = win.tags.length
                             if (total === 0) return
                             const cur = win.activeTag > 0 ? win.activeTag : 1
