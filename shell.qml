@@ -38,7 +38,13 @@ Scope {
                 // ── Geometria do menu ──────────────────────────────
                 readonly property real ballRadius: 46
                 readonly property real ballCX: width / 2
-                readonly property real ballCY: height - ballRadius - 4
+                // bola "espreitando": em repouso o centro fica abaixo da tela (só uma
+                // fatia de `ballPeek` px aparece); ao abrir, sobe e fica toda visível.
+                readonly property real ballPeek: 28
+                readonly property real ballCYRest: height - ballPeek + ballRadius
+                readonly property real ballCYOpen: height - ballRadius
+                property real ballCY: open ? ballCYOpen : ballCYRest
+                Behavior on ballCY { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
                 readonly property real petalW: 26
                 readonly property real petalH: 84
                 readonly property real petalDist: ballRadius + 10 + petalH / 2   // centro-bola → centro-pétala
@@ -66,6 +72,10 @@ Scope {
                     interval: 200
                     onTriggered: { win.dismissed = true; win.pinned = false; win.selectedIndex = -1 }
                 }
+
+                // relógio (tick por minuto) p/ o texto sobre a bola escondida
+                SystemClock { id: sysClock; precision: SystemClock.Minutes }
+                readonly property string clockText: Qt.formatDateTime(sysClock.date, "d/M HH:mm")
 
                 // ── Estado do MangoWC p/ ESTE monitor ───────────────
                 readonly property var monData: {
@@ -239,6 +249,23 @@ Scope {
                     }
                 }
 
+                // ── Data/hora inclinada sobre a bola (só quando escondida) ──
+                Text {
+                    id: clockLabel
+                    z: 4
+                    text: win.clockText
+                    color: "#cdd6f4"
+                    font.pixelSize: 13
+                    font.bold: true
+                    rotation: 0
+                    transformOrigin: Item.Center
+                    x: win.ballCX - width / 2
+                    y: (win.height - win.ballPeek) - height - 5   // logo acima da fatia, sobrepondo um tico
+                    opacity: win.open ? 0 : 1
+                    visible: opacity > 0
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                }
+
                 // ── MouseArea única no TOPO: hover + TODOS os cliques ─
                 MouseArea {
                     id: hoverMA
@@ -275,6 +302,21 @@ Scope {
                         }
                         // 4) fora -> recolhe
                         win.pinned = false
+                    }
+
+                    // scroll sobre a bola troca de workspace (os pontos atualizam pela watch)
+                    WheelHandler {
+                        id: wsScroll
+                        onWheel: (event) => {
+                            console.log("WHEEL:", event.angleDelta.y, "overBall:", win.overBall, "active:", win.activeTag)
+                            const total = win.tags.length
+                            if (total === 0) return
+                            const cur = win.activeTag > 0 ? win.activeTag : 1
+                            let next = cur + (event.angleDelta.y > 0 ? -1 : 1)  // cima = anterior
+                            next = Math.max(1, Math.min(total, next))
+                            if (next !== cur)
+                                proc.exec(["mmsg", "dispatch", "view," + next + ",0"])
+                        }
                     }
                 }
             }
