@@ -313,12 +313,11 @@ Scope {
                         id: wsScroll
                         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                         onWheel: (event) => {
-                            console.log("WHEEL:", event.angleDelta.y, "active:", win.activeTag)
                             const total = win.tags.length
                             if (total === 0) return
                             const cur = win.activeTag > 0 ? win.activeTag : 1
-                            let next = cur + (event.angleDelta.y > 0 ? -1 : 1)  // cima = anterior
-                            next = Math.max(1, Math.min(total, next))
+                            const delta = event.angleDelta.y > 0 ? -1 : 1        // cima = anterior
+                            const next = ((cur - 1 + delta + total) % total) + 1 // dá a volta (1↔total)
                             if (next !== cur)
                                 proc.exec(["mmsg", "dispatch", "view," + next + ",0"])
                         }
