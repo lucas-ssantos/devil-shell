@@ -31,7 +31,7 @@ Scope {
 
                 color: "transparent"
                 anchors { bottom: true }   // ancorada só embaixo -> centralizada na horizontal
-                exclusiveZone: 0           // não reserva espaço na tela
+                exclusiveZone: 0
                 implicitWidth: 320
                 implicitHeight: 220
 
@@ -41,9 +41,31 @@ Scope {
                 readonly property real ballCY: height - ballRadius - 4
                 readonly property real petalW: 26
                 readonly property real petalH: 84
-                readonly property real petalDist: ballRadius + 10 + petalH / 2  // dist. centro-bola → centro-pétala
+                readonly property real petalDist: ballRadius + 10 + petalH / 2   // centro-bola → centro-pétala
+                readonly property real hitOuterR: petalDist + petalH / 2 + 8     // alcance do hit-test das pétalas
+                readonly property real dotRingR: ballRadius * 0.62
 
-                property bool open: false
+                // ── Estado de abertura ──────────────────────────────
+                property bool pinned: false        // travado por clique na bola
+                property bool dismissed: false     // fecha à força mesmo com hover (até o cursor sair)
+                property bool overBall: false       // cursor sobre a bola
+                property int  hoverIndex: -1        // pétala sob o cursor (-1 = nenhuma)
+                property int  selectedIndex: -1     // pétala clicada (anim. de "as outras somem")
+                // hover COM debounce: um leave/enter transitório (ao recomitar a máscara)
+                // não recolhe o menu sem querer.
+                property bool hoverOpen: false
+                readonly property bool open: !dismissed && (pinned || hoverOpen)
+
+                // só libera o "dismissed" quando o cursor realmente sai (hoverOpen cai)
+                onHoverOpenChanged: if (!hoverOpen) dismissed = false
+
+                Timer { id: hoverCloseTimer; interval: 130; onTriggered: win.hoverOpen = false }
+                // após clicar numa pétala: destaca-a um instante e fecha
+                Timer {
+                    id: selectTimer
+                    interval: 200
+                    onTriggered: { win.dismissed = true; win.pinned = false; win.selectedIndex = -1 }
+                }
 
                 // ── Estado do MangoWC p/ ESTE monitor ───────────────
                 readonly property var monData: {
@@ -59,15 +81,60 @@ Scope {
                     return 0
                 }
 
+                // ── Hit-test (tudo por posição do cursor) ───────────
+                // ângulo (graus) da pétala i: i=0 à esquerda (158°) … direita (22°); centro 90°
+                function petalAngle(i) {
+                    const n = root.menuItems.length
+                    return n <= 1 ? 90 : 158 - i * (158 - 22) / (n - 1)
+                }
+                // índice da pétala sob (mx,my) ou -1
+                function petalAt(mx, my) {
+                    const dx = mx - ballCX
+                    const dy = ballCY - my            // pra cima é positivo
+                    const r = Math.sqrt(dx * dx + dy * dy)
+                    const n = root.menuItems.length
+                    if (n === 0 || r <= ballRadius || r > hitOuterR) return -1
+                    const theta = Math.atan2(dy, dx) * 180 / Math.PI
+                    let best = -1, bestDiff = 1e9
+                    for (let i = 0; i < n; i++) {
+                        const d = Math.abs(theta - petalAngle(i))
+                        if (d < bestDiff) { bestDiff = d; best = i }
+                    }
+                    const spacing = n > 1 ? (158 - 22) / (n - 1) : 140
+                    return bestDiff <= spacing / 2 + 2 ? best : -1
+                }
+                // índice (na lista tags) do ponto de workspace sob (mx,my) ou -1
+                function dotAt(mx, my) {
+                    const n = tags.length
+                    for (let i = 0; i < n; i++) {
+                        const ang = (-90 + i * 360 / Math.max(1, n)) * Math.PI / 180
+                        const dxp = ballCX + dotRingR * Math.cos(ang)
+                        const dyp = ballCY + dotRingR * Math.sin(ang)
+                        if (Math.hypot(mx - dxp, my - dyp) <= 9) return i
+                    }
+                    return -1
+                }
+                function overBallAt(mx, my) {
+                    return Math.hypot(mx - ballCX, my - ballCY) <= ballRadius
+                }
+
+                function refreshHover() {
+                    if (!hoverMA.containsMouse) {
+                        overBall = false; hoverIndex = -1
+                    } else {
+                        overBall = overBallAt(hoverMA.mouseX, hoverMA.mouseY)
+                        hoverIndex = overBall ? -1 : petalAt(hoverMA.mouseX, hoverMA.mouseY)
+                    }
+                    if (overBall || hoverIndex !== -1) { hoverCloseTimer.stop(); hoverOpen = true }
+                    else hoverCloseTimer.restart()
+                }
+
                 // Processo p/ comandos one-shot (mmsg view, ações das pétalas)
                 Process { id: proc }
 
-                // Fecha com debounce: suaviza a transição entre bola/pétalas
-                Timer { id: closeTimer; interval: 140; onTriggered: win.open = false }
-
                 // ── Máscara de input ────────────────────────────────
-                //  Fechado: só a bola é clicável (o resto da janela é click-through).
-                //  Aberto: a janela toda fica ativa (mover entre pétalas / clicar fora).
+                //  Fechado: só a bola é clicável (resto da janela = click-through).
+                //  Aberto: janela toda ativa (mover entre pétalas / clicar fora).
                 mask: Region {
                     shape: win.open ? RegionShape.Rect : RegionShape.Ellipse
                     x: win.open ? 0 : Math.round(win.ballCX - win.ballRadius)
@@ -76,18 +143,7 @@ Scope {
                     height: win.open ? win.height : Math.round(win.ballRadius * 2)
                 }
 
-                // ── Fundo: clicar fora das pétalas (dentro da janela) fecha ──
-                MouseArea {
-                    anchors.fill: parent
-                    z: 0
-                    enabled: win.open
-                    hoverEnabled: true
-                    onEntered: closeTimer.stop()
-                    onExited: closeTimer.restart()
-                    onClicked: win.open = false
-                }
-
-                // ── Pétalas (auto-organizadas no semicírculo superior) ──
+                // ── Pétalas (auto-organizadas; só visuais) ───────────
                 Repeater {
                     model: root.menuItems
 
@@ -96,38 +152,37 @@ Scope {
                         required property var modelData
                         required property int index
 
-                        readonly property int count: root.menuItems.length
-                        // i=0 à esquerda (158°) … último à direita (22°); centro = 90° (pra cima)
-                        readonly property real angleDeg: count <= 1 ? 90
-                            : 158 - index * (158 - 22) / (count - 1)
+                        readonly property real angleDeg: win.petalAngle(index)
                         readonly property real angleRad: angleDeg * Math.PI / 180
-                        readonly property bool hovered: petalArea.containsMouse
+                        readonly property bool hovered: win.hoverIndex === index
+                        readonly property bool selected: win.selectedIndex === index
+                        readonly property bool vanished: win.selectedIndex !== -1 && !selected
 
                         width: win.petalW
                         height: win.petalH
                         transformOrigin: Item.Center
                         rotation: 90 - angleDeg
+                        z: 1
 
-                        // distância animada: nasce dentro da bola e cresce pra fora
                         property real dist: win.open ? win.petalDist : 0
                         x: win.ballCX + dist * Math.cos(angleRad) - width / 2
                         y: win.ballCY - dist * Math.sin(angleRad) - height / 2
 
-                        scale: win.open ? (hovered ? 1.18 : 1.0) : 0.0
-                        opacity: win.open ? 1.0 : 0.0
-                        z: hovered ? 2 : 1
+                        opacity: (win.open && !vanished) ? 1.0 : 0.0
 
                         Behavior on dist { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
-                        Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutQuad } }
-                        Behavior on opacity { NumberAnimation { duration: 130 } }
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
 
+                        // crescimento do hover só no visual (não afeta hit-test)
                         Rectangle {
                             anchors.fill: parent
-                            radius: width / 2   // cápsula vertical (≈ elipse)
+                            radius: width / 2
+                            transformOrigin: Item.Center
+                            scale: (petal.hovered || petal.selected) ? 1.18 : 1.0
                             color: petal.hovered ? "#f38ba8" : "#eba0ac"
+                            Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutQuad } }
                         }
 
-                        // ícone mantido na vertical (contra-rotação da pétala)
                         Text {
                             anchors.centerIn: parent
                             rotation: -petal.rotation
@@ -135,24 +190,10 @@ Scope {
                             font.pixelSize: 16
                             color: "#1e1e2e"
                         }
-
-                        MouseArea {
-                            id: petalArea
-                            anchors.fill: parent
-                            enabled: win.open
-                            hoverEnabled: true
-                            onEntered: closeTimer.stop()
-                            onExited: closeTimer.restart()
-                            onClicked: {
-                                const cmd = petal.modelData.command ?? []
-                                if (cmd.length > 0) proc.exec(cmd)
-                                win.open = false   // demais pétalas somem (menu fecha)
-                            }
-                        }
                     }
                 }
 
-                // ── A bola (o "menu") ───────────────────────────────
+                // ── A bola (o "menu"; só visual) ─────────────────────
                 Rectangle {
                     id: ball
                     z: 3
@@ -174,47 +215,66 @@ Scope {
                         font.bold: true
                     }
 
-                    // workspaces em anel (todos; ativo destacado; clicáveis)
+                    // workspaces em anel (ativo destacado)
                     Repeater {
                         model: win.tags
-
                         delegate: Rectangle {
-                            id: dot
                             required property var modelData
                             required property int index
-
                             readonly property int n: win.tags.length
-                            readonly property real ringR: win.ballRadius * 0.62
                             readonly property real a: (-90 + index * 360 / Math.max(1, n)) * Math.PI / 180
                             readonly property bool active: modelData.is_active
 
                             width: active ? 11 : 8
                             height: width
                             radius: width / 2
-                            x: ball.width / 2 + ringR * Math.cos(a) - width / 2
-                            y: ball.height / 2 + ringR * Math.sin(a) - height / 2
-                            color: active            ? "#a6e3a1"
-                                 : modelData.is_urgent ? "#f38ba8"
+                            x: ball.width / 2 + win.dotRingR * Math.cos(a) - width / 2
+                            y: ball.height / 2 + win.dotRingR * Math.sin(a) - height / 2
+                            color: active                  ? "#a6e3a1"
+                                 : modelData.is_urgent     ? "#f38ba8"
                                  : modelData.client_count > 0 ? "#5c7a52"
                                  : "#45475a"
-
                             Behavior on width { NumberAnimation { duration: 120 } }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: proc.exec(["mmsg", "dispatch", "view," + dot.modelData.index + ",0"])
-                            }
                         }
                     }
+                }
 
-                    // hover/clique na bola abre/fecha (abaixo dos dots, que recebem clique primeiro)
-                    MouseArea {
-                        anchors.fill: parent
-                        z: -1
-                        hoverEnabled: true
-                        onEntered: { closeTimer.stop(); win.open = true }
-                        onExited: closeTimer.restart()
-                        onClicked: win.open = !win.open
+                // ── MouseArea única no TOPO: hover + TODOS os cliques ─
+                MouseArea {
+                    id: hoverMA
+                    anchors.fill: parent
+                    z: 10
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton
+
+                    onEntered: win.refreshHover()
+                    onPositionChanged: win.refreshHover()
+                    onExited: win.refreshHover()
+
+                    onClicked: {
+                        // 1) ponto de workspace?
+                        const di = win.dotAt(mouseX, mouseY)
+                        if (di >= 0) {
+                            proc.exec(["mmsg", "dispatch", "view," + win.tags[di].index + ",0"])
+                            return
+                        }
+                        // 2) bola? -> alterna travado
+                        if (win.overBallAt(mouseX, mouseY)) {
+                            if (win.pinned) { win.pinned = false; win.dismissed = true }
+                            else            { win.pinned = true;  win.dismissed = false }
+                            return
+                        }
+                        // 3) pétala? -> executa, as demais somem, destaca e fecha
+                        const pi = win.petalAt(mouseX, mouseY)
+                        if (pi >= 0) {
+                            const cmd = root.menuItems[pi].command ?? []
+                            if (cmd.length > 0) proc.exec(cmd)
+                            win.selectedIndex = pi
+                            selectTimer.restart()
+                            return
+                        }
+                        // 4) fora -> recolhe
+                        win.pinned = false
                     }
                 }
             }
