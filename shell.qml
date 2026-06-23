@@ -5,189 +5,216 @@ import QtQuick
 Scope {
     id: root
 
-    MangoLayout { id: mangoLayout }
+    MangoLayout { id: mango }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Itens das pétalas (submenus). 100% data-driven: adicione/remova
+    //  itens aqui e as pétalas se reorganizam sozinhas no semicírculo.
+    //  Cada item: { icon: "símbolo", label: "nome", command: [argv] }
+    //  command vazio ([]) = sem ação (placeholder).
+    // ──────────────────────────────────────────────────────────────
+    readonly property var menuItems: [
+        { icon: "★", label: "Item 1", command: [] },
+        { icon: "◆", label: "Item 2", command: [] },
+        { icon: "●", label: "Item 3", command: [] },
+        { icon: "▲", label: "Item 4", command: [] },
+        { icon: "■", label: "Item 5", command: [] }
+    ]
 
     Variants {
         model: Quickshell.screens
         delegate: Component {
             PanelWindow {
-                id: panelWindow
+                id: win
                 property var modelData
                 screen: modelData
-                anchors { top: true; left: true; right: true }
-                implicitHeight: 32
-                color: "#1e1e2e"
 
-                // ── Estado do MangoWC para ESTE monitor ──────────
+                color: "transparent"
+                anchors { bottom: true }   // ancorada só embaixo -> centralizada na horizontal
+                exclusiveZone: 0           // não reserva espaço na tela
+                implicitWidth: 320
+                implicitHeight: 220
+
+                // ── Geometria do menu ──────────────────────────────
+                readonly property real ballRadius: 46
+                readonly property real ballCX: width / 2
+                readonly property real ballCY: height - ballRadius - 4
+                readonly property real petalW: 26
+                readonly property real petalH: 84
+                readonly property real petalDist: ballRadius + 10 + petalH / 2  // dist. centro-bola → centro-pétala
+
+                property bool open: false
+
+                // ── Estado do MangoWC p/ ESTE monitor ───────────────
                 readonly property var monData: {
-                    const byName = mangoLayout.monitorByName(modelData.name)
+                    const byName = mango.monitorByName(modelData.name)
                     if (byName) return byName
-                    // fallback: monitor focado (caso o nome da screen não case com o do mmsg)
-                    const list = mangoLayout.monitors ?? []
+                    const list = mango.monitors ?? []
                     return (list.find(m => m.active) ?? list[0]) ?? null
                 }
-                readonly property string currentLayoutName: {
-                    const sym = monData ? monData.layout_symbol : "?"
-                    return mangoLayout.layoutNames[sym] ?? sym
-                }
                 readonly property var tags: (monData && monData.tags) ? monData.tags : []
-
-                // Janela deslizante de até 3 tags, centrada na focada e clampada nas
-                // bordas: tag 1 -> [1,2,3]; tag do meio -> [N-1,N,N+1]; última -> [n-2,n-1,n]
-                readonly property var windowTags: {
-                    const list = panelWindow.tags
-                    const total = list.length
-                    if (total === 0) return []
-                    let focused = 1
-                    for (let i = 0; i < total; i++)
-                        if (list[i].is_active) { focused = list[i].index; break }
-                    const start = Math.max(1, Math.min(focused - 1, total - 2))
-                    const out = []
-                    for (let idx = start; idx < start + 3 && idx <= total; idx++) {
-                        for (let j = 0; j < total; j++)
-                            if (list[j].index === idx) { out.push(list[j]); break }
-                    }
-                    return out
+                readonly property int activeTag: {
+                    for (let i = 0; i < tags.length; i++)
+                        if (tags[i].is_active) return tags[i].index
+                    return 0
                 }
 
-                // Processo one-shot para comandos `mmsg dispatch` (setlayout, view, …).
-                // Mesmo mecanismo da watch: herda o MANGO_INSTANCE_SIGNATURE e acha o mmsg no PATH.
-                Process { id: dispatchProc }
+                // Processo p/ comandos one-shot (mmsg view, ações das pétalas)
+                Process { id: proc }
 
-                Row {
+                // Fecha com debounce: suaviza a transição entre bola/pétalas
+                Timer { id: closeTimer; interval: 140; onTriggered: win.open = false }
+
+                // ── Máscara de input ────────────────────────────────
+                //  Fechado: só a bola é clicável (o resto da janela é click-through).
+                //  Aberto: a janela toda fica ativa (mover entre pétalas / clicar fora).
+                mask: Region {
+                    shape: win.open ? RegionShape.Rect : RegionShape.Ellipse
+                    x: win.open ? 0 : Math.round(win.ballCX - win.ballRadius)
+                    y: win.open ? 0 : Math.round(win.ballCY - win.ballRadius)
+                    width: win.open ? win.width : Math.round(win.ballRadius * 2)
+                    height: win.open ? win.height : Math.round(win.ballRadius * 2)
+                }
+
+                // ── Fundo: clicar fora das pétalas (dentro da janela) fecha ──
+                MouseArea {
                     anchors.fill: parent
-                    spacing: 8
+                    z: 0
+                    enabled: win.open
+                    hoverEnabled: true
+                    onEntered: closeTimer.stop()
+                    onExited: closeTimer.restart()
+                    onClicked: win.open = false
+                }
 
-                    // ── Módulo de layout ──────────────────────────
-                    Rectangle {
-                        width: layoutLabel.implicitWidth + 24
-                        height: parent.height
-                        color: "transparent"
+                // ── Pétalas (auto-organizadas no semicírculo superior) ──
+                Repeater {
+                    model: root.menuItems
 
+                    delegate: Item {
+                        id: petal
+                        required property var modelData
+                        required property int index
+
+                        readonly property int count: root.menuItems.length
+                        // i=0 à esquerda (158°) … último à direita (22°); centro = 90° (pra cima)
+                        readonly property real angleDeg: count <= 1 ? 90
+                            : 158 - index * (158 - 22) / (count - 1)
+                        readonly property real angleRad: angleDeg * Math.PI / 180
+                        readonly property bool hovered: petalArea.containsMouse
+
+                        width: win.petalW
+                        height: win.petalH
+                        transformOrigin: Item.Center
+                        rotation: 90 - angleDeg
+
+                        // distância animada: nasce dentro da bola e cresce pra fora
+                        property real dist: win.open ? win.petalDist : 0
+                        x: win.ballCX + dist * Math.cos(angleRad) - width / 2
+                        y: win.ballCY - dist * Math.sin(angleRad) - height / 2
+
+                        scale: win.open ? (hovered ? 1.18 : 1.0) : 0.0
+                        opacity: win.open ? 1.0 : 0.0
+                        z: hovered ? 2 : 1
+
+                        Behavior on dist { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
+                        Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutQuad } }
+                        Behavior on opacity { NumberAnimation { duration: 130 } }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: width / 2   // cápsula vertical (≈ elipse)
+                            color: petal.hovered ? "#f38ba8" : "#eba0ac"
+                        }
+
+                        // ícone mantido na vertical (contra-rotação da pétala)
                         Text {
-                            id: layoutLabel
                             anchors.centerIn: parent
-                            text: "⬡ " + panelWindow.currentLayoutName
-                            color: "#cba6f7"
-                            font.pixelSize: 13
+                            rotation: -petal.rotation
+                            text: petal.modelData.icon ?? ""
+                            font.pixelSize: 16
+                            color: "#1e1e2e"
                         }
 
                         MouseArea {
+                            id: petalArea
                             anchors.fill: parent
-                            acceptedButtons: Qt.LeftButton | Qt.RightButton
-                            onClicked: layoutPopup.visible = !layoutPopup.visible
-                        }
-                    }
-
-                    // ── Indicador de áreas de trabalho (até 3 tags) ──
-                    Row {
-                        height: parent.height
-                        spacing: 4
-
-                        Repeater {
-                            model: panelWindow.windowTags
-
-                            delegate: Item {
-                                id: wsItem
-                                required property var modelData
-                                width: 26
-                                height: parent.height
-
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 24
-                                    height: 22
-                                    radius: 4
-                                    color: wsItem.modelData.is_active ? "#cba6f7"
-                                         : wsItem.modelData.is_urgent ? "#f38ba8"
-                                         : wsArea.containsMouse   ? "#45475a"
-                                         : "transparent"
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: "" + wsItem.modelData.index
-                                        color: wsItem.modelData.is_active ? "#1e1e2e" : "#bac2de"
-                                        font.pixelSize: 13
-                                        font.bold: wsItem.modelData.is_active
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: wsArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    onClicked: {
-                                        // view,<tag>,0 -> vai para aquela área (no monitor focado)
-                                        dispatchProc.exec(["mmsg", "dispatch", "view," + wsItem.modelData.index + ",0"])
-                                    }
-                                }
+                            enabled: win.open
+                            hoverEnabled: true
+                            onEntered: closeTimer.stop()
+                            onExited: closeTimer.restart()
+                            onClicked: {
+                                const cmd = petal.modelData.command ?? []
+                                if (cmd.length > 0) proc.exec(cmd)
+                                win.open = false   // demais pétalas somem (menu fecha)
                             }
                         }
                     }
-
-                    // ... outros módulos da sua bar aqui
                 }
 
-                PopupWindow {
-                    id: layoutPopup
+                // ── A bola (o "menu") ───────────────────────────────
+                Rectangle {
+                    id: ball
+                    z: 3
+                    width: win.ballRadius * 2
+                    height: width
+                    radius: width / 2
+                    x: win.ballCX - win.ballRadius
+                    y: win.ballCY - win.ballRadius
+                    color: "#11111b"
+                    border.color: win.open ? "#cba6f7" : "#313244"
+                    border.width: 2
 
-                    // Ancorado à janela da barra, logo abaixo dela, alinhado à esquerda
-                    anchor.window: panelWindow
-                    anchor.rect.x: 0
-                    anchor.rect.y: panelWindow.height
+                    // número do workspace ativo no centro (o "contador")
+                    Text {
+                        anchors.centerIn: parent
+                        text: win.activeTag > 0 ? win.activeTag : ""
+                        color: "#a6e3a1"
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
 
-                    implicitWidth: 200
-                    implicitHeight: popupCol.implicitHeight
-                    color: "#1e1e2e"
+                    // workspaces em anel (todos; ativo destacado; clicáveis)
+                    Repeater {
+                        model: win.tags
 
-                    visible: false
-                    grabFocus: true  // clicar fora fecha e zera 'visible'
+                        delegate: Rectangle {
+                            id: dot
+                            required property var modelData
+                            required property int index
 
-                    Column {
-                        id: popupCol
-                        width: parent.width
+                            readonly property int n: win.tags.length
+                            readonly property real ringR: win.ballRadius * 0.62
+                            readonly property real a: (-90 + index * 360 / Math.max(1, n)) * Math.PI / 180
+                            readonly property bool active: modelData.is_active
 
-                        Repeater {
-                            model: [
-                                { label: "Tiling",            name: "tile"              },
-                                { label: "Center Tiling",     name: "center_tile"       },
-                                { label: "Right Tiling",      name: "right_tile"        },
-                                { label: "Vertical Tiling",   name: "vertical_tile"     },
-                                { label: "Scrolling",         name: "scroller"          },
-                                { label: "Vertical Scrolling",name: "vertical_scroller" },
-                                { label: "Monocle",           name: "monocle"           },
-                                { label: "Deck",              name: "deck"              },
-                                { label: "Vertical Deck",     name: "vertical_deck"     },
-                                { label: "Grid",              name: "grid"              },
-                                { label: "Vertical Grid",     name: "vertical_grid"     }
-                            ]
+                            width: active ? 11 : 8
+                            height: width
+                            radius: width / 2
+                            x: ball.width / 2 + ringR * Math.cos(a) - width / 2
+                            y: ball.height / 2 + ringR * Math.sin(a) - height / 2
+                            color: active            ? "#a6e3a1"
+                                 : modelData.is_urgent ? "#f38ba8"
+                                 : modelData.client_count > 0 ? "#5c7a52"
+                                 : "#45475a"
 
-                            delegate: Rectangle {
-                                id: layoutItem
-                                required property var modelData
-                                width: popupCol.width
-                                height: 32
-                                color: itemArea.containsMouse ? "#313244" : "transparent"
+                            Behavior on width { NumberAnimation { duration: 120 } }
 
-                                Text {
-                                    anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
-                                    text: layoutItem.modelData.label
-                                    color: "#cdd6f4"
-                                    font.pixelSize: 13
-                                }
-
-                                MouseArea {
-                                    id: itemArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    onClicked: {
-                                        // mmsg dispatch espera "func,arg" como UM token só
-                                        dispatchProc.exec(["mmsg", "dispatch", "setlayout," + layoutItem.modelData.name])
-                                        layoutPopup.visible = false
-                                    }
-                                }
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: proc.exec(["mmsg", "dispatch", "view," + dot.modelData.index + ",0"])
                             }
                         }
+                    }
+
+                    // hover/clique na bola abre/fecha (abaixo dos dots, que recebem clique primeiro)
+                    MouseArea {
+                        anchors.fill: parent
+                        z: -1
+                        hoverEnabled: true
+                        onEntered: { closeTimer.stop(); win.open = true }
+                        onExited: closeTimer.restart()
+                        onClicked: win.open = !win.open
                     }
                 }
             }
