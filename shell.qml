@@ -1,5 +1,6 @@
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import QtQuick
 
 Scope {
@@ -45,9 +46,50 @@ Scope {
     Variants {
         model: Quickshell.screens
         delegate: Component {
-            PanelWindow {
-                id: win
+            Scope {
+                id: unit
                 property var modelData
+
+                // ── Janela do CAVA: camada de BAIXO (fica atrás das janelas dos apps) ──
+                PanelWindow {
+                    id: cavaWin
+                    screen: unit.modelData
+                    WlrLayershell.layer: WlrLayer.Bottom
+                    color: "transparent"
+                    anchors { bottom: true; left: true; right: true }
+                    exclusiveZone: 0
+                    implicitHeight: 260
+                    mask: Region {}   // sem área de input -> totalmente click-through
+
+                    readonly property real ballCX: width / 2
+                    readonly property real ballRadius: 46
+                    readonly property real cavaMaxH: 180
+
+                    // barras lineares sobem da barra de fundo (some na faixa central da bola)
+                    Repeater {
+                        model: root.cavaLevels.length
+                        delegate: Rectangle {
+                            required property int index
+                            readonly property real slot: cavaWin.width / Math.max(1, root.cavaLevels.length)
+                            readonly property real bx: slot * (index + 0.5)
+                            readonly property real v: root.cavaLevels[index] ?? 0
+                            width: Math.max(2, slot * 0.6)
+                            x: bx - width / 2
+                            height: Math.max(0, v) * cavaWin.cavaMaxH
+                            y: cavaWin.height - height
+                            topLeftRadius: width / 2
+                            topRightRadius: width / 2
+                            color: "#cba6f7"
+                            opacity: 0.5
+                            visible: Math.abs(bx - cavaWin.ballCX) > cavaWin.ballRadius + 10
+                        }
+                    }
+                }
+
+                // ── Janela do shell (bola/menu/barra): camada de CIMA ──
+                PanelWindow {
+                id: win
+                property var modelData: unit.modelData
                 screen: modelData
 
                 color: "transparent"
@@ -179,31 +221,6 @@ Scope {
                     y: win.open ? 0 : Math.round(win.ballCY - win.ballRadius)
                     width: win.open ? Math.round(win.menuHalf * 2) : Math.round(win.ballRadius * 2)
                     height: win.open ? win.height : Math.round(win.ballRadius * 2)
-                }
-
-                // ── CAVA: barras lineares atrás de tudo (sobem da barra de fundo) ──
-                Repeater {
-                    model: root.cavaLevels.length
-                    delegate: Rectangle {
-                        required property int index
-                        readonly property real slot: win.width / Math.max(1, root.cavaLevels.length)
-                        readonly property real bx: slot * (index + 0.5)
-                        readonly property real v: root.cavaLevels[index] ?? 0
-                        z: 0
-                        width: Math.max(2, slot * 0.6)
-                        x: bx - width / 2
-                        height: Math.max(0, v) * win.cavaMaxH
-                        y: win.height - height
-                        // topo arredondado, base reta -> funde na barra (sem cara de pílula)
-                        topLeftRadius: width / 2
-                        topRightRadius: width / 2
-                        bottomLeftRadius: 0
-                        bottomRightRadius: 0
-                        color: "#cba6f7"
-                        opacity: 0.5
-                        // some sobre a bola (contorno) — ali quem aparece é o anel radial
-                        visible: Math.abs(bx - win.ballCX) > win.ballRadius + 10
-                    }
                 }
 
                 // ── CAVA: anel radial em volta da bola (atrás dela) ──
@@ -468,6 +485,7 @@ Scope {
                         }
                     }
                 }
+            }
             }
         }
     }
