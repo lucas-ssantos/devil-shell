@@ -103,8 +103,9 @@ PanelWindow {
     }
 
     // ── Hit-test (tudo por posição do cursor) ───────────
-    // pétalas em anel: 30° entre cada, partindo de 0° (+ rotação do scroll)
-    function petalAngle(i) { return i * 30 + petalRotation }
+    // pétalas em anel: 1ª em 180°, +30° por pétala, circulando toda a bola (+ scroll).
+    // (0°=direita, 90°=topo, 180°=esquerda; o ícone fica sempre na vertical pela contra-rotação)
+    function petalAngle(i) { return 180 - i * 30 + petalRotation }
     function petalAt(mx, my) {
         const dx = mx - ballCX, dy = ballCY - my
         const r = Math.sqrt(dx * dx + dy * dy)
