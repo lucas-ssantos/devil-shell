@@ -30,9 +30,8 @@ Scope {
                 screen: modelData
 
                 color: "transparent"
-                anchors { bottom: true }   // ancorada só embaixo -> centralizada na horizontal
+                anchors { bottom: true; left: true; right: true }   // largura total -> barra atravessa a tela
                 exclusiveZone: 0
-                implicitWidth: 320
                 implicitHeight: 220
 
                 // ── Geometria do menu ──────────────────────────────
@@ -51,8 +50,9 @@ Scope {
                 readonly property real petalShrink: 0.8                          // escala das pétalas não-hover
                 readonly property real petalTouch: ballRadius + petalH * petalShrink / 2  // recuada encostando na bola
                 readonly property real hitOuterR: petalDist + petalH / 2 + 8     // alcance do hit-test das pétalas
+                readonly property real menuHalf: hitOuterR + 16                  // meia-largura interativa qdo aberto
                 readonly property real dotRingR: ballRadius * 0.62
-                readonly property real gothicR: 22   // raio do "canto gótico" (filete bola ↔ borda)
+                readonly property real gothicR: 32   // raio do "canto gótico" (filete bola ↔ barra) — mais presença
 
                 // ── Estado de abertura ──────────────────────────────
                 property bool pinned: false        // travado por clique na bola
@@ -150,9 +150,11 @@ Scope {
                 //  Aberto: janela toda ativa (mover entre pétalas / clicar fora).
                 mask: Region {
                     shape: win.open ? RegionShape.Rect : RegionShape.Ellipse
-                    x: win.open ? 0 : Math.round(win.ballCX - win.ballRadius)
+                    // aberto: só a região central (bola + pétalas) é interativa; o resto da
+                    // barra de largura total continua click-through.
+                    x: win.open ? Math.round(win.ballCX - win.menuHalf) : Math.round(win.ballCX - win.ballRadius)
                     y: win.open ? 0 : Math.round(win.ballCY - win.ballRadius)
-                    width: win.open ? win.width : Math.round(win.ballRadius * 2)
+                    width: win.open ? Math.round(win.menuHalf * 2) : Math.round(win.ballRadius * 2)
                     height: win.open ? win.height : Math.round(win.ballRadius * 2)
                 }
 
@@ -211,7 +213,15 @@ Scope {
                     }
                 }
 
-                // ── Cantos góticos: filetes côncavos ligando a bola à borda ──
+                // ── Barra fina no fundo da tela (a bola se funde nela) ──
+                Rectangle {
+                    z: 2
+                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+                    height: 2
+                    color: "#11111b"
+                }
+
+                // ── Cantos góticos: filetes côncavos ligando a bola à barra ──
                 Canvas {
                     id: gothic
                     z: 2
