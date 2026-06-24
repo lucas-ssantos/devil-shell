@@ -1,7 +1,8 @@
 import QtQuick
 
-// Uma pétala do menu radial (visual). Lê o estado do controlador `ctx`.
-// A 1ª pétala (index 0) mostra a sigla do layout atual; as demais, o ícone do item.
+// Uma pétala do menu radial (visual). Lê o estado do controlador `ctx` e os
+// valores customizáveis de `Config`. A 1ª pétala (index 0) mostra a sigla do
+// layout atual; as demais, o ícone do item.
 Item {
     id: petal
     property var ctx
@@ -29,8 +30,8 @@ Item {
 
     opacity: (ctx.open && !vanished && !ctx.layoutMode) ? 1.0 : 0.0
 
-    Behavior on dist { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
-    Behavior on opacity { NumberAnimation { duration: 150 } }
+    Behavior on dist { NumberAnimation { duration: Config.petalDistAnim; easing.type: Easing.OutBack } }
+    Behavior on opacity { NumberAnimation { duration: Config.petalOpacityAnim } }
 
     // corpo da pétala (cresce no hover; base fica reta quando há hover ativo)
     Rectangle {
@@ -39,14 +40,14 @@ Item {
         topRightRadius: width / 2
         bottomLeftRadius: (petal.ctx.hoverIndex !== -1) ? 0 : width / 2
         bottomRightRadius: (petal.ctx.hoverIndex !== -1) ? 0 : width / 2
-        Behavior on bottomLeftRadius { NumberAnimation { duration: 150 } }
-        Behavior on bottomRightRadius { NumberAnimation { duration: 150 } }
+        Behavior on bottomLeftRadius { NumberAnimation { duration: Config.petalRadiusAnim } }
+        Behavior on bottomRightRadius { NumberAnimation { duration: Config.petalRadiusAnim } }
         transformOrigin: Item.Center
-        scale: (petal.hovered || petal.selected) ? 1.2
+        scale: (petal.hovered || petal.selected) ? Config.petalHoverScale
              : (petal.ctx.hoverIndex !== -1)     ? petal.ctx.petalShrink
              : 1.0
-        color: petal.hovered ? "#f38ba8" : "#eba0ac"
-        Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutQuad } }
+        color: petal.hovered ? Config.petalHover : Config.petal
+        Behavior on scale { NumberAnimation { duration: Config.petalScaleAnim; easing.type: Easing.OutQuad } }
 
         // cantos góticos da base (emergem só na pétala em hover)
         Canvas {
@@ -56,30 +57,30 @@ Item {
             x: -petal.ctx.petalFlare
             y: parent.height - 1
             property real amt: (petal.hovered && petal.ctx.open) ? 1 : 0
-            property color col: petal.hovered ? "#f38ba8" : "#eba0ac"
-            Behavior on amt { NumberAnimation { duration: 160; easing.type: Easing.OutQuad } }
+            property color col: petal.hovered ? Config.petalHover : Config.petal
+            Behavior on amt { NumberAnimation { duration: Config.petalFlareAnim; easing.type: Easing.OutQuad } }
             onAmtChanged: requestPaint()
             onColChanged: requestPaint()
             Component.onCompleted: requestPaint()
             onPaint: {
-                const ctx = getContext("2d")
-                ctx.reset()
+                const g = getContext("2d")
+                g.reset()
                 if (amt <= 0.01) return
                 const f = petal.ctx.petalFlare * amt
                 const W = parent.width
                 const xL = petal.ctx.petalFlare
                 const xR = petal.ctx.petalFlare + W
-                ctx.fillStyle = col
+                g.fillStyle = col
                 // canto direito (côncavo)
-                ctx.beginPath()
-                ctx.moveTo(xR, f); ctx.lineTo(xR + f, f); ctx.lineTo(xR + f, 0)
-                ctx.arc(xR, 0, f, 0, Math.PI / 2, false)
-                ctx.closePath(); ctx.fill()
+                g.beginPath()
+                g.moveTo(xR, f); g.lineTo(xR + f, f); g.lineTo(xR + f, 0)
+                g.arc(xR, 0, f, 0, Math.PI / 2, false)
+                g.closePath(); g.fill()
                 // canto esquerdo (espelhado)
-                ctx.beginPath()
-                ctx.moveTo(xL, f); ctx.lineTo(xL - f, f); ctx.lineTo(xL - f, 0)
-                ctx.arc(xL, 0, f, Math.PI, Math.PI / 2, true)
-                ctx.closePath(); ctx.fill()
+                g.beginPath()
+                g.moveTo(xL, f); g.lineTo(xL - f, f); g.lineTo(xL - f, 0)
+                g.arc(xL, 0, f, Math.PI, Math.PI / 2, true)
+                g.closePath(); g.fill()
             }
         }
     }
@@ -88,8 +89,8 @@ Item {
         anchors.centerIn: parent
         rotation: -petal.rotation
         text: petal.index === 0 ? petal.ctx.currentLayoutSymbol : (petal.modelData.icon ?? "")
-        font.pixelSize: 13
+        font.pixelSize: Config.petalIconSize
         font.bold: petal.index === 0
-        color: "#1e1e2e"
+        color: Config.petalIcon
     }
 }

@@ -17,14 +17,14 @@ Item {
             readonly property real slot: bars.width / Math.max(1, bars.levels.length)
             readonly property real bx: slot * (index + 0.5)
             readonly property real v: bars.levels[index] ?? 0
-            width: Math.max(2, slot * 0.6)
+            width: Math.max(2, slot * Config.cavaBarFactor)
             x: bx - width / 2
             height: Math.max(0, v) * bars.maxH
             y: bars.height - height
             topLeftRadius: width / 2
             topRightRadius: width / 2
-            color: "#cba6f7"
-            opacity: 0.5
+            color: Config.accent
+            opacity: Config.cavaBarsOpacity
             visible: Math.abs(bx - bars.ballCX) > bars.ballRadius + 10
         }
     }

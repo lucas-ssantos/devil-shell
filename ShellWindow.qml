@@ -19,32 +19,32 @@ PanelWindow {
     color: "transparent"
     anchors { bottom: true; left: true; right: true }   // largura total -> barra atravessa a tela
     exclusiveZone: 0
-    implicitHeight: 360   // espaço extra acima da bola p/ o submenu de layouts
+    implicitHeight: Config.shellHeight   // espaço extra acima da bola p/ o submenu
 
-    // ── Geometria ──────────────────────────────────────
-    readonly property real ballRadius: 46
+    // ── Geometria (valores em Config.qml) ───────────────
+    readonly property real ballRadius: Config.ballRadius
     readonly property real ballCX: width / 2
-    readonly property real ballPeek: 28
+    readonly property real ballPeek: Config.ballPeek
     readonly property real ballCYRest: height - ballPeek + ballRadius
     readonly property real ballCYOpen: height - ballRadius
     property real ballCY: open ? ballCYOpen : ballCYRest
-    Behavior on ballCY { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-    readonly property real petalW: 26
-    readonly property real petalH: 84
-    readonly property real petalDist: ballRadius + 10 + petalH / 2
-    readonly property real petalShrink: 0.8
+    Behavior on ballCY { NumberAnimation { duration: Config.ballAnim; easing.type: Easing.OutCubic } }
+    readonly property real petalW: Config.petalW
+    readonly property real petalH: Config.petalH
+    readonly property real petalDist: ballRadius + Config.petalGap + petalH / 2
+    readonly property real petalShrink: Config.petalShrink
     readonly property real petalTouch: ballRadius + petalH * petalShrink / 2
-    readonly property real petalFlare: 8
-    readonly property real hitOuterR: petalDist + petalH / 2 + 8
-    readonly property real menuHalf: hitOuterR + 16
-    readonly property real dotRingR: ballRadius * 0.62
-    readonly property real gothicR: 32
-    readonly property real cavaRadMax: 55
-    readonly property real layoutRowH: 23
-    readonly property real layoutPillW: 132
-    readonly property real layoutBow: 38
+    readonly property real petalFlare: Config.petalFlare
+    readonly property real hitOuterR: petalDist + petalH / 2 + Config.hitMargin
+    readonly property real menuHalf: hitOuterR + Config.menuMargin
+    readonly property real dotRingR: ballRadius * Config.dotRingFactor
+    readonly property real gothicR: Config.gothicR
+    readonly property real cavaRadMax: Config.cavaRadMax
+    readonly property real layoutRowH: Config.layoutRowH
+    readonly property real layoutPillW: Config.layoutPillW
+    readonly property real layoutBow: Config.layoutBow
     property real petalRotation: 0
-    Behavior on petalRotation { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    Behavior on petalRotation { NumberAnimation { duration: Config.petalRotAnim; easing.type: Easing.OutCubic } }
 
     // ── Estado de abertura ──────────────────────────────
     property bool pinned: false
@@ -58,12 +58,12 @@ PanelWindow {
     onHoverOpenChanged: if (!hoverOpen) dismissed = false
     onOpenChanged: if (!open) { selectedIndex = -1; layoutMode = false }
 
-    Timer { id: hoverCloseTimer; interval: 130; onTriggered: win.hoverOpen = false }
-    Timer { id: selectTimer; interval: 200; onTriggered: { win.dismissed = true; win.pinned = false; win.selectedIndex = -1 } }
+    Timer { id: hoverCloseTimer; interval: Config.hoverCloseMs; onTriggered: win.hoverOpen = false }
+    Timer { id: selectTimer; interval: Config.selectMs; onTriggered: { win.dismissed = true; win.pinned = false; win.selectedIndex = -1 } }
 
     // relógio (tick por minuto) p/ o texto sobre a bola escondida
     SystemClock { id: sysClock; precision: SystemClock.Minutes }
-    readonly property string clockText: Qt.formatDateTime(sysClock.date, "d/M HH:mm")
+    readonly property string clockText: Qt.formatDateTime(sysClock.date, Config.clockFormat)
 
     // ── Estado do MangoWC p/ ESTE monitor/workspace ──────
     readonly property var monData: {
@@ -92,7 +92,7 @@ PanelWindow {
         return ballCX + layoutBow * Math.sin(t * Math.PI)
     }
     function layoutPillY(i) {
-        return (ballCY - ballRadius - 8) - layoutRowH / 2 - i * layoutRowH
+        return (ballCY - ballRadius - Config.layoutGap) - layoutRowH / 2 - i * layoutRowH
     }
     function layoutAt(mx, my) {
         const n = layoutItems.length
@@ -105,7 +105,7 @@ PanelWindow {
     // ── Hit-test (tudo por posição do cursor) ───────────
     // pétalas em anel: 1ª em 180°, +30° por pétala, circulando toda a bola (+ scroll).
     // (0°=direita, 90°=topo, 180°=esquerda; o ícone fica sempre na vertical pela contra-rotação)
-    function petalAngle(i) { return 180 - i * 30 + petalRotation }
+    function petalAngle(i) { return Config.petalStartDeg + Config.petalDir * i * Config.petalStepDeg + petalRotation }
     function petalAt(mx, my) {
         const dx = mx - ballCX, dy = ballCY - my
         const r = Math.sqrt(dx * dx + dy * dy)
@@ -117,7 +117,7 @@ PanelWindow {
             const d = Math.abs(((theta - petalAngle(i) + 540) % 360) - 180)
             if (d < bestDiff) { bestDiff = d; best = i }
         }
-        return bestDiff <= 15 ? best : -1   // tolerância = metade dos 30°
+        return bestDiff <= Config.petalStepDeg / 2 ? best : -1   // tolerância = metade do passo
     }
     function dotAt(mx, my) {
         const n = tags.length
@@ -125,7 +125,7 @@ PanelWindow {
             const ang = (-90 + i * 360 / Math.max(1, n)) * Math.PI / 180
             const dxp = ballCX + dotRingR * Math.cos(ang)
             const dyp = ballCY + dotRingR * Math.sin(ang)
-            if (Math.hypot(mx - dxp, my - dyp) <= 9) return i
+            if (Math.hypot(mx - dxp, my - dyp) <= Config.dotHitR) return i
         }
         return -1
     }
@@ -171,8 +171,8 @@ PanelWindow {
     Rectangle {
         z: 2
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        height: 1
-        color: "#11111b"
+        height: Config.barHeight
+        color: Config.ball
     }
 
     GothicCorners { ctx: win }                              // filetes bola ↔ barra
@@ -182,15 +182,15 @@ PanelWindow {
     Text {
         z: 4
         text: win.clockText
-        color: "#cdd6f4"
-        font.pixelSize: 13
+        color: Config.clock
+        font.pixelSize: Config.clockSize
         font.bold: true
         transformOrigin: Item.Center
         x: win.ballCX - width / 2
         y: (win.height - win.ballPeek) - height - 5
         opacity: win.open ? 0 : 1
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        Behavior on opacity { NumberAnimation { duration: Config.clockAnim } }
     }
 
     // ── Entrada: hover + TODOS os cliques (por hit-test) ──
@@ -258,7 +258,7 @@ PanelWindow {
                 const dir = event.angleDelta.y > 0 ? -1 : 1
                 // na região das pétalas (aberto, fora da bola) -> gira o anel
                 if (win.open && !win.overBall && !win.layoutMode) {
-                    win.petalRotation += dir * 30
+                    win.petalRotation += dir * Config.petalStepDeg
                     return
                 }
                 // sobre a bola (ou fechado) -> troca de workspace

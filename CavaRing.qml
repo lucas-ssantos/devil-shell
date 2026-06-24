@@ -19,7 +19,7 @@ Repeater {
         y: ring.ctx.ballCY + ring.ctx.ballRadius * Math.sin(ang)
         transformOrigin: Item.Top
         rotation: 90 - ang * 180 / Math.PI                // aponta radialmente p/ fora
-        color: "#cba6f7"
-        opacity: 0.62
+        color: Config.accent
+        opacity: Config.cavaRingOpacity
     }
 }

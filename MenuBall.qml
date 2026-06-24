@@ -12,7 +12,7 @@ Rectangle {
     radius: width / 2
     x: ctx.ballCX - r2
     y: ctx.ballCY - r2
-    color: "#11111b"
+    color: Config.ball
     antialiasing: true
     border.width: 0
 
@@ -21,8 +21,8 @@ Rectangle {
         anchors.centerIn: parent
         visible: !ball.ctx.showLayoutName
         text: ball.ctx.activeTag > 0 ? ball.ctx.activeTag : ""
-        color: "#a6e3a1"
-        font.pixelSize: 18
+        color: Config.ballText
+        font.pixelSize: Config.ballNumberSize
         font.bold: true
     }
 
@@ -34,8 +34,8 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.WordWrap
         text: ball.ctx.displayLayoutName
-        color: "#a6e3a1"
-        font.pixelSize: 11
+        color: Config.ballText
+        font.pixelSize: Config.ballLayoutSize
         font.bold: true
     }
 
@@ -49,16 +49,16 @@ Rectangle {
             readonly property real a: (-90 + index * 360 / Math.max(1, n)) * Math.PI / 180
             readonly property bool active: modelData.is_active
 
-            width: active ? 11 : 8
+            width: active ? Config.dotActiveSize : Config.dotSize
             height: width
             radius: width / 2
             x: ball.width / 2 + ball.ctx.dotRingR * Math.cos(a) - width / 2
             y: ball.height / 2 + ball.ctx.dotRingR * Math.sin(a) - height / 2
-            color: active                     ? "#a6e3a1"
-                 : modelData.is_urgent        ? "#f38ba8"
-                 : modelData.client_count > 0 ? "#5c7a52"
-                 : "#45475a"
-            Behavior on width { NumberAnimation { duration: 120 } }
+            color: active                     ? Config.dotActive
+                 : modelData.is_urgent        ? Config.dotUrgent
+                 : modelData.client_count > 0 ? Config.dotOccupied
+                 : Config.dotEmpty
+            Behavior on width { NumberAnimation { duration: Config.dotAnim } }
         }
     }
 }

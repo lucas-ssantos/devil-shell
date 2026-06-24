@@ -14,13 +14,13 @@ PanelWindow {
     color: "transparent"
     anchors { bottom: true; left: true; right: true }
     exclusiveZone: 0
-    implicitHeight: 260
+    implicitHeight: Config.cavaHeight
     mask: Region {}   // sem área de input -> totalmente click-through
 
     CavaBars {
         levels: cavaWin.levels
         ballCX: cavaWin.width / 2
-        ballRadius: 46
-        maxH: 180
+        ballRadius: Config.ballRadius
+        maxH: Config.cavaMaxH
     }
 }

@@ -50,7 +50,7 @@ Canvas {
     onPaint: {
         const g = getContext("2d")
         g.reset()
-        g.fillStyle = "#11111b"
+        g.fillStyle = Config.ball
         g.beginPath()
         addLobe(g, 1)
         addLobe(g, -1)

@@ -20,21 +20,21 @@ Repeater {
         height: lm.ctx.layoutRowH - 3
         radius: height / 2
         transformOrigin: Item.Center
-        rotation: (fx - lm.ctx.ballCX) * 0.34            // inclinação seguindo a curvatura da bola
+        rotation: (fx - lm.ctx.ballCX) * Config.layoutTilt   // inclinação seguindo a curvatura
         // emergem da bola até a posição final
         x: lm.ctx.ballCX + (fx - lm.ctx.ballCX) * prog - width / 2
         y: lm.ctx.ballCY + (fy - lm.ctx.ballCY) * prog - height / 2
         opacity: prog
         visible: prog > 0.01
-        color: lhovered ? "#cba6f7" : "#313244"
-        Behavior on prog { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-        Behavior on color { ColorAnimation { duration: 120 } }
+        color: lhovered ? Config.layoutPillHover : Config.layoutPill
+        Behavior on prog { NumberAnimation { duration: Config.layoutAnim; easing.type: Easing.OutCubic } }
+        Behavior on color { ColorAnimation { duration: Config.layoutColorAnim } }
 
         Text {
             anchors.centerIn: parent
             text: lopt.modelData.label
-            color: lopt.lhovered ? "#11111b" : "#cdd6f4"
-            font.pixelSize: 12
+            color: lopt.lhovered ? Config.layoutTextHover : Config.layoutText
+            font.pixelSize: Config.layoutTextSize
             font.bold: lopt.lhovered
         }
     }
