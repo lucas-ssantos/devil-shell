@@ -48,8 +48,11 @@ Scope {
                 readonly property real petalW: 26
                 readonly property real petalH: 84
                 readonly property real petalDist: ballRadius + 10 + petalH / 2   // centro-bola → centro-pétala
+                readonly property real petalShrink: 0.8                          // escala das pétalas não-hover
+                readonly property real petalTouch: ballRadius + petalH * petalShrink / 2  // recuada encostando na bola
                 readonly property real hitOuterR: petalDist + petalH / 2 + 8     // alcance do hit-test das pétalas
                 readonly property real dotRingR: ballRadius * 0.62
+                readonly property real gothicR: 22   // raio do "canto gótico" (filete bola ↔ borda)
 
                 // ── Estado de abertura ──────────────────────────────
                 property bool pinned: false        // travado por clique na bola
@@ -174,7 +177,10 @@ Scope {
                         rotation: 90 - angleDeg
                         z: 1
 
-                        property real dist: win.open ? win.petalDist : 0
+                        property real dist: !win.open ? 0
+                            : (hovered || selected)     ? win.petalDist
+                            : (win.hoverIndex !== -1)   ? win.petalTouch   // outra em hover -> recua até a bola
+                            : win.petalDist
                         x: win.ballCX + dist * Math.cos(angleRad) - width / 2
                         y: win.ballCY - dist * Math.sin(angleRad) - height / 2
 
@@ -188,7 +194,9 @@ Scope {
                             anchors.fill: parent
                             radius: width / 2
                             transformOrigin: Item.Center
-                            scale: (petal.hovered || petal.selected) ? 1.18 : 1.0
+                            scale: (petal.hovered || petal.selected) ? 1.2
+                                 : (win.hoverIndex !== -1)           ? win.petalShrink   // outra em hover -> encolhe
+                                 : 1.0
                             color: petal.hovered ? "#f38ba8" : "#eba0ac"
                             Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutQuad } }
                         }
@@ -203,6 +211,60 @@ Scope {
                     }
                 }
 
+                // ── Cantos góticos: filetes côncavos ligando a bola à borda ──
+                Canvas {
+                    id: gothic
+                    z: 2
+                    anchors.fill: parent
+                    property real cy: win.ballCY      // repinta enquanto a bola sobe/desce
+                    onCyChanged: requestPaint()
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+                    Component.onCompleted: requestPaint()
+
+                    // arco menor (determinístico) de P1 a P2 em torno de C
+                    function arcMinor(ctx, C, P1, P2) {
+                        const r = Math.hypot(P1.x - C.x, P1.y - C.y)
+                        const a1 = Math.atan2(P1.y - C.y, P1.x - C.x)
+                        const a2 = Math.atan2(P2.y - C.y, P2.x - C.x)
+                        let d = a2 - a1
+                        while (d <= -Math.PI) d += 2 * Math.PI
+                        while (d >   Math.PI) d -= 2 * Math.PI
+                        ctx.arc(C.x, C.y, r, a1, a2, d < 0)
+                    }
+                    // um filete (s = +1 direito, -1 esquerdo)
+                    function lobe(ctx, s) {
+                        const cx = win.ballCX, cyc = win.ballCY, R = win.ballRadius
+                        const baseY = height, f = win.gothicR
+                        const dyc = baseY - cyc
+                        if (Math.abs(dyc) > R) return            // círculo não cruza a borda
+                        const xc = Math.sqrt(R * R - dyc * dyc)  // cruzamento círculo × borda
+                        const vy = (baseY - f) - cyc
+                        if ((R + f) <= Math.abs(vy)) return
+                        const xf = Math.sqrt((R + f) * (R + f) - vy * vy)
+                        const k = R / (R + f)
+                        const P  = { x: cx + s * xc,     y: baseY }       // cruzamento
+                        const BR = { x: cx + s * xf,     y: baseY }       // base do filete
+                        const F  = { x: cx + s * xf,     y: baseY - f }   // centro do filete
+                        const T  = { x: cx + s * k * xf, y: cyc + k * vy } // tangente no círculo
+                        const C  = { x: cx, y: cyc }
+                        ctx.beginPath()
+                        ctx.moveTo(P.x, P.y)
+                        ctx.lineTo(BR.x, BR.y)
+                        arcMinor(ctx, F, BR, T)   // filete côncavo (borda → círculo)
+                        arcMinor(ctx, C, T, P)    // de volta pelo círculo até o cruzamento
+                        ctx.closePath()
+                        ctx.fill()
+                    }
+                    onPaint: {
+                        const ctx = getContext("2d")
+                        ctx.reset()
+                        ctx.fillStyle = "#11111b"
+                        lobe(ctx, 1)
+                        lobe(ctx, -1)
+                    }
+                }
+
                 // ── A bola (o "menu"; só visual) ─────────────────────
                 Rectangle {
                     id: ball
@@ -213,8 +275,7 @@ Scope {
                     x: win.ballCX - win.ballRadius
                     y: win.ballCY - win.ballRadius
                     color: "#11111b"
-                    border.color: win.open ? "#cba6f7" : "#313244"
-                    border.width: 2
+                    border.width: 0
 
                     // número do workspace ativo no centro (o "contador")
                     Text {
