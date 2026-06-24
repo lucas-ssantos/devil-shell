@@ -138,7 +138,7 @@ Scope {
                 // submenu de layouts (lista vertical levemente curvada)
                 readonly property real layoutRowH: 23  // passo vertical entre opções
                 readonly property real layoutPillW: 132 // largura das opções
-                readonly property real layoutBow: 26   // curvatura horizontal (segue a bola)
+                readonly property real layoutBow: 38   // curvatura horizontal (segue a bola)
                 property real petalRotation: 0         // rotação do anel de pétalas (scroll)
                 Behavior on petalRotation { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
@@ -407,7 +407,7 @@ Scope {
                         required property var modelData
                         required property int index
                         readonly property bool lhovered: win.layoutMode && win.hoverIndex === index
-                        readonly property real prog: win.layoutMode ? 1 : 0
+                        property real prog: win.layoutMode ? 1 : 0   // não-readonly: o Behavior anima
                         readonly property real fx: win.layoutPillX(index)
                         readonly property real fy: win.layoutPillY(index)
                         z: 2.6
@@ -415,7 +415,7 @@ Scope {
                         height: win.layoutRowH - 3
                         radius: height / 2
                         transformOrigin: Item.Center
-                        rotation: (fx - win.ballCX) * 0.22   // leve inclinação seguindo a curva
+                        rotation: (fx - win.ballCX) * 0.34   // inclinação seguindo a curvatura da bola
                         // emergem da bola até a posição final
                         x: win.ballCX + (fx - win.ballCX) * prog - width / 2
                         y: win.ballCY + (fy - win.ballCY) * prog - height / 2
