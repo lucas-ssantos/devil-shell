@@ -35,12 +35,28 @@ Scope {
     //  Cada item: { icon: "símbolo", label: "nome", command: [argv] }
     //  command vazio ([]) = sem ação (placeholder).
     // ──────────────────────────────────────────────────────────────
+    //  A 1ª pétala é o seletor de LAYOUT do Mango (tratada à parte); as demais são livres.
     readonly property var menuItems: [
-        { icon: "★", label: "Item 1", command: [] },
+        { icon: "⬡", label: "Layout", command: [] },
         { icon: "◆", label: "Item 2", command: [] },
         { icon: "●", label: "Item 3", command: [] },
         { icon: "▲", label: "Item 4", command: [] },
         { icon: "■", label: "Item 5", command: [] }
+    ]
+
+    //  Opções de layout do Mango (symbol = sigla mostrada; name = comando do mmsg).
+    readonly property var layoutItems: [
+        { symbol: "T",  name: "tile",              label: "Tiling" },
+        { symbol: "CT", name: "center_tile",       label: "Center Tiling" },
+        { symbol: "RT", name: "right_tile",        label: "Right Tiling" },
+        { symbol: "VT", name: "vertical_tile",     label: "Vertical Tiling" },
+        { symbol: "S",  name: "scroller",          label: "Scrolling" },
+        { symbol: "VS", name: "vertical_scroller", label: "Vertical Scrolling" },
+        { symbol: "M",  name: "monocle",           label: "Monocle" },
+        { symbol: "K",  name: "deck",              label: "Deck" },
+        { symbol: "VK", name: "vertical_deck",     label: "Vertical Deck" },
+        { symbol: "G",  name: "grid",              label: "Grid" },
+        { symbol: "VG", name: "vertical_grid",     label: "Vertical Grid" }
     ]
 
     Variants {
@@ -95,7 +111,7 @@ Scope {
                 color: "transparent"
                 anchors { bottom: true; left: true; right: true }   // largura total -> barra atravessa a tela
                 exclusiveZone: 0
-                implicitHeight: 260
+                implicitHeight: 360   // espaço extra acima da bola p/ o submenu de layouts
 
                 // ── Geometria do menu ──────────────────────────────
                 readonly property real ballRadius: 46
@@ -112,12 +128,19 @@ Scope {
                 readonly property real petalDist: ballRadius + 10 + petalH / 2   // centro-bola → centro-pétala
                 readonly property real petalShrink: 0.8                          // escala das pétalas não-hover
                 readonly property real petalTouch: ballRadius + petalH * petalShrink / 2  // recuada encostando na bola
+                readonly property real petalFlare: 8   // tamanho dos cantos góticos das pétalas (no hover)
                 readonly property real hitOuterR: petalDist + petalH / 2 + 8     // alcance do hit-test das pétalas
                 readonly property real menuHalf: hitOuterR + 16                  // meia-largura interativa qdo aberto
                 readonly property real dotRingR: ballRadius * 0.62
                 readonly property real gothicR: 32   // raio do "canto gótico" (filete bola ↔ barra) — mais presença
                 readonly property real cavaMaxH: 180 // altura máx das barras lineares do cava
                 readonly property real cavaRadMax: 55 // comprimento máx dos espetos radiais do cava
+                // submenu de layouts (lista vertical levemente curvada)
+                readonly property real layoutRowH: 23  // passo vertical entre opções
+                readonly property real layoutPillW: 132 // largura das opções
+                readonly property real layoutBow: 26   // curvatura horizontal (segue a bola)
+                property real petalRotation: 0         // rotação do anel de pétalas (scroll)
+                Behavior on petalRotation { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
                 // ── Estado de abertura ──────────────────────────────
                 property bool pinned: false        // travado por clique na bola
@@ -125,6 +148,7 @@ Scope {
                 property bool overBall: false       // cursor sobre a bola
                 property int  hoverIndex: -1        // pétala sob o cursor (-1 = nenhuma)
                 property int  selectedIndex: -1     // pétala clicada (anim. de "as outras somem")
+                property bool layoutMode: false     // submenu de layouts aberto (1ª pétala)
                 // hover COM debounce: um leave/enter transitório (ao recomitar a máscara)
                 // não recolhe o menu sem querer.
                 property bool hoverOpen: false
@@ -132,6 +156,8 @@ Scope {
 
                 // só libera o "dismissed" quando o cursor realmente sai (hoverOpen cai)
                 onHoverOpenChanged: if (!hoverOpen) dismissed = false
+                // ao fechar, volta ao estado normal
+                onOpenChanged: if (!open) { selectedIndex = -1; layoutMode = false }
 
                 Timer { id: hoverCloseTimer; interval: 130; onTriggered: win.hoverOpen = false }
                 // após clicar numa pétala: destaca-a um instante e fecha
@@ -158,12 +184,33 @@ Scope {
                         if (tags[i].is_active) return tags[i].index
                     return 0
                 }
+                // layout atual deste monitor/workspace
+                readonly property string currentLayoutSymbol: monData ? (monData.layout_symbol ?? "?") : "?"
+                readonly property string currentLayoutName: mango.layoutNames[currentLayoutSymbol] ?? currentLayoutSymbol
+                // mostra o NOME do layout (na bola) ao focar a 1ª pétala ou no submenu de layouts
+                readonly property bool showLayoutName: layoutMode || hoverIndex === 0
+
+                // ── Submenu de layouts: posição de cada opção (lista curvada) ──
+                function layoutPillX(i) {
+                    const t = (i + 0.5) / root.layoutItems.length
+                    return ballCX + layoutBow * Math.sin(t * Math.PI)   // bojo p/ a direita no meio
+                }
+                function layoutPillY(i) {
+                    return (ballCY - ballRadius - 8) - layoutRowH / 2 - i * layoutRowH
+                }
+                function layoutAt(mx, my) {
+                    const n = root.layoutItems.length
+                    for (let i = 0; i < n; i++)
+                        if (Math.abs(mx - layoutPillX(i)) <= layoutPillW / 2
+                         && Math.abs(my - layoutPillY(i)) <= layoutRowH / 2) return i
+                    return -1
+                }
 
                 // ── Hit-test (tudo por posição do cursor) ───────────
                 // ângulo (graus) da pétala i: i=0 à esquerda (158°) … direita (22°); centro 90°
+                // pétalas em anel: 30° entre cada, partindo de 0° (+ rotação do scroll)
                 function petalAngle(i) {
-                    const n = root.menuItems.length
-                    return n <= 1 ? 90 : 158 - i * (158 - 22) / (n - 1)
+                    return i * 30 + win.petalRotation
                 }
                 // índice da pétala sob (mx,my) ou -1
                 function petalAt(mx, my) {
@@ -175,11 +222,11 @@ Scope {
                     const theta = Math.atan2(dy, dx) * 180 / Math.PI
                     let best = -1, bestDiff = 1e9
                     for (let i = 0; i < n; i++) {
-                        const d = Math.abs(theta - petalAngle(i))
+                        // diferença angular mínima (lida com a volta 360°)
+                        const d = Math.abs(((theta - petalAngle(i) + 540) % 360) - 180)
                         if (d < bestDiff) { bestDiff = d; best = i }
                     }
-                    const spacing = n > 1 ? (158 - 22) / (n - 1) : 140
-                    return bestDiff <= spacing / 2 + 2 ? best : -1
+                    return bestDiff <= 15 ? best : -1   // tolerância = metade dos 30°
                 }
                 // índice (na lista tags) do ponto de workspace sob (mx,my) ou -1
                 function dotAt(mx, my) {
@@ -201,7 +248,10 @@ Scope {
                         overBall = false; hoverIndex = -1
                     } else {
                         overBall = overBallAt(hoverMA.mouseX, hoverMA.mouseY)
-                        hoverIndex = overBall ? -1 : petalAt(hoverMA.mouseX, hoverMA.mouseY)
+                        // no submenu de layouts, o índice vem das opções; senão das pétalas
+                        hoverIndex = overBall ? -1
+                            : (layoutMode ? layoutAt(hoverMA.mouseX, hoverMA.mouseY)
+                                          : petalAt(hoverMA.mouseX, hoverMA.mouseY))
                     }
                     if (overBall || hoverIndex !== -1) { hoverCloseTimer.stop(); hoverOpen = true }
                     else hoverCloseTimer.restart()
@@ -272,7 +322,7 @@ Scope {
                         x: win.ballCX + dist * Math.cos(angleRad) - width / 2
                         y: win.ballCY - dist * Math.sin(angleRad) - height / 2
 
-                        opacity: (win.open && !vanished) ? 1.0 : 0.0
+                        opacity: (win.open && !vanished && !win.layoutMode) ? 1.0 : 0.0
 
                         Behavior on dist { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
                         Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -280,21 +330,107 @@ Scope {
                         // crescimento do hover só no visual (não afeta hit-test)
                         Rectangle {
                             anchors.fill: parent
-                            radius: width / 2
+                            // topo sempre arredondado; base fica RETA quando há hover ativo
+                            // (entra direto na bola), e volta a arredondar sem hover
+                            topLeftRadius: width / 2
+                            topRightRadius: width / 2
+                            bottomLeftRadius: (win.hoverIndex !== -1) ? 0 : width / 2
+                            bottomRightRadius: (win.hoverIndex !== -1) ? 0 : width / 2
+                            Behavior on bottomLeftRadius { NumberAnimation { duration: 150 } }
+                            Behavior on bottomRightRadius { NumberAnimation { duration: 150 } }
                             transformOrigin: Item.Center
                             scale: (petal.hovered || petal.selected) ? 1.2
                                  : (win.hoverIndex !== -1)           ? win.petalShrink   // outra em hover -> encolhe
                                  : 1.0
                             color: petal.hovered ? "#f38ba8" : "#eba0ac"
                             Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutQuad } }
+
+                            // cantos góticos da pétala: emergem na base (lado da bola) só no hover ativo
+                            Canvas {
+                                id: pflare
+                                width: parent.width + 2 * win.petalFlare
+                                height: win.petalFlare + 2
+                                x: -win.petalFlare
+                                y: parent.height - 1
+                                property real amt: (petal.hovered && win.open) ? 1 : 0
+                                property color col: petal.hovered ? "#f38ba8" : "#eba0ac"
+                                Behavior on amt { NumberAnimation { duration: 160; easing.type: Easing.OutQuad } }
+                                onAmtChanged: requestPaint()
+                                onColChanged: requestPaint()
+                                Component.onCompleted: requestPaint()
+                                onPaint: {
+                                    const ctx = getContext("2d")
+                                    ctx.reset()
+                                    if (amt <= 0.01) return
+                                    const f = win.petalFlare * amt
+                                    const W = parent.width
+                                    const xL = win.petalFlare
+                                    const xR = win.petalFlare + W
+                                    ctx.fillStyle = col
+                                    // canto direito (côncavo)
+                                    ctx.beginPath()
+                                    ctx.moveTo(xR, f)
+                                    ctx.lineTo(xR + f, f)
+                                    ctx.lineTo(xR + f, 0)
+                                    ctx.arc(xR, 0, f, 0, Math.PI / 2, false)
+                                    ctx.closePath()
+                                    ctx.fill()
+                                    // canto esquerdo (espelhado)
+                                    ctx.beginPath()
+                                    ctx.moveTo(xL, f)
+                                    ctx.lineTo(xL - f, f)
+                                    ctx.lineTo(xL - f, 0)
+                                    ctx.arc(xL, 0, f, Math.PI, Math.PI / 2, true)
+                                    ctx.closePath()
+                                    ctx.fill()
+                                }
+                            }
                         }
 
                         Text {
                             anchors.centerIn: parent
                             rotation: -petal.rotation
-                            text: petal.modelData.icon ?? ""
-                            font.pixelSize: 16
+                            // 1ª pétala mostra a sigla do layout atual; demais -> ícone
+                            text: petal.index === 0 ? win.currentLayoutSymbol : (petal.modelData.icon ?? "")
+                            font.pixelSize: 13
+                            font.bold: petal.index === 0
                             color: "#1e1e2e"
+                        }
+                    }
+                }
+
+                // ── Submenu de LAYOUTS: lista curvada de retângulos (emergem da bola) ──
+                Repeater {
+                    model: root.layoutItems
+                    delegate: Rectangle {
+                        id: lopt
+                        required property var modelData
+                        required property int index
+                        readonly property bool lhovered: win.layoutMode && win.hoverIndex === index
+                        readonly property real prog: win.layoutMode ? 1 : 0
+                        readonly property real fx: win.layoutPillX(index)
+                        readonly property real fy: win.layoutPillY(index)
+                        z: 2.6
+                        width: win.layoutPillW
+                        height: win.layoutRowH - 3
+                        radius: height / 2
+                        transformOrigin: Item.Center
+                        rotation: (fx - win.ballCX) * 0.22   // leve inclinação seguindo a curva
+                        // emergem da bola até a posição final
+                        x: win.ballCX + (fx - win.ballCX) * prog - width / 2
+                        y: win.ballCY + (fy - win.ballCY) * prog - height / 2
+                        opacity: prog
+                        visible: prog > 0.01
+                        color: lhovered ? "#cba6f7" : "#313244"
+                        Behavior on prog { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: lopt.modelData.label
+                            color: lopt.lhovered ? "#11111b" : "#cdd6f4"
+                            font.pixelSize: 12
+                            font.bold: lopt.lhovered
                         }
                     }
                 }
@@ -381,9 +517,25 @@ Scope {
                     // número do workspace ativo no centro (o "contador")
                     Text {
                         anchors.centerIn: parent
+                        visible: !win.showLayoutName
                         text: win.activeTag > 0 ? win.activeTag : ""
                         color: "#a6e3a1"
                         font.pixelSize: 18
+                        font.bold: true
+                    }
+
+                    // nome do layout (focando a 1ª pétala / no submenu de layouts)
+                    Text {
+                        anchors.centerIn: parent
+                        width: parent.width - 14
+                        visible: win.showLayoutName
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        text: win.layoutMode
+                            ? (win.hoverIndex >= 0 ? (root.layoutItems[win.hoverIndex].label ?? "") : win.currentLayoutName)
+                            : win.currentLayoutName
+                        color: "#a6e3a1"
+                        font.pixelSize: 11
                         font.bold: true
                     }
 
@@ -447,22 +599,38 @@ Scope {
                             proc.exec(["mmsg", "dispatch", "view," + win.tags[di].index + ",0"])
                             return
                         }
-                        // 2) bola? -> alterna travado
+                        // 2) bola?
                         if (win.overBallAt(mouseX, mouseY)) {
+                            if (win.layoutMode) { win.layoutMode = false; return }  // volta ao menu principal
                             if (win.pinned) { win.pinned = false; win.dismissed = true }
                             else            { win.pinned = true;  win.dismissed = false }
                             return
                         }
-                        // 3) pétala? -> executa, as demais somem, destaca e fecha
-                        const pi = win.petalAt(mouseX, mouseY)
-                        if (pi >= 0) {
-                            const cmd = root.menuItems[pi].command ?? []
-                            if (cmd.length > 0) proc.exec(cmd)
-                            win.selectedIndex = pi
-                            selectTimer.restart()
+                        // 3) submenu de layouts aberto -> escolher na lista
+                        if (win.layoutMode) {
+                            const li = win.layoutAt(mouseX, mouseY)
+                            if (li >= 0) {
+                                proc.exec(["mmsg", "dispatch", "setlayout," + root.layoutItems[li].name])
+                                selectTimer.restart()   // fecha
+                            } else {
+                                win.pinned = false      // clicou fora -> recolhe
+                            }
                             return
                         }
-                        // 4) fora -> recolhe
+                        // 4) pétala?
+                        const pi = win.petalAt(mouseX, mouseY)
+                        if (pi >= 0) {
+                            if (pi === 0) {
+                                win.layoutMode = true   // 1ª pétala = abre o submenu de layouts
+                            } else {
+                                const cmd = root.menuItems[pi].command ?? []
+                                if (cmd.length > 0) proc.exec(cmd)
+                                win.selectedIndex = pi
+                                selectTimer.restart()
+                            }
+                            return
+                        }
+                        // 5) fora -> recolhe
                         win.pinned = false
                     }
                 }
@@ -475,11 +643,17 @@ Scope {
                         id: wsScroll
                         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                         onWheel: (event) => {
+                            const dir = event.angleDelta.y > 0 ? -1 : 1
+                            // na região das pétalas (aberto, fora da bola) -> gira o anel
+                            if (win.open && !win.overBall && !win.layoutMode) {
+                                win.petalRotation += dir * 30
+                                return
+                            }
+                            // sobre a bola (ou fechado) -> troca de workspace
                             const total = win.tags.length
                             if (total === 0) return
                             const cur = win.activeTag > 0 ? win.activeTag : 1
-                            const delta = event.angleDelta.y > 0 ? -1 : 1        // cima = anterior
-                            const next = ((cur - 1 + delta + total) % total) + 1 // dá a volta (1↔total)
+                            const next = ((cur - 1 + dir + total) % total) + 1   // dá a volta (1↔total)
                             if (next !== cur)
                                 proc.exec(["mmsg", "dispatch", "view," + next + ",0"])
                         }
