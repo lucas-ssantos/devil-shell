@@ -7,6 +7,27 @@ Scope {
 
     MangoLayout { id: mango }
 
+    // ── CAVA: visualizador de áudio (saída raw via stdout) ──
+    // cada frame vira um array de níveis 0..1 (mesmo p/ todos os monitores)
+    property var cavaLevels: []
+    Process {
+        id: cavaProc
+        command: ["cava", "-p", "/home/luke/.config/quickshell/cava.conf"]
+        running: true
+        stdout: SplitParser {
+            onRead: line => {
+                const parts = line.split(";")
+                const arr = []
+                for (let i = 0; i < parts.length; i++) {
+                    if (parts[i] === "") continue
+                    arr.push(parseInt(parts[i]) / 1000)
+                }
+                if (arr.length > 0) root.cavaLevels = arr
+            }
+        }
+    }
+    Timer { interval: 2000; running: !cavaProc.running; onTriggered: cavaProc.running = true }
+
     // ──────────────────────────────────────────────────────────────
     //  Itens das pétalas (submenus). 100% data-driven: adicione/remova
     //  itens aqui e as pétalas se reorganizam sozinhas no semicírculo.
@@ -53,6 +74,8 @@ Scope {
                 readonly property real menuHalf: hitOuterR + 16                  // meia-largura interativa qdo aberto
                 readonly property real dotRingR: ballRadius * 0.62
                 readonly property real gothicR: 32   // raio do "canto gótico" (filete bola ↔ barra) — mais presença
+                readonly property real cavaMaxH: 120 // altura máx das barras lineares do cava
+                readonly property real cavaRadMax: 38 // comprimento máx dos espetos radiais do cava
 
                 // ── Estado de abertura ──────────────────────────────
                 property bool pinned: false        // travado por clique na bola
@@ -158,6 +181,48 @@ Scope {
                     height: win.open ? win.height : Math.round(win.ballRadius * 2)
                 }
 
+                // ── CAVA: barras lineares atrás de tudo (sobem da barra de fundo) ──
+                Repeater {
+                    model: root.cavaLevels.length
+                    delegate: Rectangle {
+                        required property int index
+                        readonly property real slot: win.width / Math.max(1, root.cavaLevels.length)
+                        readonly property real bx: slot * (index + 0.5)
+                        readonly property real v: root.cavaLevels[index] ?? 0
+                        z: 0
+                        width: Math.max(2, slot * 0.6)
+                        x: bx - width / 2
+                        height: Math.max(0, v) * win.cavaMaxH
+                        y: win.height - height
+                        radius: width / 2
+                        color: "#cba6f7"
+                        opacity: 0.4
+                        // some sobre a bola (contorno) — ali quem aparece é o anel radial
+                        visible: Math.abs(bx - win.ballCX) > win.ballRadius + 10
+                    }
+                }
+
+                // ── CAVA: anel radial em volta da bola (atrás dela) ──
+                Repeater {
+                    model: root.cavaLevels.length
+                    delegate: Rectangle {
+                        required property int index
+                        readonly property int n: root.cavaLevels.length
+                        readonly property real ang: index / Math.max(1, n) * 2 * Math.PI - Math.PI / 2
+                        readonly property real v: root.cavaLevels[index] ?? 0
+                        z: 0
+                        width: 3
+                        radius: 1.5
+                        height: Math.max(0, v) * win.cavaRadMax           // espeto a partir da borda da bola
+                        x: win.ballCX + win.ballRadius * Math.cos(ang) - width / 2
+                        y: win.ballCY + win.ballRadius * Math.sin(ang)
+                        transformOrigin: Item.Top
+                        rotation: 90 - ang * 180 / Math.PI                // aponta radialmente p/ fora
+                        color: "#cba6f7"
+                        opacity: 0.55
+                    }
+                }
+
                 // ── Pétalas (auto-organizadas; só visuais) ───────────
                 Repeater {
                     model: root.menuItems
@@ -217,7 +282,7 @@ Scope {
                 Rectangle {
                     z: 2
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                    height: 2
+                    height: 1
                     color: "#11111b"
                 }
 
