@@ -28,7 +28,7 @@ Item {
     x: ctx.ballCX + dist * Math.cos(angleRad) - width / 2
     y: ctx.ballCY - dist * Math.sin(angleRad) - height / 2
 
-    opacity: (ctx.open && !vanished && !ctx.layoutMode) ? 1.0 : 0.0
+    opacity: (ctx.open && !vanished && !ctx.layoutMode && !ctx.audioMode) ? 1.0 : 0.0
 
     Behavior on dist { NumberAnimation { duration: Config.petalDistAnim; easing.type: Easing.OutBack } }
     Behavior on opacity { NumberAnimation { duration: Config.petalOpacityAnim } }
@@ -86,9 +86,66 @@ Item {
                 g.closePath(); g.fill()
             }
         }
+
+        // ── Painel de áudio: 3 botões + divisórias (só na 5ª pétala) ──
+        Item {
+            visible: petal.modelData.audio ?? false
+            anchors.fill: parent
+            anchors.margins: Config.audioBtnMargin
+
+            // fundo do painel (um pouco mais escuro = clicável)
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Qt.darker(Config.petal, Config.audioBtnDarken)
+            }
+            // destaque da seção sob o cursor
+            Rectangle {
+                visible: petal.hovered && petal.ctx.audioSection >= 0
+                width: parent.width
+                height: parent.height / 3
+                y: (2 - petal.ctx.audioSection) * (parent.height / 3)   // sec2=topo … sec0=baixo
+                radius: 6
+                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
+            }
+            // divisórias entre os botões
+            Repeater {
+                model: 2
+                delegate: Rectangle {
+                    required property int index
+                    width: parent.width * 0.7
+                    height: 1.5
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: (index + 1) * (parent.height / 3) - height / 2
+                    color: Config.petalIcon
+                    opacity: 0.3
+                }
+            }
+            // ícones (i0=headphone topo, i1=mic, i2=config baixo)
+            Repeater {
+                model: 3
+                delegate: Text {
+                    required property int index
+                    readonly property bool muted: index === 0 ? AudioService.sinkMuted
+                                                : index === 1 ? AudioService.sourceMuted : false
+                    rotation: -petal.rotation
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
+                    font.family: Config.iconFont
+                    font.pixelSize: Config.audioIconSize
+                    color: Config.petalIcon
+                    opacity: muted ? 0.4 : 1.0
+                    text: index === 0 ? (muted ? Config.iconOutputMuted : Config.iconOutput)
+                        : index === 1 ? (muted ? Config.iconInputMuted : Config.iconInput)
+                        : Config.iconConfig
+                }
+            }
+        }
     }
 
+    // ── Pétala normal: ícone único ──
     Text {
+        visible: !(petal.modelData.audio ?? false)
         anchors.centerIn: parent
         rotation: -petal.rotation
         text: petal.index === 0 ? petal.ctx.currentLayoutSymbol : (petal.modelData.icon ?? "")
@@ -96,4 +153,5 @@ Item {
         font.bold: petal.index === 0
         color: Config.petalIcon
     }
+
 }

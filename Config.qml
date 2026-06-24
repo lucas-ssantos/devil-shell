@@ -49,6 +49,27 @@ Singleton {
     readonly property real cavaBarsOpacity: 0.5
     readonly property real cavaRingOpacity: 0.62
 
+    // ── Áudio (5ª pétala) ───────────────────────────────
+    readonly property string iconFont: "Symbols Nerd Font"   // fonte dos ícones (troque pela sua)
+    readonly property string iconOutput: ""            // volume (headphone/saída)
+    readonly property string iconOutputMuted: ""       // volume mudo
+    readonly property string iconInput: ""             // microfone (entrada)
+    readonly property string iconInputMuted: ""        // microfone mudo
+    readonly property string iconConfig: ""            // engrenagem (config)
+    readonly property int    audioIconSize: 17               // tamanho dos ícones (maiores)
+    readonly property real   audioBtnMargin: 3               // recuo do painel de botões
+    readonly property real   audioBtnDarken: 1.22            // fundo do botão (× mais escuro)
+    readonly property real   audioBtnHoverDarken: 1.5        // botão sob o cursor
+    readonly property color  audioMutedColor: "#f38ba8"
+    readonly property real   volStep: 0.05       // passo do scroll (5%)
+    readonly property real   sinkVolMax: 1.5     // headphone até 150%
+    readonly property real   sourceVolMax: 1.0   // microfone até 100%
+    readonly property real   audioSliderW: 150
+    readonly property real   audioSliderH: 22
+    readonly property color  audioSliderBg: "#313244"
+    readonly property color  audioSliderFill: "#cba6f7"
+    readonly property color  audioSliderText: "#cdd6f4"
+
     // ── Relógio ─────────────────────────────────────────
     readonly property string clockFormat: "d/M HH:mm"
 

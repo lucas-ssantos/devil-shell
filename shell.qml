@@ -19,7 +19,7 @@ Scope {
         { icon: "◆", label: "Item 2", command: [] },
         { icon: "●", label: "Item 3", command: [] },
         { icon: "▲", label: "Item 4", command: [] },
-        { icon: "■", label: "Item 5", command: [] }
+        { icon: "🔊", label: "Áudio", audio: true }   // 5ª = controle de áudio (3 seções)
     ]
 
     //  Opções de layout do Mango (symbol = sigla; name = comando do mmsg; label = nome).

@@ -53,10 +53,17 @@ PanelWindow {
     property int  hoverIndex: -1
     property int  selectedIndex: -1
     property bool layoutMode: false
+    property bool audioMode: false      // submenu de áudio (config) aberto
+    property int  audioSection: -1      // seção da pétala de áudio sob o cursor (0/1/2)
+    property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
     readonly property bool open: !dismissed && (pinned || hoverOpen)
+    readonly property int audioIndex: {
+        for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
+        return -1
+    }
     onHoverOpenChanged: if (!hoverOpen) dismissed = false
-    onOpenChanged: if (!open) { selectedIndex = -1; layoutMode = false }
+    onOpenChanged: if (!open) { selectedIndex = -1; layoutMode = false; audioMode = false }
 
     Timer { id: hoverCloseTimer; interval: Config.hoverCloseMs; onTriggered: win.hoverOpen = false }
     Timer { id: selectTimer; interval: Config.selectMs; onTriggered: { win.dismissed = true; win.pinned = false; win.selectedIndex = -1 } }
@@ -102,6 +109,26 @@ PanelWindow {
         return -1
     }
 
+    // ── Áudio (5ª pétala) ───────────────────────────────
+    // seção (0=config junto à bola, 1=mic, 2=headphone na ponta) sob o cursor, ou -1
+    function audioSectionAt(mx, my) {
+        if (petalAt(mx, my) !== audioIndex) return -1
+        const dx = mx - ballCX, dy = ballCY - my
+        const r = Math.sqrt(dx * dx + dy * dy)
+        const r0 = petalDist - petalH / 2, r1 = petalDist + petalH / 2
+        return Math.max(0, Math.min(2, Math.floor((r - r0) / (r1 - r0) * 3)))
+    }
+    // posição vertical de cada slider do submenu de áudio (0=headphone, 1=mic)
+    function audioPillY(i) {
+        return (ballCY - ballRadius - Config.layoutGap) - Config.audioSliderH / 2 - i * (Config.audioSliderH + 8)
+    }
+    function audioSliderAt(mx, my) {
+        for (let i = 0; i < 2; i++)
+            if (Math.abs(mx - ballCX) <= Config.audioSliderW / 2
+             && Math.abs(my - audioPillY(i)) <= Config.audioSliderH / 2) return i
+        return -1
+    }
+
     // ── Hit-test (tudo por posição do cursor) ───────────
     // pétalas em anel: 1ª em 180°, +30° por pétala, circulando toda a bola (+ scroll).
     // (0°=direita, 90°=topo, 180°=esquerda; o ícone fica sempre na vertical pela contra-rotação)
@@ -132,15 +159,23 @@ PanelWindow {
     function overBallAt(mx, my) { return Math.hypot(mx - ballCX, my - ballCY) <= ballRadius }
 
     function refreshHover() {
+        const mx = hoverMA.mouseX, my = hoverMA.mouseY
         if (!hoverMA.containsMouse) {
-            overBall = false; hoverIndex = -1
+            overBall = false; hoverIndex = -1; audioSection = -1; audioSliderHover = -1
         } else {
-            overBall = overBallAt(hoverMA.mouseX, hoverMA.mouseY)
-            hoverIndex = overBall ? -1
-                : (layoutMode ? layoutAt(hoverMA.mouseX, hoverMA.mouseY)
-                              : petalAt(hoverMA.mouseX, hoverMA.mouseY))
+            overBall = overBallAt(mx, my)
+            if (audioMode) {
+                hoverIndex = -1; audioSection = -1
+                audioSliderHover = overBall ? -1 : audioSliderAt(mx, my)
+            } else if (layoutMode) {
+                hoverIndex = overBall ? -1 : layoutAt(mx, my); audioSection = -1; audioSliderHover = -1
+            } else {
+                hoverIndex = overBall ? -1 : petalAt(mx, my)
+                audioSection = (hoverIndex === audioIndex) ? audioSectionAt(mx, my) : -1
+                audioSliderHover = -1
+            }
         }
-        if (overBall || hoverIndex !== -1) { hoverCloseTimer.stop(); hoverOpen = true }
+        if (overBall || hoverIndex !== -1 || audioSliderHover !== -1) { hoverCloseTimer.stop(); hoverOpen = true }
         else hoverCloseTimer.restart()
     }
 
@@ -166,6 +201,7 @@ PanelWindow {
     }
 
     LayoutMenu { ctx: win }                                 // submenu de layouts
+    AudioMenu { ctx: win }                                  // submenu de áudio (sliders)
 
     // barra fina no fundo (a bola se funde nela)
     Rectangle {
@@ -214,12 +250,13 @@ PanelWindow {
             }
             // 2) bola?
             if (win.overBallAt(mouseX, mouseY)) {
+                if (win.audioMode)  { win.audioMode = false; return }   // volta ao menu principal
                 if (win.layoutMode) { win.layoutMode = false; return }  // volta ao menu principal
                 if (win.pinned) { win.pinned = false; win.dismissed = true }
                 else            { win.pinned = true;  win.dismissed = false }
                 return
             }
-            // 3) submenu de layouts aberto -> escolher na lista
+            // 3) submenu de layouts -> escolher na lista
             if (win.layoutMode) {
                 const li = win.layoutAt(mouseX, mouseY)
                 if (li >= 0) {
@@ -230,10 +267,21 @@ PanelWindow {
                 }
                 return
             }
+            // 3b) submenu de áudio -> clique no slider não faz nada (scroll ajusta); fora recolhe
+            if (win.audioMode) {
+                if (win.audioSliderAt(mouseX, mouseY) < 0) win.pinned = false
+                return
+            }
             // 4) pétala?
             const pi = win.petalAt(mouseX, mouseY)
             if (pi >= 0) {
-                if (pi === 0) {
+                if (pi === win.audioIndex) {
+                    // 5ª pétala (áudio): seção define a ação
+                    const s = win.audioSectionAt(mouseX, mouseY)
+                    if (s === 2)      AudioService.toggleSinkMute()    // headphone (saída)
+                    else if (s === 1) AudioService.toggleSourceMute()  // microfone (entrada)
+                    else if (s === 0) win.audioMode = true             // config (abre sliders)
+                } else if (pi === 0) {
                     win.layoutMode = true   // 1ª pétala = abre o submenu de layouts
                 } else {
                     const cmd = win.menuItems[pi].command ?? []
@@ -255,7 +303,13 @@ PanelWindow {
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             onWheel: (event) => {
-                const dir = event.angleDelta.y > 0 ? -1 : 1
+                const dir = event.angleDelta.y > 0 ? -1 : 1   // cima = +
+                // submenu de áudio: scroll sobre um slider ajusta o volume
+                if (win.audioMode) {
+                    if (win.audioSliderHover === 0) AudioService.addSinkVolume(-dir * Config.volStep)
+                    else if (win.audioSliderHover === 1) AudioService.addSourceVolume(-dir * Config.volStep)
+                    return
+                }
                 // na região das pétalas (aberto, fora da bola) -> gira o anel
                 if (win.open && !win.overBall && !win.layoutMode) {
                     win.petalRotation += dir * Config.petalStepDeg
