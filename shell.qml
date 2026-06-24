@@ -216,6 +216,7 @@ Scope {
                     id: gothic
                     z: 2
                     anchors.fill: parent
+                    antialiasing: true
                     property real cy: win.ballCY      // repinta enquanto a bola sobe/desce
                     onCyChanged: requestPaint()
                     onWidthChanged: requestPaint()
@@ -232,8 +233,8 @@ Scope {
                         while (d >   Math.PI) d -= 2 * Math.PI
                         ctx.arc(C.x, C.y, r, a1, a2, d < 0)
                     }
-                    // um filete (s = +1 direito, -1 esquerdo)
-                    function lobe(ctx, s) {
+                    // adiciona o subpath de um filete (s = +1 direito, -1 esquerdo)
+                    function addLobe(ctx, s) {
                         const cx = win.ballCX, cyc = win.ballCY, R = win.ballRadius
                         const baseY = height, f = win.gothicR
                         const dyc = baseY - cyc
@@ -248,20 +249,21 @@ Scope {
                         const F  = { x: cx + s * xf,     y: baseY - f }   // centro do filete
                         const T  = { x: cx + s * k * xf, y: cyc + k * vy } // tangente no círculo
                         const C  = { x: cx, y: cyc }
-                        ctx.beginPath()
                         ctx.moveTo(P.x, P.y)
                         ctx.lineTo(BR.x, BR.y)
                         arcMinor(ctx, F, BR, T)   // filete côncavo (borda → círculo)
                         arcMinor(ctx, C, T, P)    // de volta pelo círculo até o cruzamento
                         ctx.closePath()
-                        ctx.fill()
                     }
                     onPaint: {
                         const ctx = getContext("2d")
                         ctx.reset()
                         ctx.fillStyle = "#11111b"
-                        lobe(ctx, 1)
-                        lobe(ctx, -1)
+                        // só os filetes; eles entram um pouco por baixo da bola (overlap)
+                        ctx.beginPath()
+                        addLobe(ctx, 1)
+                        addLobe(ctx, -1)
+                        ctx.fill()
                     }
                 }
 
@@ -269,12 +271,15 @@ Scope {
                 Rectangle {
                     id: ball
                     z: 3
-                    width: win.ballRadius * 2
+                    // ~2px maior que o raio usado pelos filetes: cobre a junção (overlap), sem emenda
+                    readonly property real r2: win.ballRadius + 2
+                    width: r2 * 2
                     height: width
                     radius: width / 2
-                    x: win.ballCX - win.ballRadius
-                    y: win.ballCY - win.ballRadius
+                    x: win.ballCX - r2
+                    y: win.ballCY - r2
                     color: "#11111b"
+                    antialiasing: true
                     border.width: 0
 
                     // número do workspace ativo no centro (o "contador")
