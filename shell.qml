@@ -53,7 +53,7 @@ Scope {
                 color: "transparent"
                 anchors { bottom: true; left: true; right: true }   // largura total -> barra atravessa a tela
                 exclusiveZone: 0
-                implicitHeight: 220
+                implicitHeight: 260
 
                 // ── Geometria do menu ──────────────────────────────
                 readonly property real ballRadius: 46
@@ -74,8 +74,8 @@ Scope {
                 readonly property real menuHalf: hitOuterR + 16                  // meia-largura interativa qdo aberto
                 readonly property real dotRingR: ballRadius * 0.62
                 readonly property real gothicR: 32   // raio do "canto gótico" (filete bola ↔ barra) — mais presença
-                readonly property real cavaMaxH: 120 // altura máx das barras lineares do cava
-                readonly property real cavaRadMax: 38 // comprimento máx dos espetos radiais do cava
+                readonly property real cavaMaxH: 180 // altura máx das barras lineares do cava
+                readonly property real cavaRadMax: 55 // comprimento máx dos espetos radiais do cava
 
                 // ── Estado de abertura ──────────────────────────────
                 property bool pinned: false        // travado por clique na bola
@@ -194,9 +194,13 @@ Scope {
                         x: bx - width / 2
                         height: Math.max(0, v) * win.cavaMaxH
                         y: win.height - height
-                        radius: width / 2
+                        // topo arredondado, base reta -> funde na barra (sem cara de pílula)
+                        topLeftRadius: width / 2
+                        topRightRadius: width / 2
+                        bottomLeftRadius: 0
+                        bottomRightRadius: 0
                         color: "#cba6f7"
-                        opacity: 0.4
+                        opacity: 0.5
                         // some sobre a bola (contorno) — ali quem aparece é o anel radial
                         visible: Math.abs(bx - win.ballCX) > win.ballRadius + 10
                     }
@@ -210,7 +214,7 @@ Scope {
                         readonly property int n: root.cavaLevels.length
                         readonly property real ang: index / Math.max(1, n) * 2 * Math.PI - Math.PI / 2
                         readonly property real v: root.cavaLevels[index] ?? 0
-                        z: 0
+                        z: 2.5                                            // acima da barra/filetes, atrás da bola
                         width: 3
                         radius: 1.5
                         height: Math.max(0, v) * win.cavaRadMax           // espeto a partir da borda da bola
@@ -219,7 +223,7 @@ Scope {
                         transformOrigin: Item.Top
                         rotation: 90 - ang * 180 / Math.PI                // aponta radialmente p/ fora
                         color: "#cba6f7"
-                        opacity: 0.55
+                        opacity: 0.62
                     }
                 }
 
