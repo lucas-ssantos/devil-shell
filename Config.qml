@@ -27,6 +27,7 @@ Singleton {
     readonly property real petalGap: 10        // folga bola → pétala
     readonly property real petalShrink: 0.8    // escala das não-hover
     readonly property real petalHoverScale: 1.2
+    readonly property real petalHoverExtend: 5 // quanto a pétala em hover estende p/ a bola (px)
     readonly property real petalFlare: 8       // tamanho dos cantos góticos da pétala
     readonly property real petalStartDeg: 180  // ângulo da 1ª pétala (0=dir, 90=topo, 180=esq)
     readonly property real petalStepDeg: 30    // passo entre pétalas (e do scroll)

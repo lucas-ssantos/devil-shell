@@ -36,6 +36,9 @@ Item {
     // corpo da pétala (cresce no hover; base fica reta quando há hover ativo)
     Rectangle {
         anchors.fill: parent
+        // em hover, estende a base ~5px em direção à bola (conecta melhor)
+        anchors.bottomMargin: petal.hovered ? -Config.petalHoverExtend : 0
+        Behavior on anchors.bottomMargin { NumberAnimation { duration: Config.petalScaleAnim } }
         topLeftRadius: width / 2
         topRightRadius: width / 2
         bottomLeftRadius: (petal.ctx.hoverIndex !== -1) ? 0 : width / 2
