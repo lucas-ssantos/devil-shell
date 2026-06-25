@@ -101,10 +101,10 @@ Item {
             }
             // destaque da seção sob o cursor
             Rectangle {
-                visible: petal.hovered && petal.ctx.audioSection >= 0
+                visible: petal.hovered && petal.ctx.petalSection >= 0
                 width: parent.width
                 height: parent.height / 3
-                y: (2 - petal.ctx.audioSection) * (parent.height / 3)   // sec2=topo … sec0=baixo
+                y: (2 - petal.ctx.petalSection) * (parent.height / 3)   // sec2=topo … sec0=baixo
                 radius: 6
                 color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
             }
@@ -141,11 +141,58 @@ Item {
                 }
             }
         }
+
+        // ── Painel de captura: 2 botões (só na 4ª pétala) ──
+        Item {
+            visible: petal.modelData.capture ?? false
+            anchors.fill: parent
+            anchors.margins: Config.audioBtnMargin
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Qt.darker(Config.petal, Config.audioBtnDarken)
+            }
+            // destaque (sec1=topo, sec0=baixo)
+            Rectangle {
+                visible: petal.hovered && petal.ctx.petalSection >= 0
+                width: parent.width
+                height: parent.height / 2
+                y: (1 - petal.ctx.petalSection) * (parent.height / 2)
+                radius: 6
+                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
+            }
+            // divisória
+            Rectangle {
+                width: parent.width * 0.7
+                height: 1.5
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: parent.height / 2 - height / 2
+                color: Config.petalIcon
+                opacity: 0.3
+            }
+            // ícones (i0=print topo, i1=gravar baixo)
+            Repeater {
+                model: 2
+                delegate: Text {
+                    required property int index
+                    readonly property bool rec: CaptureService.recording
+                    rotation: -petal.rotation
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: index * (parent.height / 2) + (parent.height / 2 - height) / 2
+                    font.family: Config.iconFont
+                    font.pixelSize: Config.audioIconSize
+                    color: (index === 1 && rec) ? Config.captureRecColor : Config.petalIcon
+                    text: index === 0 ? Config.iconScreenshot
+                                      : (rec ? Config.iconRecording : Config.iconRecord)
+                }
+            }
+        }
     }
 
     // ── Pétala normal: ícone único ──
     Text {
-        visible: !(petal.modelData.audio ?? false)
+        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.capture ?? false)
         anchors.centerIn: parent
         rotation: -petal.rotation
         text: petal.index === 0 ? petal.ctx.currentLayoutSymbol : (petal.modelData.icon ?? "")

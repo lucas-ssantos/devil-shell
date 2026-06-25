@@ -70,6 +70,12 @@ Singleton {
     readonly property color  audioSliderFill: "#cba6f7"
     readonly property color  audioSliderText: "#cdd6f4"
 
+    // ── Captura (4ª pétala) ─────────────────────────────
+    readonly property string iconScreenshot: ""   // câmera (print)
+    readonly property string iconRecord: ""       // filmadora (gravar)
+    readonly property string iconRecording: ""    // parar (enquanto grava)
+    readonly property color  captureRecColor: "#f38ba8" // vermelho enquanto grava
+
     // ── Relógio ─────────────────────────────────────────
     readonly property string clockFormat: "d/M HH:mm"
 

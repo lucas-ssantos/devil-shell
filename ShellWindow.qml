@@ -54,12 +54,16 @@ PanelWindow {
     property int  selectedIndex: -1
     property bool layoutMode: false
     property bool audioMode: false      // submenu de áudio (config) aberto
-    property int  audioSection: -1      // seção da pétala de áudio sob o cursor (0/1/2)
+    property int  petalSection: -1      // seção da pétala multi-botão sob o cursor
     property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
     readonly property bool open: !dismissed && (pinned || hoverOpen)
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
+        return -1
+    }
+    readonly property int captureIndex: {
+        for (let i = 0; i < menuItems.length; i++) if (menuItems[i].capture) return i
         return -1
     }
     onHoverOpenChanged: if (!hoverOpen) dismissed = false
@@ -109,14 +113,17 @@ PanelWindow {
         return -1
     }
 
-    // ── Áudio (5ª pétala) ───────────────────────────────
-    // seção (0=config junto à bola, 1=mic, 2=headphone na ponta) sob o cursor, ou -1
-    function audioSectionAt(mx, my) {
-        if (petalAt(mx, my) !== audioIndex) return -1
+    // ── Pétalas multi-botão (áudio/captura) ─────────────
+    // seção (0 = junto à bola … n-1 = na ponta) sob o cursor, dividindo a pétala em n
+    function petalSectionAt(mx, my, n) {
         const dx = mx - ballCX, dy = ballCY - my
         const r = Math.sqrt(dx * dx + dy * dy)
         const r0 = petalDist - petalH / 2, r1 = petalDist + petalH / 2
-        return Math.max(0, Math.min(2, Math.floor((r - r0) / (r1 - r0) * 3)))
+        return Math.max(0, Math.min(n - 1, Math.floor((r - r0) / (r1 - r0) * n)))
+    }
+    // nº de seções da pétala i (áudio=3, captura=2, demais=0)
+    function petalSections(i) {
+        return i === audioIndex ? 3 : i === captureIndex ? 2 : 0
     }
     // posição vertical de cada slider do submenu de áudio (0=headphone, 1=mic)
     function audioPillY(i) {
@@ -157,21 +164,24 @@ PanelWindow {
         return -1
     }
     function overBallAt(mx, my) { return Math.hypot(mx - ballCX, my - ballCY) <= ballRadius }
+    // fecha o menu (usado antes de capturas, p/ não roubar o arrasto do slurp)
+    function closeMenu() { dismissed = true; pinned = false }
 
     function refreshHover() {
         const mx = hoverMA.mouseX, my = hoverMA.mouseY
         if (!hoverMA.containsMouse) {
-            overBall = false; hoverIndex = -1; audioSection = -1; audioSliderHover = -1
+            overBall = false; hoverIndex = -1; petalSection = -1; audioSliderHover = -1
         } else {
             overBall = overBallAt(mx, my)
             if (audioMode) {
-                hoverIndex = -1; audioSection = -1
+                hoverIndex = -1; petalSection = -1
                 audioSliderHover = overBall ? -1 : audioSliderAt(mx, my)
             } else if (layoutMode) {
-                hoverIndex = overBall ? -1 : layoutAt(mx, my); audioSection = -1; audioSliderHover = -1
+                hoverIndex = overBall ? -1 : layoutAt(mx, my); petalSection = -1; audioSliderHover = -1
             } else {
                 hoverIndex = overBall ? -1 : petalAt(mx, my)
-                audioSection = (hoverIndex === audioIndex) ? audioSectionAt(mx, my) : -1
+                const ns = petalSections(hoverIndex)
+                petalSection = ns > 0 ? petalSectionAt(mx, my, ns) : -1
                 audioSliderHover = -1
             }
         }
@@ -277,10 +287,21 @@ PanelWindow {
             if (pi >= 0) {
                 if (pi === win.audioIndex) {
                     // 5ª pétala (áudio): seção define a ação
-                    const s = win.audioSectionAt(mouseX, mouseY)
+                    const s = win.petalSectionAt(mouseX, mouseY, 3)
                     if (s === 2)      AudioService.toggleSinkMute()    // headphone (saída)
                     else if (s === 1) AudioService.toggleSourceMute()  // microfone (entrada)
                     else if (s === 0) win.audioMode = true             // config (abre sliders)
+                } else if (pi === win.captureIndex) {
+                    // 4ª pétala (captura): topo = print, base = gravar/parar
+                    const s = win.petalSectionAt(mouseX, mouseY, 2)
+                    if (s === 1) {
+                        win.closeMenu(); CaptureService.screenshot()       // print (fecha o menu p/ não atrapalhar)
+                    } else if (CaptureService.recording) {
+                        CaptureService.stopRecording()                     // parar gravação
+                    } else {
+                        // grava este monitor inteiro (a tela é escolhida por qual bola se clica)
+                        win.closeMenu(); CaptureService.startRecording(win.modelData.name)
+                    }
                 } else if (pi === 0) {
                     win.layoutMode = true   // 1ª pétala = abre o submenu de layouts
                 } else {

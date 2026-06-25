@@ -18,8 +18,8 @@ Scope {
         { icon: "⬡", label: "Layout", command: [] },
         { icon: "◆", label: "Item 2", command: [] },
         { icon: "●", label: "Item 3", command: [] },
-        { icon: "▲", label: "Item 4", command: [] },
-        { icon: "🔊", label: "Áudio", audio: true }   // 5ª = controle de áudio (3 seções)
+        { icon: "▲", label: "Captura", capture: true }, // 4ª = print + gravação (2 seções)
+        { icon: "🔊", label: "Áudio", audio: true }      // 5ª = controle de áudio (3 seções)
     ]
 
     //  Opções de layout do Mango (symbol = sigla; name = comando do mmsg; label = nome).
