@@ -21,7 +21,7 @@ Scope {
         { icon: "▲", label: "Item 4", command: [] },
         { icon: "📷", label: "Captura", capture: true }, // 5ª = print + gravação (2 seções)
         { icon: "🔊", label: "Áudio", audio: true },      // 6ª = controle de áudio (3 seções)
-        { icon: "■", label: "Item 7", command: [] }
+        { icon: "󰀻", label: "Bandeja", tray: true }       // 7ª = system tray (Discord, Steam…)
     ]
 
     //  Opções de layout do Mango (symbol = sigla; name = comando do mmsg; label = nome).

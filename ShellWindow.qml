@@ -1,5 +1,6 @@
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.SystemTray
 import QtQuick
 
 // Janela do shell (camada de cima): bola/menu, pétalas, submenu de layouts,
@@ -66,6 +67,10 @@ PanelWindow {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].capture) return i
         return -1
     }
+    readonly property int trayIndex: {
+        for (let i = 0; i < menuItems.length; i++) if (menuItems[i].tray) return i
+        return -1
+    }
     onHoverOpenChanged: if (!hoverOpen) dismissed = false
     onOpenChanged: if (!open) { selectedIndex = -1; layoutMode = false; audioMode = false }
 
@@ -98,6 +103,26 @@ PanelWindow {
         ? (hoverIndex >= 0 ? (layoutItems[hoverIndex].label ?? "") : currentLayoutName)
         : currentLayoutName
 
+    // Troca para o workspace `n` NESTE monitor. O `view` do mango age no monitor
+    // FOCADO, então, se este monitor não estiver focado, focamos ele antes (direção
+    // calculada pela posição do monitor focado vs. este — vale p/ 2 monitores).
+    function viewTagHere(n) {
+        const me = monData
+        if (!me) return
+        if (me.active) {                                   // já focado -> troca direto
+            proc.exec(["mmsg", "dispatch", "view," + n + ",0"])
+            return
+        }
+        const list = mango ? (mango.monitors ?? []) : []
+        const cur = list.find(m => m.active)
+        let dir = "right"
+        if (cur) {
+            if ((me.x ?? 0) !== (cur.x ?? 0))      dir = (me.x > cur.x) ? "right" : "left"
+            else if ((me.y ?? 0) !== (cur.y ?? 0)) dir = (me.y > cur.y) ? "down" : "up"
+        }
+        proc.exec(["sh", "-c", "mmsg dispatch focusmon," + dir + "; mmsg dispatch view," + n + ",0"])
+    }
+
     // ── Submenu de layouts: posição de cada opção (lista curvada) ──
     function layoutPillX(i) {
         const t = (i + 0.5) / layoutItems.length
@@ -122,9 +147,12 @@ PanelWindow {
         const r0 = petalDist - petalH / 2, r1 = petalDist + petalH / 2
         return Math.max(0, Math.min(n - 1, Math.floor((r - r0) / (r1 - r0) * n)))
     }
-    // nº de seções da pétala i (áudio=3, captura=2, demais=0)
+    // nº de seções da pétala i (áudio=3, captura=2, bandeja=nº de apps, demais=0)
     function petalSections(i) {
-        return i === audioIndex ? 3 : i === captureIndex ? 2 : 0
+        if (i === audioIndex) return 3
+        if (i === captureIndex) return 2
+        if (i === trayIndex) return SystemTray.items.values.length
+        return 0
     }
     // posição vertical de cada slider do submenu de áudio (0=headphone, 1=mic)
     function audioPillY(i) {
@@ -257,17 +285,29 @@ PanelWindow {
         anchors.fill: parent
         z: 10
         hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
 
         onEntered: win.refreshHover()
         onPositionChanged: win.refreshHover()
         onExited: win.refreshHover()
 
-        onClicked: {
+        onClicked: (mouse) => {
+            // Botão direito: só age na pétala da bandeja -> abre o menu do app (sair/fechar etc)
+            if (mouse.button === Qt.RightButton) {
+                if (win.petalAt(mouseX, mouseY) === win.trayIndex) {
+                    const items = SystemTray.items.values
+                    if (items.length > 0) {
+                        const it = items[win.petalSectionAt(mouseX, mouseY, items.length)]
+                        if (it && it.hasMenu) it.display(win, Math.round(mouseX), Math.round(mouseY))
+                    }
+                }
+                return
+            }
+            // ===== a partir daqui: botão esquerdo (comportamento normal) =====
             // 1) ponto de workspace?
             const di = win.dotAt(mouseX, mouseY)
             if (di >= 0) {
-                proc.exec(["mmsg", "dispatch", "view," + win.tags[di].index + ",0"])
+                win.viewTagHere(win.tags[di].index)   // troca no monitor DESTA bola
                 return
             }
             // 2) bola?
@@ -314,6 +354,13 @@ PanelWindow {
                         // grava este monitor inteiro (a tela é escolhida por qual bola se clica)
                         win.closeMenu(); CaptureService.startRecording(win.modelData.name)
                     }
+                } else if (pi === win.trayIndex) {
+                    // 7ª pétala (bandeja): esquerdo foca/abre a janela do app (direito = menu)
+                    const items = SystemTray.items.values
+                    if (items.length > 0) {
+                        const it = items[win.petalSectionAt(mouseX, mouseY, items.length)]
+                        if (it) it.activate()
+                    }
                 } else if (pi === 0) {
                     win.layoutMode = true   // 1ª pétala = abre o submenu de layouts
                 } else {
@@ -348,13 +395,13 @@ PanelWindow {
                     win.petalRotation += dir * Config.petalStepDeg
                     return
                 }
-                // sobre a bola (ou fechado) -> troca de workspace
+                // sobre a bola (ou fechado) -> troca de workspace DESTE monitor
                 const total = win.tags.length
                 if (total === 0) return
                 const cur = win.activeTag > 0 ? win.activeTag : 1
                 const next = ((cur - 1 + dir + total) % total) + 1
                 if (next !== cur)
-                    proc.exec(["mmsg", "dispatch", "view," + next + ",0"])
+                    win.viewTagHere(next)
             }
         }
     }
