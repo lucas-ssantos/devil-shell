@@ -248,6 +248,10 @@ Item {
                     height: trayPanel.slot
                     y: (trayPanel.count - 1 - index) * trayPanel.slot
                     Image {
+                        id: trayImg
+                        // só aparece quando carregou de fato (evita o ícone de "imagem quebrada"
+                        // de apps com SNI torto, ex. pasystray, que erram no IconName)
+                        visible: status === Image.Ready
                         anchors.centerIn: parent
                         rotation: -petal.rotation
                         source: trayCell.modelData.icon
@@ -257,6 +261,16 @@ Item {
                         height: Config.trayIconSize
                         fillMode: Image.PreserveAspectFit
                         smooth: true
+                    }
+                    // fallback: inicial do app quando o ícone não carrega
+                    Text {
+                        visible: trayImg.status !== Image.Ready
+                        anchors.centerIn: parent
+                        rotation: -petal.rotation
+                        text: (trayCell.modelData.title || trayCell.modelData.id || "?").charAt(0).toUpperCase()
+                        font.pixelSize: Config.trayIconSize - 2
+                        font.bold: true
+                        color: Config.petalIcon
                     }
                 }
             }
