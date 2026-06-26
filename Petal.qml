@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Services.SystemTray
 
 // Uma pétala do menu radial (visual). Lê o estado do controlador `ctx` e os
 // valores customizáveis de `Config`. A 1ª pétala (index 0) mostra a sigla do
@@ -188,11 +189,83 @@ Item {
                 }
             }
         }
+
+        // ── Painel da bandeja (system tray): 1 seção por app (só na 7ª pétala) ──
+        Item {
+            id: trayPanel
+            visible: petal.modelData.tray ?? false
+            anchors.fill: parent
+            anchors.margins: Config.audioBtnMargin
+            readonly property int count: SystemTray.items.values.length
+            readonly property real slot: height / Math.max(1, count)
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Qt.darker(Config.petal, Config.audioBtnDarken)
+            }
+            // destaque da seção (app) sob o cursor — seção 0 = junto à bola (baixo)
+            Rectangle {
+                visible: petal.hovered && petal.ctx.petalSection >= 0 && trayPanel.count > 0
+                width: parent.width
+                height: trayPanel.slot
+                y: (trayPanel.count - 1 - petal.ctx.petalSection) * trayPanel.slot
+                radius: 6
+                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
+            }
+            // divisórias entre os apps
+            Repeater {
+                model: Math.max(0, trayPanel.count - 1)
+                delegate: Rectangle {
+                    required property int index
+                    width: parent.width * 0.7
+                    height: 1.5
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: (index + 1) * trayPanel.slot - height / 2
+                    color: Config.petalIcon
+                    opacity: 0.3
+                }
+            }
+            // ícone genérico quando não há nenhum app na bandeja
+            Text {
+                visible: trayPanel.count === 0
+                anchors.centerIn: parent
+                rotation: -petal.rotation
+                text: Config.iconTray
+                font.family: Config.iconFont
+                font.pixelSize: Config.audioIconSize
+                color: Config.petalIcon
+                opacity: 0.5
+            }
+            // ícones dos apps (item k = seção k; seção 0 junto à bola = embaixo)
+            Repeater {
+                model: SystemTray.items
+                delegate: Item {
+                    id: trayCell
+                    required property var modelData
+                    required property int index
+                    width: trayPanel.width
+                    height: trayPanel.slot
+                    y: (trayPanel.count - 1 - index) * trayPanel.slot
+                    Image {
+                        anchors.centerIn: parent
+                        rotation: -petal.rotation
+                        source: trayCell.modelData.icon
+                        sourceSize.width: Config.trayIconSize
+                        sourceSize.height: Config.trayIconSize
+                        width: Config.trayIconSize
+                        height: Config.trayIconSize
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                    }
+                }
+            }
+        }
     }
 
     // ── Pétala normal: ícone único ──
     Text {
-        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.capture ?? false)
+        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.capture ?? false) && !(petal.modelData.tray ?? false)
         anchors.centerIn: parent
         rotation: -petal.rotation
         text: petal.index === 0 ? petal.ctx.currentLayoutSymbol : (petal.modelData.icon ?? "")

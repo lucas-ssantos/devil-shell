@@ -76,6 +76,10 @@ Singleton {
     readonly property string iconRecording: ""    // parar (enquanto grava)
     readonly property color  captureRecColor: "#f38ba8" // vermelho enquanto grava
 
+    // ── Bandeja / system tray (7ª pétala) ───────────────
+    readonly property string iconTray: "󰀻"       // ícone genérico quando a bandeja está vazia (nf-md-apps)
+    readonly property int    trayIconSize: 16     // tamanho dos ícones dos apps na pétala
+
     // ── Relógio (data à esquerda da bola, hora à direita) ──
     readonly property string dateFormat: "d/M"
     readonly property string timeFormat: "HH:mm"
