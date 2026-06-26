@@ -66,6 +66,7 @@ Singleton {
     readonly property real   sourceVolMax: 1.0   // microfone até 100%
     readonly property real   audioSliderW: 150
     readonly property real   audioSliderH: 22
+    readonly property real   audioDevW: 280      // largura do seletor de dispositivos (direito no áudio)
     readonly property color  audioSliderBg: Theme.surface0
     readonly property color  audioSliderFill: Theme.mauve
     readonly property color  audioSliderText: Theme.text

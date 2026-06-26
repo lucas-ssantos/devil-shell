@@ -12,6 +12,8 @@ Singleton {
 
     // mantém os nós "vivos" (necessário p/ ler/alterar audio.volume / muted)
     PwObjectTracker { objects: [Pipewire.defaultAudioSink, Pipewire.defaultAudioSource] }
+    // mantém todos os nós vivos p/ o seletor de dispositivos ler description/name/isSink
+    PwObjectTracker { objects: Pipewire.nodes.values }
 
     readonly property real sinkVolume:   (sink && sink.audio)     ? sink.audio.volume   : 0
     readonly property bool sinkMuted:     (sink && sink.audio)     ? sink.audio.muted    : true

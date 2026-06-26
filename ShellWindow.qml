@@ -58,8 +58,8 @@ PanelWindow {
     property int  petalSection: -1      // seção da pétala multi-botão sob o cursor
     property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
-    // a bola fica aberta tb enquanto o menu do tray estiver visível (não recolher sozinha)
-    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible)
+    // a bola fica aberta tb enquanto um popup (tray/áudio) estiver visível (não recolher sozinha)
+    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible)
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
         return -1
@@ -268,6 +268,9 @@ PanelWindow {
     // menu estilizado do item da bandeja (system tray), aberto no clique direito
     TrayMenu { id: trayMenu; ctx: win }
 
+    // seletor de dispositivo de áudio (direito no headphone/mic da pétala de áudio)
+    AudioDevices { id: audioDevices; ctx: win }
+
     // ── Máscara de input ────────────────────────────────
     //  Fechado: só a bola é clicável. Aberto: só a região central (resto = click-through).
     mask: Region {
@@ -339,9 +342,11 @@ PanelWindow {
         onExited: win.refreshHover()
 
         onClicked: (mouse) => {
-            // Botão direito: só age na pétala da bandeja -> abre o menu do app (sair/fechar etc)
+            // Botão direito: bandeja -> menu do app; áudio -> seletor de dispositivo
             if (mouse.button === Qt.RightButton) {
-                if (win.petalAt(mouseX, mouseY) === win.trayIndex) {
+                if (win.layoutMode || win.audioMode) return   // ignora durante submenus
+                const rpi = win.petalAt(mouseX, mouseY)
+                if (rpi === win.trayIndex) {
                     if (trayMenu.visible) { trayMenu.visible = false; return }   // direito de novo fecha
                     const items = SystemTray.items.values
                     const s = items.length > 0 ? win.petalSectionAt(mouseX, mouseY, items.length) : -1
@@ -350,6 +355,12 @@ PanelWindow {
                         win.dismissed = false                                   // garante a bola junto do menu
                         trayMenu.openAt(it, Math.round(mouseX), Math.round(mouseY))
                     }
+                } else if (rpi === win.audioIndex) {
+                    if (audioDevices.visible) { audioDevices.visible = false; return }  // direito de novo fecha
+                    const s = win.petalSectionAt(mouseX, mouseY, 3)
+                    win.dismissed = false
+                    if (s === 2)      audioDevices.openAt("sink",   Math.round(mouseX), Math.round(mouseY))  // headphone -> saídas
+                    else if (s === 1) audioDevices.openAt("source", Math.round(mouseX), Math.round(mouseY))  // mic -> entradas
                 }
                 return
             }
@@ -362,7 +373,10 @@ PanelWindow {
             }
             // 2) bola?
             if (win.overBallAt(mouseX, mouseY)) {
-                if (trayMenu.visible) { trayMenu.visible = false; win.pinned = false; win.dismissed = true; return }  // fecha menu + bola
+                if (trayMenu.visible || audioDevices.visible) {   // fecha popup + bola
+                    trayMenu.visible = false; audioDevices.visible = false
+                    win.pinned = false; win.dismissed = true; return
+                }
                 if (win.audioMode)  { win.audioMode = false; return }   // volta ao menu principal
                 if (win.layoutMode) { win.layoutMode = false; return }  // volta ao menu principal
                 if (win.pinned) { win.pinned = false; win.dismissed = true }
@@ -422,8 +436,9 @@ PanelWindow {
                 }
                 return
             }
-            // 5) fora -> recolhe (e fecha o menu do tray, se aberto)
+            // 5) fora -> recolhe (e fecha os popups, se abertos)
             trayMenu.visible = false
+            audioDevices.visible = false
             win.pinned = false
         }
     }
