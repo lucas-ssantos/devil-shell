@@ -103,6 +103,12 @@ PopupWindow {
         radius: Config.trayMenuRadius
         border.color: Config.trayMenuBorder
         border.width: 1
+        // animação de entrada: aparece crescendo a partir da base (abre pra cima)
+        opacity: root.visible ? 1 : 0
+        scale: root.visible ? 1 : 0.9
+        transformOrigin: Item.Bottom
+        Behavior on opacity { NumberAnimation { duration: Config.trayMenuAnim; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Config.trayMenuAnim; easing.type: Easing.OutCubic } }
 
         Column {
             id: col

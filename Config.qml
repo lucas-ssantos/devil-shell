@@ -94,7 +94,30 @@ Singleton {
     readonly property real   trayMenuSepH: 9      // altura da faixa do separador
     readonly property int    trayMenuTextSize: 13
     readonly property int    trayMenuIconSize: 16 // ícone dentro do menu
-    readonly property real   trayMenuGap: 23      // folga acima da pétala (o menu abre pra cima)
+    readonly property real   trayMenuGap: 21      // folga acima da pétala (o menu abre pra cima)
+    readonly property int    trayMenuAnim: 140    // duração da animação de entrada do menu (ms)
+
+    // ── Notificações (topo-centro da tela) ──────────────
+    readonly property real   notifWidth: 360       // largura do toast
+    readonly property real   notifTopMargin: 12    // folga do topo da tela
+    readonly property real   notifSpacing: 8       // espaço entre toasts
+    readonly property real   notifPad: 12          // recuo interno do card
+    readonly property real   notifRadius: 14
+    readonly property int    notifTimeout: 5000    // auto-dismiss (ms); urgência crítica não some
+    readonly property int    notifAnim: 160        // animação de entrada do toast (ms)
+    readonly property real   notifIconSize: 38     // ícone do app no toast
+    readonly property int    notifAppSize: 11      // tamanho do nome do app
+    readonly property int    notifSummarySize: 13  // título (negrito)
+    readonly property int    notifBodySize: 12     // corpo
+    readonly property int    notifBodyMaxLines: 6  // limite de linhas do corpo
+    readonly property color  notifBg: "#1e1e2e"
+    readonly property color  notifBorder: "#313244"
+    readonly property color  notifAppText: "#a6adc8"
+    readonly property color  notifSummary: "#cdd6f4"
+    readonly property color  notifBody: "#bac2de"
+    readonly property color  notifLow: "#6c7086"      // faixa de urgência baixa
+    readonly property color  notifNormal: "#cba6f7"   // normal (acento)
+    readonly property color  notifCritical: "#f38ba8" // crítica (vermelho)
 
     // ── Relógio (data à esquerda da bola, hora à direita) ──
     readonly property string dateFormat: "d/M"

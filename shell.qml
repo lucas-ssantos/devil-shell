@@ -43,6 +43,9 @@ Scope {
         { symbol: "VG", name: "vertical_grid",     label: "Vertical Grid" }
     ]
 
+    // ── Notificações: uma única janela no topo-centro do monitor focado ──
+    NotificationWindow { mango: mangoSvc }
+
     // ── Uma instância por monitor: janela do cava (camada de baixo) + shell (camada de cima) ──
     Variants {
         model: Quickshell.screens
