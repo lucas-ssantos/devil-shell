@@ -44,10 +44,14 @@ Singleton {
 
     // ── Cava ────────────────────────────────────────────
     readonly property real cavaMaxH: 180       // altura máx das barras lineares
-    readonly property real cavaRadMax: 55      // comprimento máx dos espetos radiais
+    readonly property real cavaRadMax: 70      // comprimento máx dos espetos radiais (círculo)
     readonly property real cavaBarFactor: 0.6  // largura da barra (× slot)
     readonly property real cavaBarsOpacity: 0.5
-    readonly property real cavaRingOpacity: 0.62
+    readonly property real cavaRingOpacity: 0.85
+    // gradiente radial do círculo (Cavasik): base interna → meio → pontas dos picos
+    readonly property color cavaColor1: Theme.blue   // interno (base do espectro)
+    readonly property color cavaColor2: Theme.red    // meio
+    readonly property color cavaColor3: Theme.green  // pontas (picos altos)
 
     // ── Áudio (5ª pétala) ───────────────────────────────
     readonly property string iconFont: "Symbols Nerd Font"   // fonte dos ícones (troque pela sua)

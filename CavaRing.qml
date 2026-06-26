@@ -1,7 +1,9 @@
 import QtQuick
 
-// CAVA estilo Cavasik (modo CÍRCULO): curva fechada suave ao redor da bola, raio
-// modulado pelo espectro, preenchida (blob pulsante atrás da bola) + contorno fino.
+// CAVA estilo Cavasik (modo CÍRCULO): espectro RADIAL com espetos ao redor da bola.
+// O espectro é espelhado (simétrico, com o grave no topo) e preenchido do centro até
+// os picos, com gradiente radial (cavaColor1 base → cavaColor2 → cavaColor3 pontas).
+// A própria bola (opaca, à frente) tampa o centro = o "furo" do círculo.
 Item {
     id: ring
     property var ctx
@@ -13,7 +15,7 @@ Item {
     readonly property real rMax: ctx ? ctx.cavaRadMax : 55
     readonly property real side: 2 * (r0 + rMax) + 8
 
-    z: 2.5                                   // atrás da bola, à frente da barra/filetes
+    z: 2.5                                    // atrás da bola (z 3), à frente da barra/filetes
     x: cx - side / 2
     y: cy - side / 2
     width: side
@@ -27,35 +29,36 @@ Item {
         onPaint: {
             const g = getContext("2d")
             g.reset()
-            const lv = ring.levels
-            const n = lv ? lv.length : 0
-            if (n < 3) return
+            const base = ring.levels
+            const bn = base ? base.length : 0
+            if (bn < 2) return
             const ccx = width / 2, ccy = height / 2
+            const r0 = ring.r0, rMax = ring.rMax
 
-            // pontos ao redor: raio = r0 + nível*rMax
-            const pxs = [], pys = []
-            for (let i = 0; i < n; i++) {
-                const ang = i / n * 2 * Math.PI - Math.PI / 2
-                const rr = ring.r0 + Math.max(0, lv[i] ?? 0) * ring.rMax
-                pxs.push(ccx + rr * Math.cos(ang))
-                pys.push(ccy + rr * Math.sin(ang))
-            }
+            // espelha p/ ficar simétrico (grave no topo): [níveis..., níveis invertidos]
+            const lv = base.concat(base.slice().reverse())
+            const m = lv.length
 
-            // curva FECHADA suave (midpoint quad ao longo do laço)
+            // polígono dos picos (espetos): raio = r0 + nível*rMax, fechado
             g.beginPath()
-            g.moveTo((pxs[n - 1] + pxs[0]) / 2, (pys[n - 1] + pys[0]) / 2)
-            for (let i = 0; i < n; i++) {
-                const nxt = (i + 1) % n
-                g.quadraticCurveTo(pxs[i], pys[i], (pxs[i] + pxs[nxt]) / 2, (pys[i] + pys[nxt]) / 2)
+            for (let k = 0; k < m; k++) {
+                const ang = -Math.PI / 2 + k / m * 2 * Math.PI
+                const rr = r0 + Math.max(0, lv[k]) * rMax
+                const x = ccx + rr * Math.cos(ang)
+                const y = ccy + rr * Math.sin(ang)
+                if (k === 0) g.moveTo(x, y); else g.lineTo(x, y)
             }
             g.closePath()
 
-            const a = Config.accent
-            g.fillStyle = Qt.rgba(a.r, a.g, a.b, Config.cavaRingOpacity)
+            // gradiente radial (a parte < r0 fica sob a bola)
+            const c1 = Config.cavaColor1, c2 = Config.cavaColor2, c3 = Config.cavaColor3
+            const op = Config.cavaRingOpacity
+            const grad = g.createRadialGradient(ccx, ccy, r0, ccx, ccy, r0 + rMax)
+            grad.addColorStop(0.0, Qt.rgba(c1.r, c1.g, c1.b, op))
+            grad.addColorStop(0.5, Qt.rgba(c2.r, c2.g, c2.b, op))
+            grad.addColorStop(1.0, Qt.rgba(c3.r, c3.g, c3.b, op))
+            g.fillStyle = grad
             g.fill()
-            g.lineWidth = 1.5
-            g.strokeStyle = Qt.rgba(a.r, a.g, a.b, Math.min(1, Config.cavaRingOpacity + 0.25))
-            g.stroke()
         }
     }
 }
