@@ -221,6 +221,18 @@ PanelWindow {
     // processo p/ comandos one-shot (mmsg view/setlayout, ações das pétalas)
     Process { id: proc }
 
+    // menu nativo do item da bandeja (system tray), aberto no clique direito
+    property real trayMenuX: 0
+    property real trayMenuY: 0
+    QsMenuAnchor {
+        id: trayMenu
+        anchor.window: win
+        anchor.rect.x: win.trayMenuX
+        anchor.rect.y: win.trayMenuY
+        anchor.rect.width: 1
+        anchor.rect.height: 1
+    }
+
     // ── Máscara de input ────────────────────────────────
     //  Fechado: só a bola é clicável. Aberto: só a região central (resto = click-through).
     mask: Region {
@@ -296,9 +308,13 @@ PanelWindow {
             if (mouse.button === Qt.RightButton) {
                 if (win.petalAt(mouseX, mouseY) === win.trayIndex) {
                     const items = SystemTray.items.values
-                    if (items.length > 0) {
-                        const it = items[win.petalSectionAt(mouseX, mouseY, items.length)]
-                        if (it && it.hasMenu) it.display(win, Math.round(mouseX), Math.round(mouseY))
+                    const s = items.length > 0 ? win.petalSectionAt(mouseX, mouseY, items.length) : -1
+                    const it = s >= 0 ? items[s] : null
+                    if (it && it.menu) {
+                        win.trayMenuX = Math.round(mouseX)
+                        win.trayMenuY = Math.round(mouseY)
+                        trayMenu.menu = it.menu
+                        trayMenu.open()
                     }
                 }
                 return
@@ -355,7 +371,7 @@ PanelWindow {
                         win.closeMenu(); CaptureService.startRecording(win.modelData.name)
                     }
                 } else if (pi === win.trayIndex) {
-                    // 7ª pétala (bandeja): esquerdo foca/abre a janela do app (direito = menu)
+                    // 7ª pétala (bandeja): esquerdo = ação padrão do app (foca/alterna a janela)
                     const items = SystemTray.items.values
                     if (items.length > 0) {
                         const it = items[win.petalSectionAt(mouseX, mouseY, items.length)]

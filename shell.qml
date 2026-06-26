@@ -1,3 +1,6 @@
+//@ pragma UseQApplication
+// ↑ necessário p/ menus de plataforma (menu do system tray via QsMenuAnchor/display).
+//   Mudar isto exige RESTART do quickshell (pkill quickshell; qs) — hot-reload não basta.
 import Quickshell
 import QtQuick
 
