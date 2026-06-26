@@ -11,13 +11,13 @@ import QtQuick
 // (o mmsg funciona porque usa o socket do mango, não o Wayland). Já o que o mango
 // mesmo spawna recebe o ambiente Wayland correto.
 //
-// Screenshot: script ~/.config/mango/printscreen_edit.sh (wayfreeze + slurp -d + swappy).
+// Screenshot: script ~/.config/mango/scripts/printscreen_edit.sh (wayfreeze + slurp -d + swappy).
 // Gravação:   wf-recorder gravando UM monitor inteiro (-o <saída>). Requer também: pgrep.
 Singleton {
     id: svc
     property bool recording: false
 
-    readonly property string shotScript: "~/.config/mango/printscreen_edit.sh"
+    readonly property string shotScript: "~/.config/mango/scripts/printscreen_edit.sh"
 
     // pede ao mango para rodar `sh -c '<script>'` no ambiente dele (Wayland OK).
     // O PATH do mango é mínimo (não inclui ~/.cargo/bin nem ~/.local/bin), então

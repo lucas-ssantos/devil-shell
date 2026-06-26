@@ -23,7 +23,7 @@ pkill quickshell; qs   # reinicia
 - **Hot reload:** salvar qualquer `.qml` recarrega automaticamente. Um erro de QML aborta o
   carregamento inteiro (a tela some); cheque a saída do terminal.
 - **Logs (`console.log`) só aparecem se o `qs` for iniciado por um terminal.** Em uso normal ele
-  é lançado pelo `~/.config/mango/autostart.sh` (`pkill qs; qs &`), sem terminal visível.
+  é lançado pelo `~/.config/mango/scripts/autostart.sh` (`pkill qs; qs &`), sem terminal visível.
 - **Inicie o `qs` de dentro da sessão do mango.** Ele precisa herdar `WAYLAND_DISPLAY` e
   `MANGO_INSTANCE_SIGNATURE` do ambiente do compositor; um terminal "pelado" fora da sessão quebra
   o `mmsg` (erro `connect: No such file or directory`).
@@ -136,5 +136,5 @@ mmsg get version
 mmsg dispatch "spawn,sh -c 'echo $PATH > /tmp/p'"   # inspecionar o ambiente do spawn
 ```
 
-Scripts externos usados pela captura: `~/.config/mango/printscreen_edit.sh` (wayfreeze + slurp -d +
-grim + swappy) e `printscreen.sh` (sem editor). Lançamento do shell: `~/.config/mango/autostart.sh`.
+Scripts externos usados pela captura: `~/.config/mango/scripts/printscreen_edit.sh` (wayfreeze + slurp -d +
+grim + swappy) e `printscreen.sh` (sem editor). Lançamento do shell: `~/.config/mango/scripts/autostart.sh`.
