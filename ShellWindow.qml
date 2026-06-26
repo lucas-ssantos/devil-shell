@@ -222,6 +222,49 @@ PanelWindow {
     // processo p/ comandos one-shot (mmsg view/setlayout, ações das pétalas)
     Process { id: proc }
 
+    // ── Foco da janela do app a partir do tray (esquerdo) ──────────────
+    // O activate() do SNI é incoerente (alterna/não rouba foco). Em vez disso, achamos
+    // a janela do app (mmsg get all-clients, casando por appid/título) e focamos com
+    // `focusid`, que foca qualquer janela incondicionalmente. Sem janela -> activate().
+    property var pendingFocusTray: null
+    function focusTrayApp(it) {
+        pendingFocusTray = it
+        clientsProc.exec(["mmsg", "get", "all-clients"])
+    }
+    function matchTrayClient(clients, tray) {
+        function norm(s) { return (s || "").toString().toLowerCase() }
+        const fields = [norm(tray.id), norm(tray.title), norm(tray.tooltipTitle)].filter(s => s.length > 0)
+        // 1) por appid (sinal mais confiável: ex. tray "steam" -> appid "steam")
+        for (let i = 0; i < clients.length; i++) {
+            const a = norm(clients[i].appid)
+            if (!a) continue
+            for (let j = 0; j < fields.length; j++)
+                if (a.indexOf(fields[j]) >= 0 || fields[j].indexOf(a) >= 0) return clients[i]
+        }
+        // 2) fallback por título
+        for (let i = 0; i < clients.length; i++) {
+            const t = norm(clients[i].title)
+            for (let j = 0; j < fields.length; j++)
+                if (fields[j].length >= 4 && t.indexOf(fields[j]) >= 0) return clients[i]
+        }
+        return null
+    }
+    Process {
+        id: clientsProc
+        stdout: SplitParser {
+            onRead: line => {
+                const it = win.pendingFocusTray
+                win.pendingFocusTray = null
+                if (!it) return
+                let data
+                try { data = JSON.parse(line) } catch (e) { it.activate(); return }
+                const c = win.matchTrayClient(data.clients ?? [], it)
+                if (c) proc.exec(["mmsg", "dispatch", "focusid", "client," + c.id])
+                else it.activate()   // app sem janela aberta -> abre/ativa
+            }
+        }
+    }
+
     // menu estilizado do item da bandeja (system tray), aberto no clique direito
     TrayMenu { id: trayMenu; ctx: win }
 
@@ -363,11 +406,11 @@ PanelWindow {
                         win.closeMenu(); CaptureService.startRecording(win.modelData.name)
                     }
                 } else if (pi === win.trayIndex) {
-                    // 7ª pétala (bandeja): esquerdo = ação padrão do app (foca/alterna a janela)
+                    // 7ª pétala (bandeja): esquerdo = traz/foca a janela do app (via mango)
                     const items = SystemTray.items.values
                     if (items.length > 0) {
                         const it = items[win.petalSectionAt(mouseX, mouseY, items.length)]
-                        if (it) it.activate()
+                        if (it) win.focusTrayApp(it)
                     }
                 } else if (pi === 0) {
                     win.layoutMode = true   // 1ª pétala = abre o submenu de layouts
