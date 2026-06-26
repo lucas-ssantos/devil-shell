@@ -18,14 +18,15 @@ Scope {
     // ── Dados (data-driven) ──
     //  Pétalas: a 1ª é o seletor de LAYOUT (tratada à parte); as demais são livres.
     //  Item: { icon: "símbolo", label: "nome", command: [argv] }  (command [] = sem ação)
+    //  `spawn: "cmd"` -> lança pelo compositor (mango) c/ ambiente Wayland correto (p/ apps gráficos).
     readonly property var menuItems: [
-        { icon: "⬡", label: "Layout", command: [] },
+        { icon: "⬡", label: "Layout", command: [] },                    // 1ª = mudar layout do mango
         { icon: "◆", label: "Item 2", command: [] },
         { icon: "●", label: "Item 3", command: [] },
-        { icon: "▲", label: "Item 4", command: [] },
-        { icon: "📷", label: "Captura", capture: true }, // 5ª = print + gravação (2 seções)
-        { icon: "🔊", label: "Áudio", audio: true },      // 6ª = controle de áudio (3 seções)
-        { icon: "󰀻", label: "Bandeja", tray: true }       // 7ª = system tray (Discord, Steam…)
+        { icon: "☰", label: "Lançador", spawn: "rofi -show drun" },     // 4ª = abre o launcher
+        { icon: "📷", label: "Captura", capture: true },                // 5ª = print + gravação (2 seções)
+        { icon: "🔊", label: "Áudio", audio: true },                    // 6ª = controle de áudio (3 seções)
+        { icon: "󰀻", label: "Bandeja", tray: true }                     // 7ª = system tray (Discord, Steam…)
     ]
 
     //  Opções de layout do Mango (symbol = sigla; name = comando do mmsg; label = nome).

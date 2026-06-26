@@ -429,8 +429,11 @@ PanelWindow {
                 } else if (pi === 0) {
                     win.layoutMode = true   // 1ª pétala = abre o submenu de layouts
                 } else {
-                    const cmd = win.menuItems[pi].command ?? []
-                    if (cmd.length > 0) proc.exec(cmd)
+                    const item = win.menuItems[pi]
+                    if (item.spawn)                              // app gráfico: lança pelo mango (env Wayland)
+                        proc.exec(["mmsg", "dispatch", "spawn," + item.spawn])
+                    else if ((item.command ?? []).length > 0)    // comando direto (sem env Wayland)
+                        proc.exec(item.command)
                     win.selectedIndex = pi
                     selectTimer.restart()
                 }
