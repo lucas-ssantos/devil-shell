@@ -1,21 +1,20 @@
 import QtQuick
 
 // CAVA estilo Cavasik (modo CÍRCULO): espectro RADIAL com espetos ao redor da bola.
-// O espectro é espelhado (simétrico, com o grave no topo) e preenchido do centro até
-// os picos, com gradiente radial (cavaColor1 base → cavaColor2 → cavaColor3 pontas).
-// A própria bola (opaca, à frente) tampa o centro = o "furo" do círculo.
+// Fica no FUNDO (dentro da CavaWindow), à frente do CavaBars e atrás de tudo o mais.
+// Recebe a geometria da bola (cx/cy/r0/rMax) e os níveis; a bola (em outra janela, à
+// frente) tampa o centro = o "furo" do círculo.
 Item {
     id: ring
-    property var ctx
 
-    readonly property var levels: ctx ? (ctx.levels ?? []) : []
-    readonly property real cx: ctx ? ctx.ballCX : 0
-    readonly property real cy: ctx ? ctx.ballCY : 0
-    readonly property real r0: ctx ? ctx.ballRadius : 46
-    readonly property real rMax: ctx ? ctx.cavaRadMax : 55
+    property var levels: []
+    property real cx: 0       // centro X da bola (nesta janela)
+    property real cy: 0       // centro Y da bola (nesta janela)
+    property real r0: 46      // raio da bola (base do espectro)
+    property real rMax: 70    // comprimento máx dos picos
     readonly property real side: 2 * (r0 + rMax) + 8
 
-    z: 2.5                                    // atrás da bola (z 3), à frente da barra/filetes
+    z: 1                      // à frente do CavaBars (z 0)
     x: cx - side / 2
     y: cy - side / 2
     width: side

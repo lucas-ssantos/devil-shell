@@ -40,7 +40,6 @@ PanelWindow {
     readonly property real menuHalf: hitOuterR + Config.menuMargin
     readonly property real dotRingR: ballRadius * Config.dotRingFactor
     readonly property real gothicR: Config.gothicR
-    readonly property real cavaRadMax: Config.cavaRadMax
     readonly property real layoutRowH: Config.layoutRowH
     readonly property real layoutPillW: Config.layoutPillW
     readonly property real layoutBow: Config.layoutBow
@@ -282,7 +281,16 @@ PanelWindow {
     }
 
     // ── Componentes visuais ─────────────────────────────
-    CavaRing { ctx: win }                                   // anel de áudio (atrás da bola)
+    // CavaRing (círculo Cavasik): à frente das janelas do mango (a ShellWindow é camada
+    // Top) e atrás de TODO o shell (z 0 < pétala z1 < barra/gótico z2 < bola z3 …).
+    CavaRing {
+        z: 0
+        levels: win.levels
+        cx: win.ballCX
+        cy: win.ballCY
+        r0: win.ballRadius
+        rMax: Config.cavaRadMax
+    }
 
     Repeater {                                              // pétalas
         model: win.menuItems
