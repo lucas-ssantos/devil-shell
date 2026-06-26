@@ -76,8 +76,10 @@ Singleton {
     readonly property string iconRecording: ""    // parar (enquanto grava)
     readonly property color  captureRecColor: "#f38ba8" // vermelho enquanto grava
 
-    // ── Relógio ─────────────────────────────────────────
-    readonly property string clockFormat: "d/M HH:mm"
+    // ── Relógio (data à esquerda da bola, hora à direita) ──
+    readonly property string dateFormat: "d/M"
+    readonly property string timeFormat: "HH:mm"
+    readonly property real   clockSideGap: 40   // distância do centro da bola até a borda interna de cada texto
 
     // ── Fontes (px) ─────────────────────────────────────
     readonly property int  petalIconSize: 13

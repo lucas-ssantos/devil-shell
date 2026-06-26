@@ -74,7 +74,8 @@ PanelWindow {
 
     // relógio (tick por minuto) p/ o texto sobre a bola escondida
     SystemClock { id: sysClock; precision: SystemClock.Minutes }
-    readonly property string clockText: Qt.formatDateTime(sysClock.date, Config.clockFormat)
+    readonly property string dateText: Qt.formatDateTime(sysClock.date, Config.dateFormat)
+    readonly property string timeText: Qt.formatDateTime(sysClock.date, Config.timeFormat)
 
     // ── Estado do MangoWC p/ ESTE monitor/workspace ──────
     readonly property var monData: {
@@ -224,16 +225,27 @@ PanelWindow {
     GothicCorners { ctx: win }                              // filetes bola ↔ barra
     MenuBall { ctx: win }                                   // a bola
 
-    // data/hora inclinada sobre a bola (só quando escondida)
+    // data/hora ao lado da bola (só quando escondida): data à esquerda, hora à direita
     Text {
         z: 4
-        text: win.clockText
+        text: win.dateText
         color: Config.clock
         font.pixelSize: Config.clockSize
         font.bold: true
-        transformOrigin: Item.Center
-        x: win.ballCX - width / 2
-        y: (win.height - win.ballPeek) - height - 5
+        x: win.ballCX - Config.clockSideGap - width   // borda direita encosta na bola pela esquerda
+        y: win.height - win.ballPeek / 2 - height / 2  // centralizado na fatia visível da bola
+        opacity: win.open ? 0 : 1
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: Config.clockAnim } }
+    }
+    Text {
+        z: 4
+        text: win.timeText
+        color: Config.clock
+        font.pixelSize: Config.clockSize
+        font.bold: true
+        x: win.ballCX + Config.clockSideGap          // borda esquerda começa após a bola
+        y: win.height - win.ballPeek / 2 - height / 2
         opacity: win.open ? 0 : 1
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: Config.clockAnim } }
