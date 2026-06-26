@@ -58,7 +58,8 @@ PanelWindow {
     property int  petalSection: -1      // seção da pétala multi-botão sob o cursor
     property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
-    readonly property bool open: !dismissed && (pinned || hoverOpen)
+    // a bola fica aberta tb enquanto o menu do tray estiver visível (não recolher sozinha)
+    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible)
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
         return -1
@@ -221,17 +222,8 @@ PanelWindow {
     // processo p/ comandos one-shot (mmsg view/setlayout, ações das pétalas)
     Process { id: proc }
 
-    // menu nativo do item da bandeja (system tray), aberto no clique direito
-    property real trayMenuX: 0
-    property real trayMenuY: 0
-    QsMenuAnchor {
-        id: trayMenu
-        anchor.window: win
-        anchor.rect.x: win.trayMenuX
-        anchor.rect.y: win.trayMenuY
-        anchor.rect.width: 1
-        anchor.rect.height: 1
-    }
+    // menu estilizado do item da bandeja (system tray), aberto no clique direito
+    TrayMenu { id: trayMenu; ctx: win }
 
     // ── Máscara de input ────────────────────────────────
     //  Fechado: só a bola é clicável. Aberto: só a região central (resto = click-through).
@@ -307,14 +299,13 @@ PanelWindow {
             // Botão direito: só age na pétala da bandeja -> abre o menu do app (sair/fechar etc)
             if (mouse.button === Qt.RightButton) {
                 if (win.petalAt(mouseX, mouseY) === win.trayIndex) {
+                    if (trayMenu.visible) { trayMenu.visible = false; return }   // direito de novo fecha
                     const items = SystemTray.items.values
                     const s = items.length > 0 ? win.petalSectionAt(mouseX, mouseY, items.length) : -1
                     const it = s >= 0 ? items[s] : null
                     if (it && it.menu) {
-                        win.trayMenuX = Math.round(mouseX)
-                        win.trayMenuY = Math.round(mouseY)
-                        trayMenu.menu = it.menu
-                        trayMenu.open()
+                        win.dismissed = false                                   // garante a bola junto do menu
+                        trayMenu.openAt(it, Math.round(mouseX), Math.round(mouseY))
                     }
                 }
                 return
@@ -328,6 +319,7 @@ PanelWindow {
             }
             // 2) bola?
             if (win.overBallAt(mouseX, mouseY)) {
+                if (trayMenu.visible) { trayMenu.visible = false; win.pinned = false; win.dismissed = true; return }  // fecha menu + bola
                 if (win.audioMode)  { win.audioMode = false; return }   // volta ao menu principal
                 if (win.layoutMode) { win.layoutMode = false; return }  // volta ao menu principal
                 if (win.pinned) { win.pinned = false; win.dismissed = true }
@@ -387,7 +379,8 @@ PanelWindow {
                 }
                 return
             }
-            // 5) fora -> recolhe
+            // 5) fora -> recolhe (e fecha o menu do tray, se aberto)
+            trayMenu.visible = false
             win.pinned = false
         }
     }

@@ -80,6 +80,22 @@ Singleton {
     readonly property string iconTray: "󰀻"       // ícone genérico quando a bandeja está vazia (nf-md-apps)
     readonly property int    trayIconSize: 16     // tamanho dos ícones dos apps na pétala
 
+    // menu estilizado do clique direito (TrayMenu.qml)
+    readonly property color  trayMenuBg: "#1e1e2e"
+    readonly property color  trayMenuBorder: "#313244"
+    readonly property color  trayMenuHover: "#45475a"
+    readonly property color  trayMenuText: "#cdd6f4"
+    readonly property color  trayMenuTextDisabled: "#6c7086"
+    readonly property real   trayMenuW: 220       // largura fixa do menu
+    readonly property real   trayMenuRadius: 10
+    readonly property real   trayMenuPad: 6       // recuo interno do painel
+    readonly property real   trayMenuRowH: 28
+    readonly property real   trayMenuRowRadius: 6
+    readonly property real   trayMenuSepH: 9      // altura da faixa do separador
+    readonly property int    trayMenuTextSize: 13
+    readonly property int    trayMenuIconSize: 16 // ícone dentro do menu
+    readonly property real   trayMenuGap: 23      // folga acima da pétala (o menu abre pra cima)
+
     // ── Relógio (data à esquerda da bola, hora à direita) ──
     readonly property string dateFormat: "d/M"
     readonly property string timeFormat: "HH:mm"
