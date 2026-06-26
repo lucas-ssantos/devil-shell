@@ -1,6 +1,7 @@
 import QtQuick
 
-// Barras lineares do CAVA: sobem da barra de fundo e somem na faixa central da bola.
+// Espectro do CAVA estilo Cavasik: ÁREA SUAVE preenchida (curva, não barras),
+// subindo da base, com gradiente do acento (topo) ao transparente (base).
 Item {
     id: bars
     anchors.fill: parent
@@ -10,22 +11,43 @@ Item {
     property real ballRadius: 46
     property real maxH: 180
 
-    Repeater {
-        model: bars.levels.length
-        delegate: Rectangle {
-            required property int index
-            readonly property real slot: bars.width / Math.max(1, bars.levels.length)
-            readonly property real bx: slot * (index + 0.5)
-            readonly property real v: bars.levels[index] ?? 0
-            width: Math.max(2, slot * Config.cavaBarFactor)
-            x: bx - width / 2
-            height: Math.max(0, v) * bars.maxH
-            y: bars.height - height
-            topLeftRadius: width / 2
-            topRightRadius: width / 2
-            color: Config.accent
-            opacity: Config.cavaBarsOpacity
-            visible: Math.abs(bx - bars.ballCX) > bars.ballRadius + 10
+    onLevelsChanged: cv.requestPaint()
+    onWidthChanged: cv.requestPaint()
+    onHeightChanged: cv.requestPaint()
+
+    Canvas {
+        id: cv
+        anchors.fill: parent
+        onPaint: {
+            const g = getContext("2d")
+            g.reset()
+            const lv = bars.levels
+            const n = lv ? lv.length : 0
+            if (n < 2) return
+            const W = width, H = height
+            const step = W / (n - 1)
+            function px(i) { return i * step }
+            function py(i) { return H - Math.max(0, lv[i] ?? 0) * bars.maxH }
+
+            // contorno: base-esq -> primeiro ponto -> curva suave (midpoint quad) -> base-dir
+            g.beginPath()
+            g.moveTo(0, H)
+            g.lineTo(px(0), py(0))
+            for (let i = 1; i < n; i++) {
+                const xc = (px(i - 1) + px(i)) / 2
+                const yc = (py(i - 1) + py(i)) / 2
+                g.quadraticCurveTo(px(i - 1), py(i - 1), xc, yc)
+            }
+            g.lineTo(px(n - 1), py(n - 1))
+            g.lineTo(W, H)
+            g.closePath()
+
+            const a = Config.accent
+            const grad = g.createLinearGradient(0, H - bars.maxH, 0, H)
+            grad.addColorStop(0, Qt.rgba(a.r, a.g, a.b, Config.cavaBarsOpacity))
+            grad.addColorStop(1, Qt.rgba(a.r, a.g, a.b, 0))
+            g.fillStyle = grad
+            g.fill()
         }
     }
 }
