@@ -104,10 +104,14 @@ painel de captura de 2 seções, conforme as flags do item), [LayoutMenu.qml](La
 (filetes côncavos `Canvas` que fundem a bola na barra fina), [CavaRing.qml](CavaRing.qml)/
 [CavaBars.qml](CavaBars.qml) (visualizador radial/linear).
 
-### Config centralizada
-**[Config.qml](Config.qml)** é um singleton com TODOS os valores ajustáveis (geometria, cores,
-fontes, tempos, ângulos das pétalas, áudio, captura). Regra do projeto: **nada de valores
-hardcoded na lógica** — adicione em `Config.qml` e referencie como `Config.<algo>`.
+### Config centralizada + Tema
+**[Config.qml](Config.qml)** é um singleton com TODOS os valores ajustáveis (geometria, fontes,
+tempos, ângulos das pétalas, áudio, captura) e os nomes **semânticos** de cor (`ball`, `petal`,
+`accent`…). **[Theme.qml](Theme.qml)** é a paleta crua (Catppuccin Mocha: `base`, `text`, `mauve`,
+`red`, `surface0`…) e a **única fonte** dos hex; o `Config` só mapeia semântico → paleta
+(`accent: Theme.mauve`). Trocar de tema = editar só o `Theme.qml`. Regra do projeto: **nada de
+valores hardcoded na lógica** — cor nova vem de `Theme`, exposta por um nome em `Config`, e os
+componentes usam `Config.<algo>` (nunca hex direto).
 
 ## Convenções e armadilhas de QML/Quickshell
 

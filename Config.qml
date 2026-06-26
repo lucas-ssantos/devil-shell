@@ -60,32 +60,32 @@ Singleton {
     readonly property real   audioBtnMargin: 3               // recuo do painel de botões
     readonly property real   audioBtnDarken: 1.22            // fundo do botão (× mais escuro)
     readonly property real   audioBtnHoverDarken: 1.5        // botão sob o cursor
-    readonly property color  audioMutedColor: "#f38ba8"
+    readonly property color  audioMutedColor: Theme.red
     readonly property real   volStep: 0.05       // passo do scroll (5%)
     readonly property real   sinkVolMax: 1.5     // headphone até 150%
     readonly property real   sourceVolMax: 1.0   // microfone até 100%
     readonly property real   audioSliderW: 150
     readonly property real   audioSliderH: 22
-    readonly property color  audioSliderBg: "#313244"
-    readonly property color  audioSliderFill: "#cba6f7"
-    readonly property color  audioSliderText: "#cdd6f4"
+    readonly property color  audioSliderBg: Theme.surface0
+    readonly property color  audioSliderFill: Theme.mauve
+    readonly property color  audioSliderText: Theme.text
 
     // ── Captura (4ª pétala) ─────────────────────────────
     readonly property string iconScreenshot: ""   // câmera (print)
     readonly property string iconRecord: ""       // filmadora (gravar)
     readonly property string iconRecording: ""    // parar (enquanto grava)
-    readonly property color  captureRecColor: "#f38ba8" // vermelho enquanto grava
+    readonly property color  captureRecColor: Theme.red // vermelho enquanto grava
 
     // ── Bandeja / system tray (7ª pétala) ───────────────
     readonly property string iconTray: "󰀻"       // ícone genérico quando a bandeja está vazia (nf-md-apps)
     readonly property int    trayIconSize: 16     // tamanho dos ícones dos apps na pétala
 
     // menu estilizado do clique direito (TrayMenu.qml)
-    readonly property color  trayMenuBg: "#1e1e2e"
-    readonly property color  trayMenuBorder: "#313244"
-    readonly property color  trayMenuHover: "#45475a"
-    readonly property color  trayMenuText: "#cdd6f4"
-    readonly property color  trayMenuTextDisabled: "#6c7086"
+    readonly property color  trayMenuBg: Theme.base
+    readonly property color  trayMenuBorder: Theme.surface0
+    readonly property color  trayMenuHover: Theme.surface1
+    readonly property color  trayMenuText: Theme.text
+    readonly property color  trayMenuTextDisabled: Theme.overlay0
     readonly property real   trayMenuW: 220       // largura fixa do menu
     readonly property real   trayMenuRadius: 10
     readonly property real   trayMenuPad: 6       // recuo interno do painel
@@ -110,14 +110,14 @@ Singleton {
     readonly property int    notifSummarySize: 13  // título (negrito)
     readonly property int    notifBodySize: 12     // corpo
     readonly property int    notifBodyMaxLines: 6  // limite de linhas do corpo
-    readonly property color  notifBg: "#1e1e2e"
-    readonly property color  notifBorder: "#313244"
-    readonly property color  notifAppText: "#a6adc8"
-    readonly property color  notifSummary: "#cdd6f4"
-    readonly property color  notifBody: "#bac2de"
-    readonly property color  notifLow: "#6c7086"      // faixa de urgência baixa
-    readonly property color  notifNormal: "#cba6f7"   // normal (acento)
-    readonly property color  notifCritical: "#f38ba8" // crítica (vermelho)
+    readonly property color  notifBg: Theme.base
+    readonly property color  notifBorder: Theme.surface0
+    readonly property color  notifAppText: Theme.subtext0
+    readonly property color  notifSummary: Theme.text
+    readonly property color  notifBody: Theme.subtext1
+    readonly property color  notifLow: Theme.overlay0      // faixa de urgência baixa
+    readonly property color  notifNormal: Theme.mauve      // normal (acento)
+    readonly property color  notifCritical: Theme.red      // crítica (vermelho)
 
     // ── Relógio (data à esquerda da bola, hora à direita) ──
     readonly property string dateFormat: "d/M"
@@ -131,22 +131,22 @@ Singleton {
     readonly property int  layoutTextSize: 12
     readonly property int  clockSize: 13
 
-    // ── Cores ───────────────────────────────────────────
-    readonly property color ball: "#11111b"
-    readonly property color petal: "#eba0ac"
-    readonly property color petalHover: "#f38ba8"
-    readonly property color petalIcon: "#1e1e2e"
-    readonly property color accent: "#cba6f7"
-    readonly property color ballText: "#a6e3a1"
-    readonly property color clock: "#cdd6f4"
-    readonly property color layoutPill: "#313244"
-    readonly property color layoutPillHover: "#cba6f7"
-    readonly property color layoutText: "#cdd6f4"
-    readonly property color layoutTextHover: "#11111b"
-    readonly property color dotActive: "#a6e3a1"
-    readonly property color dotUrgent: "#f38ba8"
-    readonly property color dotOccupied: "#5c7a52"
-    readonly property color dotEmpty: "#45475a"
+    // ── Cores (semânticas → paleta em Theme.qml) ────────
+    readonly property color ball: Theme.crust
+    readonly property color petal: Theme.maroon
+    readonly property color petalHover: Theme.red
+    readonly property color petalIcon: Theme.base
+    readonly property color accent: Theme.mauve
+    readonly property color ballText: Theme.green
+    readonly property color clock: Theme.text
+    readonly property color layoutPill: Theme.surface0
+    readonly property color layoutPillHover: Theme.mauve
+    readonly property color layoutText: Theme.text
+    readonly property color layoutTextHover: Theme.crust
+    readonly property color dotActive: Theme.green
+    readonly property color dotUrgent: Theme.red
+    readonly property color dotOccupied: Theme.dimGreen
+    readonly property color dotEmpty: Theme.surface1
 
     // ── Tempos (ms) ─────────────────────────────────────
     readonly property int  ballAnim: 220
