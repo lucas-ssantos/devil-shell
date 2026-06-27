@@ -21,7 +21,7 @@ Scope {
     //  `spawn: "cmd"` -> lança pelo compositor (mango) c/ ambiente Wayland correto (p/ apps gráficos).
     readonly property var menuItems: [
         { icon: "⬡", label: "Layout", command: [] },                    // 1ª = mudar layout do mango
-        { icon: "◆", label: "Item 2", command: [] },
+        { icon: "", label: "Atualizações", update: true },             // 2ª = updates do sistema + MangoWC
         { icon: "●", label: "Item 3", command: [] },
         { icon: "☰", label: "Lançador", spawn: "rofi -show drun" },     // 4ª = abre o launcher
         { icon: "📷", label: "Captura", capture: true },                // 5ª = print + gravação (2 seções)

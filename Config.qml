@@ -81,6 +81,18 @@ Singleton {
     readonly property string iconRecording: ""    // parar (enquanto grava)
     readonly property color  captureRecColor: Theme.red // vermelho enquanto grava
 
+    // ── Atualizações (2ª pétala) ─────────────────────────
+    readonly property int    updateInterval: 300000   // checa pacotes a cada 5 min (ms)
+    readonly property string iconUpdate: ""          // pacotes (nf-fa-download)
+    readonly property string iconMango: ""           // atualizar MangoWC (nf-fa-refresh)
+    // checagem (rodada por sh -c, sem terminal): tenta refrescar (sudo -n, não trava) e CONTA.
+    // Sem NOPASSWD p/ `apt update`, o refresh é pulado e ele conta a partir das listas atuais.
+    readonly property string updateCheckCmd: "sudo -n apt update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable"
+    // upgrade do sistema: abre um terminal (sudo pede senha aqui). Troque `nala`/`kitty` se quiser.
+    readonly property string updateUpgradeSpawn: "kitty -e bash -lc 'sudo nala upgrade || sudo apt upgrade; echo; echo Concluido; read -n1 -s'"
+    // build/atualização do MangoWC via script do usuário, num terminal.
+    readonly property string updateMangoSpawn: "kitty -e bash -lc '$HOME/.config/mango/scripts/update-mango.sh; echo; echo Concluido; read -n1 -s'"
+
     // ── Bandeja / system tray (7ª pétala) ───────────────
     readonly property string iconTray: "󰀻"       // ícone genérico quando a bandeja está vazia (nf-md-apps)
     readonly property int    trayIconSize: 16     // tamanho dos ícones dos apps na pétala

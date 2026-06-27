@@ -67,6 +67,10 @@ PanelWindow {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].capture) return i
         return -1
     }
+    readonly property int updateIndex: {
+        for (let i = 0; i < menuItems.length; i++) if (menuItems[i].update) return i
+        return -1
+    }
     readonly property int trayIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].tray) return i
         return -1
@@ -151,6 +155,7 @@ PanelWindow {
     function petalSections(i) {
         if (i === audioIndex) return 3
         if (i === captureIndex) return 2
+        if (i === updateIndex) return 2
         if (i === trayIndex) return SystemTray.items.values.length
         return 0
     }
@@ -416,6 +421,12 @@ PanelWindow {
                     if (s === 2)      AudioService.toggleSinkMute()    // headphone (saída)
                     else if (s === 1) AudioService.toggleSourceMute()  // microfone (entrada)
                     else if (s === 0) win.audioMode = true             // config (abre sliders)
+                } else if (pi === win.updateIndex) {
+                    // 2ª pétala (atualizações): topo = upgrade do sistema, base = update do MangoWC
+                    const s = win.petalSectionAt(mouseX, mouseY, 2)
+                    win.closeMenu()
+                    if (s === 1) UpdateService.runUpgrade()
+                    else         UpdateService.updateMango()
                 } else if (pi === win.captureIndex) {
                     // 4ª pétala (captura): topo = print, base = gravar/parar
                     const s = win.petalSectionAt(mouseX, mouseY, 2)

@@ -190,6 +190,69 @@ Item {
             }
         }
 
+        // ── Painel de atualizações: 2 botões (só na 2ª pétala) ──
+        Item {
+            visible: petal.modelData.update ?? false
+            anchors.fill: parent
+            anchors.margins: Config.audioBtnMargin
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Qt.darker(Config.petal, Config.audioBtnDarken)
+            }
+            // destaque (sec1=topo, sec0=baixo)
+            Rectangle {
+                visible: petal.hovered && petal.ctx.petalSection >= 0
+                width: parent.width
+                height: parent.height / 2
+                y: (1 - petal.ctx.petalSection) * (parent.height / 2)
+                radius: 6
+                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
+            }
+            // divisória
+            Rectangle {
+                width: parent.width * 0.7
+                height: 1.5
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: parent.height / 2 - height / 2
+                color: Config.petalIcon
+                opacity: 0.3
+            }
+            // topo: pacotes -> ícone quando 0, nº (acento) quando há updates
+            Text {
+                visible: UpdateService.packages <= 0
+                rotation: -petal.rotation
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: (parent.height / 2 - height) / 2
+                font.family: Config.iconFont
+                font.pixelSize: Config.audioIconSize
+                color: Config.petalIcon
+                opacity: 0.5
+                text: Config.iconUpdate
+            }
+            Text {
+                visible: UpdateService.packages > 0
+                rotation: -petal.rotation
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: (parent.height / 2 - height) / 2
+                font.pixelSize: Config.audioIconSize
+                font.bold: true
+                color: Config.accent
+                text: UpdateService.packages
+            }
+            // base: atualizar o MangoWC
+            Text {
+                rotation: -petal.rotation
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: parent.height / 2 + (parent.height / 2 - height) / 2
+                font.family: Config.iconFont
+                font.pixelSize: Config.audioIconSize
+                color: Config.petalIcon
+                text: Config.iconMango
+            }
+        }
+
         // ── Painel da bandeja (system tray): 1 seção por app (só na 7ª pétala) ──
         Item {
             id: trayPanel
@@ -279,7 +342,7 @@ Item {
 
     // ── Pétala normal: ícone único ──
     Text {
-        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.capture ?? false) && !(petal.modelData.tray ?? false)
+        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.capture ?? false) && !(petal.modelData.tray ?? false) && !(petal.modelData.update ?? false)
         anchors.centerIn: parent
         rotation: -petal.rotation
         text: petal.index === 0 ? petal.ctx.currentLayoutSymbol : (petal.modelData.icon ?? "")
