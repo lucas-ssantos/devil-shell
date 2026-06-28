@@ -1,5 +1,6 @@
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import Quickshell.Services.SystemTray
 import QtQuick
 
@@ -21,6 +22,8 @@ PanelWindow {
     anchors { bottom: true; left: true; right: true }   // largura total -> barra atravessa a tela
     exclusiveZone: 0
     implicitHeight: Config.shellHeight   // espaço extra acima da bola p/ o submenu
+    // pega o teclado SÓ enquanto há um menu/popup aberto (p/ o ESC fechar); fora disso não rouba
+    WlrLayershell.keyboardFocus: win.anyPopup ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     // ── Geometria (valores em Config.qml) ───────────────
     readonly property real ballRadius: Config.ballRadius
@@ -55,6 +58,8 @@ PanelWindow {
     property bool hoverOpen: false
     // a bola fica aberta tb enquanto um popup (tray/áudio/layout) estiver visível (não recolher sozinha)
     readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || layoutMenu.visible)
+    // algum menu/popup aberto? (tray, dispositivos de áudio, layout, ou sliders de áudio)
+    readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || layoutMenu.visible || audioMode
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
         return -1
@@ -179,6 +184,15 @@ PanelWindow {
     function overBallAt(mx, my) { return Math.hypot(mx - ballCX, my - ballCY) <= ballRadius }
     // fecha o menu (usado antes de capturas, p/ não roubar o arrasto do slurp)
     function closeMenu() { dismissed = true; pinned = false }
+    // fecha TODOS os menus/popups e recolhe a bola (usado pelo ESC)
+    function closeAllMenus() {
+        trayMenu.visible = false
+        audioDevices.visible = false
+        layoutMenu.visible = false
+        audioMode = false
+        pinned = false
+        dismissed = true
+    }
 
     function refreshHover() {
         const mx = hoverMA.mouseX, my = hoverMA.mouseY
@@ -254,6 +268,13 @@ PanelWindow {
 
     // menu de seleção de layout (1ª pétala) — popup estilizado
     LayoutMenu { id: layoutMenu; ctx: win }
+
+    // ESC fecha todos os menus (a janela só recebe o teclado quando há um menu aberto)
+    Item {
+        anchors.fill: parent
+        focus: win.anyPopup
+        Keys.onEscapePressed: win.closeAllMenus()
+    }
 
     // ── Máscara de input ────────────────────────────────
     //  Fechado: só a bola é clicável. Aberto: só a região central (resto = click-through).
@@ -413,9 +434,13 @@ PanelWindow {
                         if (it) win.focusTrayApp(it)
                     }
                 } else if (pi === 0) {
-                    // 1ª pétala = abre o popup de seleção de layout
-                    win.dismissed = false
-                    layoutMenu.openAt(Math.round(mouseX), Math.round(mouseY))
+                    // 1ª pétala = alterna o popup de seleção de layout
+                    if (layoutMenu.visible) {
+                        layoutMenu.visible = false
+                    } else {
+                        win.dismissed = false
+                        layoutMenu.openAt(Math.round(mouseX), Math.round(mouseY))
+                    }
                 } else {
                     const item = win.menuItems[pi]
                     if (item.spawn)                              // app gráfico: lança pelo mango (env Wayland)
