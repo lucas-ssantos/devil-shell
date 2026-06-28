@@ -82,15 +82,14 @@ Singleton {
     readonly property color  captureRecColor: Theme.red // vermelho enquanto grava
 
     // ── Atualizações (2ª pétala) ─────────────────────────
-    readonly property int    updateInterval: 300000   // checa pacotes a cada 5 min (ms)
+    readonly property int    updateInterval: 3600000  // checa pacotes de 1 em 1 hora (ms)
     readonly property string iconUpdate: ""    // logo do Debian (nf-linux-debian)
     readonly property string iconMango: "🥭"           // manga (emoji; renderiza na fonte padrão)
-    // checagem (rodada por sh -c, sem terminal): tenta refrescar (sudo -n, não trava) e CONTA.
-    // Sem NOPASSWD p/ `apt update`, o refresh é pulado e ele conta a partir das listas atuais.
-    readonly property string updateCheckCmd: "sudo -n apt update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable"
-    // upgrade do sistema EM BACKGROUND (sem terminal); saída via dunstify (o servidor é o
-    // Quickshell). Precisa de NOPASSWD p/ o `nala/apt upgrade` (senão reporta falha).
-    readonly property string updateUpgradeSpawn: "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; dunstify -r 9101 \"Atualizando o sistema…\"; if sudo -n nala upgrade -y >/tmp/qs-upgrade.log 2>&1; then dunstify -r 9101 \"✓ Sistema atualizado\"; else dunstify -r 9101 -u critical \"✗ Falha — veja /tmp/qs-upgrade.log\"; fi'"
+    // checagem (background, sem terminal): `sudo nala update` p/ refrescar e CONTA os atualizáveis.
+    // Precisa de NOPASSWD p/ `nala update` (senão pula o refresh e conta as listas já existentes).
+    readonly property string updateCheckCmd: "sudo -n nala update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable"
+    // clique: abre um TERMINAL e roda `sudo nala upgrade` SEM -y (você confirma ou não).
+    readonly property string updateUpgradeSpawn: "kitty -e bash -lc 'sudo nala upgrade; echo; echo Concluido; read -n1 -s'"
     // atualização do MangoWC EM BACKGROUND via script do usuário; saída via dunstify.
     readonly property string updateMangoSpawn: "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; dunstify -r 9102 \"Atualizando o MangoWC…\"; if \"$HOME/.config/mango/scripts/update-mango.sh\" >/tmp/qs-mango.log 2>&1; then dunstify -r 9102 \"✓ MangoWC atualizado (reinicie a sessão)\"; else dunstify -r 9102 -u critical \"✗ Falha no Mango — veja /tmp/qs-mango.log\"; fi'"
 
