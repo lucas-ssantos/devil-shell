@@ -1,4 +1,4 @@
-# Bola — shell Quickshell para MangoWC
+# Devil Shell — shell Quickshell para MangoWC
 
 Uma "barra" não-convencional para o compositor Wayland **[MangoWC](https://mangowm.github.io/)**
 (base dwl/wlroots), escrita em **QML** sobre o **[Quickshell](https://quickshell.org)**.
