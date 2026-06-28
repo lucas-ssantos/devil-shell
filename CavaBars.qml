@@ -1,7 +1,8 @@
 import QtQuick
 
 // Espectro do CAVA estilo Cavasik: ÁREA SUAVE preenchida (curva, não barras),
-// subindo da base, com gradiente do acento (topo) ao transparente (base).
+// subindo da base, com gradiente da cor das ondas (topo) ao transparente (base).
+// Cor vem do tema "Infernal Rose" (Config.cavaWave), separado do acento do shell.
 Item {
     id: bars
     anchors.fill: parent
@@ -42,7 +43,7 @@ Item {
             g.lineTo(W, H)
             g.closePath()
 
-            const a = Config.accent
+            const a = Config.cavaWave
             const grad = g.createLinearGradient(0, H - bars.maxH, 0, H)
             grad.addColorStop(0, Qt.rgba(a.r, a.g, a.b, Config.cavaBarsOpacity))
             grad.addColorStop(1, Qt.rgba(a.r, a.g, a.b, 0))

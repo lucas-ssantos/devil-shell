@@ -44,10 +44,13 @@ Singleton {
     readonly property real cavaBarFactor: 0.6  // largura da barra (× slot)
     readonly property real cavaBarsOpacity: 0.5
     readonly property real cavaRingOpacity: 0.85
+    // Visualizador CAVA usa o tema 'cava' do Theme.qml (hoje Infernal Rose), de propósito
+    // diferente do resto do shell. O espectro vem de Theme.cava* (interno → meio → pontas).
     // gradiente radial do círculo (Cavasik): base interna → meio → pontas dos picos
-    readonly property color cavaColor1: Theme.blue   // interno (base do espectro)
-    readonly property color cavaColor2: Theme.red    // meio
-    readonly property color cavaColor3: Theme.green  // pontas (picos altos)
+    readonly property color cavaColor1: Theme.cavaInner   // interno (base do espectro)
+    readonly property color cavaColor2: Theme.cavaMid     // meio
+    readonly property color cavaColor3: Theme.cavaTip     // pontas (picos altos, ethereal)
+    readonly property color cavaWave:   Theme.cavaMid     // área das ondas lineares (CavaBars)
 
     // ── Áudio (5ª pétala) ───────────────────────────────
     readonly property string iconFont: "JetBrainsMono Nerd Font"   // fonte dos ícones (instalada; tem os glifos + logos de distro)
@@ -169,16 +172,16 @@ Singleton {
     readonly property color petalHover: Theme.red
     readonly property color petalIcon: Theme.base
     readonly property color accent: Theme.mauve
-    readonly property color ballText: Theme.green
+    readonly property color ballText: Theme.red          // nº do workspace (vermelho vivo na bola preta)
     readonly property color clock: Theme.text
     readonly property color layoutPill: Theme.surface0
     readonly property color layoutPillHover: Theme.mauve
     readonly property color layoutText: Theme.text
     readonly property color layoutTextHover: Theme.crust
-    readonly property color dotActive: Theme.green
-    readonly property color dotUrgent: Theme.red
-    readonly property color dotOccupied: Theme.dimGreen
-    readonly property color dotEmpty: Theme.surface1
+    readonly property color dotActive: Theme.red         // workspace atual (vermelho vivo)
+    readonly property color dotUrgent: Theme.peach        // urgente (laranja-chama, distinto do ativo)
+    readonly property color dotOccupied: Theme.maroon    // ocupado (vermelho escuro)
+    readonly property color dotEmpty: Theme.surface1     // vazio (cinza metálico)
 
     // ── Tempos (ms) ─────────────────────────────────────
     readonly property int  ballAnim: 220

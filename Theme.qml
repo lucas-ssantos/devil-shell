@@ -2,45 +2,51 @@ pragma Singleton
 import Quickshell
 import QtQuick
 
-// Paleta de cores do tema (Catppuccin Mocha). É a ÚNICA fonte das cores.
-// Trocar de tema = trocar os hex aqui (ou apontar para outra paleta, ex. Latte/Macchiato);
-// o Config.qml só mapeia nomes semânticos (ball, petal, accent…) para esta paleta.
-// Acesse de qualquer lugar como `Theme.<cor>`.
+// SELETOR DE TEMA. As paletas cruas (hex) ficam em arquivos próprios, cada uma com o
+// MESMO conjunto de nomes: CrimsonDevil.qml e InfernalRose.qml. Aqui só se escolhe qual
+// paleta vai para cada parte do shell:
+//   • shell → tema do shell inteiro (bola, pétalas, menus, notificações, cápsulas…)
+//   • cava  → tema do visualizador CAVA (barras/ondas e círculo); pode ser diferente.
+// Trocar de tema = trocar a paleta apontada abaixo (uma linha). O Config.qml e os
+// componentes seguem usando Theme.<cor> / Theme.cava* sem nenhuma mudança.
 Singleton {
     id: theme
 
-    // ── Base / superfícies (do mais escuro ao mais claro) ──
-    readonly property color crust:     "#11111b"
-    readonly property color mantle:    "#181825"
-    readonly property color base:      "#1e1e2e"
-    readonly property color surface0:  "#313244"
-    readonly property color surface1:  "#45475a"
-    readonly property color surface2:  "#585b70"
+    // ── Escolha das paletas ─────────────────────────────
+    readonly property var shell: CrimsonDevil    // ← troque por InfernalRose p/ o shell todo
+    readonly property var cava:  InfernalRose     // ← tema do CAVA (independente do shell)
 
-    // ── Overlays / textos ──
-    readonly property color overlay0:  "#6c7086"
-    readonly property color overlay1:  "#7f849c"
-    readonly property color overlay2:  "#9399b2"
-    readonly property color subtext0:  "#a6adc8"
-    readonly property color subtext1:  "#bac2de"
-    readonly property color text:      "#cdd6f4"
+    // ── Re-exporta as cores do tema do SHELL como Theme.<cor> ──
+    readonly property color crust:     shell.crust
+    readonly property color mantle:    shell.mantle
+    readonly property color base:      shell.base
+    readonly property color surface0:  shell.surface0
+    readonly property color surface1:  shell.surface1
+    readonly property color surface2:  shell.surface2
+    readonly property color overlay0:  shell.overlay0
+    readonly property color overlay1:  shell.overlay1
+    readonly property color overlay2:  shell.overlay2
+    readonly property color subtext0:  shell.subtext0
+    readonly property color subtext1:  shell.subtext1
+    readonly property color text:      shell.text
+    readonly property color rosewater: shell.rosewater
+    readonly property color flamingo:  shell.flamingo
+    readonly property color pink:      shell.pink
+    readonly property color mauve:     shell.mauve
+    readonly property color red:       shell.red
+    readonly property color maroon:    shell.maroon
+    readonly property color peach:     shell.peach
+    readonly property color yellow:    shell.yellow
+    readonly property color green:     shell.green
+    readonly property color teal:      shell.teal
+    readonly property color sky:       shell.sky
+    readonly property color sapphire:  shell.sapphire
+    readonly property color blue:      shell.blue
+    readonly property color lavender:  shell.lavender
+    readonly property color dimGreen:  shell.dimGreen
 
-    // ── Acentos ──
-    readonly property color rosewater: "#f5e0dc"
-    readonly property color flamingo:  "#f2cdcd"
-    readonly property color pink:      "#f5c2e7"
-    readonly property color mauve:     "#cba6f7"
-    readonly property color red:       "#f38ba8"
-    readonly property color maroon:    "#eba0ac"
-    readonly property color peach:     "#fab387"
-    readonly property color yellow:    "#f9e2af"
-    readonly property color green:     "#a6e3a1"
-    readonly property color teal:      "#94e2d5"
-    readonly property color sky:       "#89dceb"
-    readonly property color sapphire:  "#74c7ec"
-    readonly property color blue:      "#89b4fa"
-    readonly property color lavender:  "#b4befe"
-
-    // ── Extras (fora da paleta padrão) ──
-    readonly property color dimGreen:  "#5c7a52"   // ponto de workspace ocupado (verde apagado)
+    // ── Espectro do CAVA (do tema 'cava', interno → meio → pontas) ──
+    readonly property color cavaInner: cava.cavaInner
+    readonly property color cavaMid:   cava.cavaMid
+    readonly property color cavaTip:   cava.cavaTip
 }
