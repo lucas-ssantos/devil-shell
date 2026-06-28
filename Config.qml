@@ -132,6 +132,24 @@ Singleton {
     readonly property color  notifNormal: Theme.mauve      // normal (acento)
     readonly property color  notifCritical: Theme.red      // crítica (vermelho)
 
+    // ── Cápsulas do topo (mídia à esquerda, clima à direita) ──
+    readonly property real   capsuleW: 200         // largura da cápsula
+    readonly property real   capsuleH: 32          // altura (quando estendida)
+    readonly property real   capsulePeek: 6        // fatia visível quando retraída
+    readonly property real   capsuleEdge: 0.10     // distância das margens (10%)
+    readonly property real   capsuleRadius: 12     // cantos inferiores
+    readonly property int    capsuleAnim: 200      // animação de descida (ms)
+    readonly property int    capsuleIconSize: 14
+    readonly property int    capsuleTextSize: 12
+    readonly property color  capsuleBg: Theme.base
+    readonly property color  capsuleText: Theme.text
+    readonly property string iconMedia: ""   // nota musical (nf-fa-music)
+    readonly property string iconWeather: "" // termômetro (nf-weather-thermometer)
+
+    // ── Clima (cápsula direita) ─────────────────────────
+    readonly property string weatherLocation: ""   // local p/ wttr.in; VAZIO = auto por IP. Ex.: "Brasilia", "Sao+Paulo"
+    readonly property int    weatherInterval: 1800000  // atualiza a cada 30 min (ms)
+
     // ── Relógio (data à esquerda da bola, hora à direita) ──
     readonly property string dateFormat: "d/M"
     readonly property string timeFormat: "HH:mm"

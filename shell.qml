@@ -67,6 +67,11 @@ Scope {
                     mango: mangoSvc
                     levels: cava.levels
                 }
+
+                // cápsulas retráteis no topo (mídia / temperatura)
+                TopCapsules {
+                    modelData: unit.modelData
+                }
             }
         }
     }
