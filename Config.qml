@@ -54,7 +54,7 @@ Singleton {
     readonly property color cavaColor3: Theme.green  // pontas (picos altos)
 
     // ── Áudio (5ª pétala) ───────────────────────────────
-    readonly property string iconFont: "Symbols Nerd Font"   // fonte dos ícones (troque pela sua)
+    readonly property string iconFont: "JetBrainsMono Nerd Font"   // fonte dos ícones (instalada; tem os glifos + logos de distro)
     readonly property string iconOutput: ""            // volume (headphone/saída)
     readonly property string iconOutputMuted: ""       // volume mudo
     readonly property string iconInput: ""             // microfone (entrada)
@@ -83,15 +83,16 @@ Singleton {
 
     // ── Atualizações (2ª pétala) ─────────────────────────
     readonly property int    updateInterval: 300000   // checa pacotes a cada 5 min (ms)
-    readonly property string iconUpdate: ""          // pacotes (nf-fa-download)
-    readonly property string iconMango: ""           // atualizar MangoWC (nf-fa-refresh)
+    readonly property string iconUpdate: ""    // logo do Debian (nf-linux-debian)
+    readonly property string iconMango: "🥭"           // manga (emoji; renderiza na fonte padrão)
     // checagem (rodada por sh -c, sem terminal): tenta refrescar (sudo -n, não trava) e CONTA.
     // Sem NOPASSWD p/ `apt update`, o refresh é pulado e ele conta a partir das listas atuais.
     readonly property string updateCheckCmd: "sudo -n apt update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable"
-    // upgrade do sistema: abre um terminal (sudo pede senha aqui). Troque `nala`/`kitty` se quiser.
-    readonly property string updateUpgradeSpawn: "kitty -e bash -lc 'sudo nala upgrade || sudo apt upgrade; echo; echo Concluido; read -n1 -s'"
-    // build/atualização do MangoWC via script do usuário, num terminal.
-    readonly property string updateMangoSpawn: "kitty -e bash -lc '$HOME/.config/mango/scripts/update-mango.sh; echo; echo Concluido; read -n1 -s'"
+    // upgrade do sistema EM BACKGROUND (sem terminal); saída via dunstify (o servidor é o
+    // Quickshell). Precisa de NOPASSWD p/ o `nala/apt upgrade` (senão reporta falha).
+    readonly property string updateUpgradeSpawn: "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; dunstify -r 9101 \"Atualizando o sistema…\"; if sudo -n nala upgrade -y >/tmp/qs-upgrade.log 2>&1; then dunstify -r 9101 \"✓ Sistema atualizado\"; else dunstify -r 9101 -u critical \"✗ Falha — veja /tmp/qs-upgrade.log\"; fi'"
+    // atualização do MangoWC EM BACKGROUND via script do usuário; saída via dunstify.
+    readonly property string updateMangoSpawn: "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; dunstify -r 9102 \"Atualizando o MangoWC…\"; if \"$HOME/.config/mango/scripts/update-mango.sh\" >/tmp/qs-mango.log 2>&1; then dunstify -r 9102 \"✓ MangoWC atualizado (reinicie a sessão)\"; else dunstify -r 9102 -u critical \"✗ Falha no Mango — veja /tmp/qs-mango.log\"; fi'"
 
     // ── Bandeja / system tray (7ª pétala) ───────────────
     readonly property string iconTray: "󰀻"       // ícone genérico quando a bandeja está vazia (nf-md-apps)

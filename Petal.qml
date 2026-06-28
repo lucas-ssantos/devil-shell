@@ -219,36 +219,33 @@ Item {
                 color: Config.petalIcon
                 opacity: 0.3
             }
-            // topo: pacotes -> ícone quando 0, nº (acento) quando há updates
+            // topo: ícone do Debian (acento quando há updates) + contador
             Text {
-                visible: UpdateService.packages <= 0
                 rotation: -petal.rotation
                 anchors.horizontalCenter: parent.horizontalCenter
-                y: (parent.height / 2 - height) / 2
+                y: (parent.height / 2 - height) / 2 - 3
                 font.family: Config.iconFont
                 font.pixelSize: Config.audioIconSize
-                color: Config.petalIcon
-                opacity: 0.5
+                color: UpdateService.packages > 0 ? Config.accent : Config.petalIcon
+                opacity: UpdateService.packages > 0 ? 1.0 : 0.55
                 text: Config.iconUpdate
             }
             Text {
                 visible: UpdateService.packages > 0
                 rotation: -petal.rotation
                 anchors.horizontalCenter: parent.horizontalCenter
-                y: (parent.height / 2 - height) / 2
-                font.pixelSize: Config.audioIconSize
+                y: parent.height / 2 - height - 1   // logo acima da divisória
+                font.pixelSize: 9
                 font.bold: true
                 color: Config.accent
                 text: UpdateService.packages
             }
-            // base: atualizar o MangoWC
+            // base: manga (emoji) -> atualizar o MangoWC. Sem iconFont (fonte padrão renderiza o emoji).
             Text {
                 rotation: -petal.rotation
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: parent.height / 2 + (parent.height / 2 - height) / 2
-                font.family: Config.iconFont
                 font.pixelSize: Config.audioIconSize
-                color: Config.petalIcon
                 text: Config.iconMango
             }
         }
