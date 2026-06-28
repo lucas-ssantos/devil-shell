@@ -63,9 +63,10 @@ cargo install wayfreeze          # wayfreeze costuma vir do cargo (~/.cargo/bin)
 ```
 
 ### ⚠️ Avisos importantes
-- **Só pode haver UM servidor de notificações.** Se `dunst`/`mako`/`swaync` estiver rodando, o
-  Quickshell não registra o servidor e os toasts não aparecem (warn `already registered`). Desative
-  o outro daemon. O `dunstify`/`notify-send` continuam **enviando** normalmente.
+- **Só pode haver UM servidor de notificações.** Se `swaync`/`mako`/`dunst` estiver rodando, o
+  Quickshell não registra o servidor e os toasts não aparecem (warn `already registered`). Por isso
+  o `autostart.sh` mata o `swaync`. O `notify-send` (pacote `libnotify-bin`) continua **enviando**
+  normalmente.
 - **PATH do mango é mínimo** (`/usr/local/bin:/usr/bin:/bin:/opt/zig…`). Ferramentas em
   `~/.cargo/bin` / `~/.local/bin` (ex.: `wayfreeze`) não são achadas por processos que o mango
   lança — por isso a captura estende o PATH antes de rodar.

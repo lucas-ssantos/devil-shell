@@ -86,8 +86,9 @@ Singleton {
     readonly property string updateCheckCmd: "sudo -n nala update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable"
     // clique: abre um TERMINAL e roda `sudo nala upgrade` SEM -y (você confirma ou não).
     readonly property string updateUpgradeSpawn: "kitty -e bash -lc 'sudo nala upgrade; echo; echo Concluido; read -n1 -s'"
-    // atualização do MangoWC EM BACKGROUND via script do usuário; saída via dunstify.
-    readonly property string updateMangoSpawn: "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; dunstify -r 9102 \"Atualizando o MangoWC…\"; if \"$HOME/.config/mango/scripts/update-mango.sh\" >/tmp/qs-mango.log 2>&1; then dunstify -r 9102 \"✓ MangoWC atualizado (reinicie a sessão)\"; else dunstify -r 9102 -u critical \"✗ Falha no Mango — veja /tmp/qs-mango.log\"; fi'"
+    // atualização do MangoWC EM BACKGROUND via script do usuário; saída via notify-send
+    // (-r 9102 reaproveita o mesmo toast: "Atualizando…" → "✓/✗"; precisa de libnotify-bin).
+    readonly property string updateMangoSpawn: "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; notify-send -a MangoWC -r 9102 \"Atualizando o MangoWC…\"; if \"$HOME/.config/mango/scripts/update-mango.sh\" >/tmp/qs-mango.log 2>&1; then notify-send -a MangoWC -r 9102 \"✓ MangoWC atualizado (reinicie a sessão)\"; else notify-send -a MangoWC -r 9102 -u critical \"✗ Falha no Mango — veja /tmp/qs-mango.log\"; fi'"
 
     // ── Bandeja / system tray (7ª pétala) ───────────────
     readonly property string iconTray: "󰀻"       // ícone genérico quando a bandeja está vazia (nf-md-apps)
