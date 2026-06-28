@@ -1,6 +1,7 @@
 pragma Singleton
 import Quickshell
 import QtQuick
+import "root:/themes"   // Theme (paleta ativa); subpasta -> precisa de import explícito
 
 // Configuração central (singleton). Edite aqui para customizar aparência/comportamento
 // sem mexer na lógica. Acesse de qualquer componente como `Config.<algo>`.

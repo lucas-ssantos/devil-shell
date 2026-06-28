@@ -1,4 +1,5 @@
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // CAVA estilo Cavasik (modo CÍRCULO): espectro RADIAL com espetos ao redor da bola.
 // Fica no FUNDO (dentro da CavaWindow), à frente do CavaBars e atrás de tudo o mais.

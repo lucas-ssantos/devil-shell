@@ -1,4 +1,6 @@
 import QtQuick
+import "root:/services"   // AudioService
+import "root:/"           // Config (raiz)
 
 // Submenu de áudio (config): 2 sliders — i=0 headphone (sink), i=1 microfone (source).
 // Emergem da bola; o scroll sobre cada um (ajuste de volume) é tratado pela ShellWindow.

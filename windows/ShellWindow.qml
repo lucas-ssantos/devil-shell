@@ -3,6 +3,11 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.SystemTray
 import QtQuick
+import "root:/ui"         // MenuBall, Petal, GothicCorners, AudioMenu, AudioDevices, TrayMenu
+import "root:/layouts"    // LayoutMenu
+import "root:/cava"       // CavaRing
+import "root:/services"   // AudioService, CaptureService, UpdateService
+import "root:/"           // Config (raiz)
 
 // Janela do shell (camada de cima): bola/menu, pétalas, submenu de layouts,
 // cava radial, barra e TODA a lógica de interação (hover/clique/scroll).

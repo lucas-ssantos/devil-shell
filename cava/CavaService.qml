@@ -10,7 +10,7 @@ Scope {
 
     Process {
         id: proc
-        command: ["cava", "-p", "/home/luke/.config/quickshell/cava.conf"]
+        command: ["cava", "-p", "/home/luke/.config/quickshell/cava/cava.conf"]
         running: true
         stdout: SplitParser {
             onRead: line => {

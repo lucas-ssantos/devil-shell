@@ -1,4 +1,5 @@
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // A bola/menu central: número do workspace ativo OU nome do layout, e o anel de workspaces.
 Rectangle {

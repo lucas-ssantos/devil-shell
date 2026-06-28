@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Services.Pipewire
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // Seletor de dispositivo de áudio (popup), aberto pelo clique DIREITO nas seções
 // headphone (saídas) / microfone (entradas) da pétala de áudio. Lista os dispositivos

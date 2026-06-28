@@ -18,7 +18,8 @@ e há um **visualizador de áudio (CAVA)** ao fundo, no estilo do [Cavasik](http
   workspaces (clique troca; scroll sobre a bola troca com wrap 1↔N — no monitor certo).
 - **Menu radial de pétalas** (data-driven, reorganiza sozinho). Configuração atual (1ª → 7ª):
   - **1ª — Layout:** seletor de layout do Mango (lista curvada; clique aplica via `mmsg`).
-  - **2ª / 3ª — livres:** pétalas de exemplo (sem ação).
+  - **2ª — Atualizações:** Atualização do Debian e verificação de atualização do MangoWM
+  - **3ª — Configurações:** Abre menu para cofigurações gerais do Shell
   - **4ª — Lançador:** abre o `rofi -show drun`.
   - **5ª — Captura:** printscreen (área, com editor swappy) e gravação de tela (monitor inteiro).
   - **6ª — Áudio:** mudo de saída/entrada + sliders de volume (scroll ajusta);
@@ -71,7 +72,8 @@ cargo install wayfreeze          # wayfreeze costuma vir do cargo (~/.cargo/bin)
   `~/.cargo/bin` / `~/.local/bin` (ex.: `wayfreeze`) não são achadas por processos que o mango
   lança — por isso a captura estende o PATH antes de rodar.
 - O autostart roda como shell **não-login** (não lê `~/.bashrc`/`~/.profile`); para o `qs` e afins
-  serem encontrados, o `~/.config/mango/autostart.sh` define o PATH explicitamente.
+  serem encontrados, o `~/.config/mango/scripts/autostart.sh` (e o `services/session.sh`) define o
+  PATH explicitamente.
 
 ---
 
@@ -82,8 +84,9 @@ qs                       # inicia o Quickshell carregando ./shell.qml
 pkill quickshell; qs     # reinicia
 ```
 
-Em uso normal o `qs` é lançado pelo `~/.config/mango/autostart.sh` (junto com o resto da sessão).
-Os `console.log` só aparecem se o `qs` for iniciado por um terminal.
+Em uso normal o `qs` é lançado pelo `~/.config/mango/scripts/autostart.sh`; ao subir, o próprio `qs`
+sobe os daemons da sessão (wallpaper, bluetooth, idle-lock) via `services/session.sh`.
+Os `console.log` só aparecem se o `qs` for iniciado por um terminal (ou via `qs log`).
 
 > Inicie o `qs` **de dentro da sessão do mango** — ele precisa herdar `WAYLAND_DISPLAY` e
 > `MANGO_INSTANCE_SIGNATURE`; um terminal "pelado" fora da sessão quebra o `mmsg`.
@@ -109,14 +112,29 @@ para apps gráficos), além de flags especiais (`audio`, `capture`, `tray`).
 
 ## 🗂️ Estrutura
 
-- **Entrada:** `shell.qml` (liga serviços, dados e as janelas por monitor).
-- **Serviços (singletons):** `MangoLayout` (estado do mango), `AudioService` (PipeWire),
-  `CaptureService` (print/gravação), `CavaService` (níveis do cava), `NotificationService`.
-- **Janelas (por monitor):** `CavaWindow` (camada de baixo, atrás dos apps) e `ShellWindow`
-  (camada de cima, a UI interativa). `NotificationWindow` é única (monitor focado).
-- **Visual:** `MenuBall`, `Petal`, `LayoutMenu`, `AudioMenu`, `AudioDevices`, `TrayMenu`,
-  `GothicCorners`, `CavaBars` (espectro de fundo) e `CavaRing` (círculo da bola).
-- **Config:** `Config.qml`, `Theme.qml`, `cava.conf`.
+Os `.qml` são organizados em subpastas por papel. **Atenção:** a auto-descoberta do Quickshell por
+nome só vale na **raiz**; arquivos em subpastas precisam de `import "root:/<pasta>"` (até os
+singletons). Detalhes no [CLAUDE.md](CLAUDE.md).
+
+```
+shell.qml        ponto de entrada (liga serviços, dados e janelas por monitor)
+Config.qml       config central (singleton) — todos os valores ajustáveis
+themes/          Theme (seletor) + paletas CrimsonDevil e InfernalRose (os hex)
+services/        MangoLayout, AudioService, CaptureService, MediaService, WeatherService,
+                 UpdateService, NotificationService, StartupService + session.sh
+cava/            CavaService, CavaWindow, CavaBars, CavaRing + cava.conf
+layouts/         LayoutMenu (seletor de layout do mango)
+windows/         ShellWindow (UI interativa) e NotificationWindow (toasts)
+ui/              MenuBall, Petal, GothicCorners, AudioMenu, AudioDevices, TrayMenu,
+                 Capsule, TopCapsules
+```
+
+- **Por monitor** (`Variants`): `CavaWindow` (camada de baixo) + `ShellWindow` (camada de cima) +
+  `TopCapsules` (cápsulas do topo). `NotificationWindow` é única (monitor focado).
+- **Inicialização da sessão centralizada no qs:** `StartupService` (chamado pelo `shell.qml`) sobe
+  wallpaper / bluetooth / idle-lock via `services/session.sh` (pedido ao compositor por `mmsg spawn`).
+  No `~/.config/mango/scripts/autostart.sh` fica só o bootstrap mínimo (PATH/dbus, matar o swaync,
+  lançar o `qs`, notificação de reload).
 
 Detalhes de arquitetura e as **peculiaridades de MangoWC + Quickshell** (IPC, `spawn`, processos,
-armadilhas de QML) estão no **[CLAUDE.md](CLAUDE.md)**.
+armadilhas de QML, imports `root:/`) estão no **[CLAUDE.md](CLAUDE.md)**.

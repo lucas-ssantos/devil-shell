@@ -1,5 +1,6 @@
 import Quickshell
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // Menu estilizado do item da bandeja (system tray), aberto no clique direito.
 // Lê as entradas do menu do app via QsMenuOpener e as desenha no tema do shell

@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // Serviço de clima (singleton): pega a temperatura do wttr.in periodicamente.
 // O local vem de Config.weatherLocation (vazio = auto por IP). Requer `curl` e rede.

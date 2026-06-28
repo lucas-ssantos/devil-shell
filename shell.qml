@@ -4,6 +4,10 @@
 //   quickshell (pkill quickshell; qs) — hot-reload não basta.
 import Quickshell
 import QtQuick
+import "root:/services"   // MangoLayout, StartupService
+import "root:/cava"       // CavaService, CavaWindow
+import "root:/windows"    // ShellWindow, NotificationWindow
+import "root:/ui"         // TopCapsules
 
 // Ponto de entrada: só liga os serviços, os dados e as janelas por monitor.
 // A lógica/visual fica nos componentes (ShellWindow, MenuBall, Petal, LayoutMenu,
@@ -14,6 +18,10 @@ Scope {
     // ── Serviços ──
     MangoLayout  { id: mangoSvc }   // estado do MangoWC (monitores, tags, layouts)
     CavaService  { id: cava }    // níveis de áudio do cava
+
+    // Sobe os daemons da sessão (wallpaper, blueman, idle/lock) centralizados no qs.
+    // Ver services/StartupService.qml e services/session.sh.
+    Component.onCompleted: StartupService.start()
 
     // ── Dados (data-driven) ──
     //  Pétalas: a 1ª é o seletor de LAYOUT (tratada à parte); as demais são livres.

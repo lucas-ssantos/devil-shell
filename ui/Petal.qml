@@ -1,5 +1,7 @@
 import QtQuick
 import Quickshell.Services.SystemTray
+import "root:/services"   // AudioService, CaptureService, UpdateService
+import "root:/"           // Config (raiz)
 
 // Uma pétala do menu radial (visual). Lê o estado do controlador `ctx` e os
 // valores customizáveis de `Config`. A 1ª pétala (index 0) mostra a sigla do

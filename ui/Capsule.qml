@@ -1,4 +1,5 @@
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // Cápsula retrátil no topo da tela: fica escondida (só a fatia `capsulePeek` aparece)
 // e DESCE ao passar o mouse, mostrando ícone + texto. Conteúdo via propriedades.

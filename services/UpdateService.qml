@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // Serviço de atualizações (singleton):
 //  - a cada Config.updateInterval, conta os pacotes atualizáveis -> `packages`

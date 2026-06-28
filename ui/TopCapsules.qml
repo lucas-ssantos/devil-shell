@@ -1,6 +1,8 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
+import "root:/services"   // MediaService, WeatherService
+import "root:/"           // Config (raiz); Capsule está na mesma pasta (ui)
 
 // Janela do topo: duas cápsulas retráteis. Esquerda (10% da margem esq.) = mídia (MPRIS);
 // direita (10% da margem dir.) = temperatura (wttr.in). Camada Top; só as duas zonas das

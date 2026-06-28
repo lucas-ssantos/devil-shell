@@ -1,4 +1,5 @@
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // Espectro do CAVA estilo Cavasik: ÁREA SUAVE preenchida (curva, não barras),
 // subindo da base, com gradiente da cor das ondas (topo) ao transparente (base).

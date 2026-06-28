@@ -1,4 +1,5 @@
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // Cantos góticos: filetes côncavos ligando a bola à barra de fundo (mesma cor).
 // `ctx` = controlador (ShellWindow); `g` = contexto 2D do Canvas.

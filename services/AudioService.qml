@@ -1,6 +1,7 @@
 pragma Singleton
 import Quickshell
 import Quickshell.Services.Pipewire
+import "root:/"   // Config (raiz)
 
 // Serviço de áudio (singleton) via Pipewire. Expõe volume/mudo da saída (sink =
 // headphone) e da entrada (source = microfone) e funções pra alterar.

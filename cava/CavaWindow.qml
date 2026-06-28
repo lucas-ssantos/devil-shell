@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
+import "root:/"   // Config (raiz); CavaBars está na mesma pasta (cava)
 
 // Janela do CAVA na camada de BAIXO (fica atrás das janelas dos apps).
 // Totalmente click-through; só desenha as barras lineares.

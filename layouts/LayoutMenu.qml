@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import "root:/"   // Config (raiz)
 
 // Menu de seleção de LAYOUT do Mango — popup estilizado (igual ao do tray/áudio).
 // Lista os layoutItems; clicar aplica via `mmsg dispatch setlayout,<name>`. O layout

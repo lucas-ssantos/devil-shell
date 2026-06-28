@@ -2,6 +2,8 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
 import QtQuick
+import "root:/services"   // NotificationService, MangoLayout (via property)
+import "root:/"           // Config (raiz)
 
 // Painel de notificações (toasts) no TOPO-CENTRO da tela focada. Lê as notificações
 // ativas de NotificationService e mostra um card por notificação, com auto-dismiss.
