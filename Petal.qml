@@ -29,7 +29,7 @@ Item {
     x: ctx.ballCX + dist * Math.cos(angleRad) - width / 2
     y: ctx.ballCY - dist * Math.sin(angleRad) - height / 2
 
-    opacity: (ctx.open && !vanished && !ctx.layoutMode && !ctx.audioMode) ? 1.0 : 0.0
+    opacity: (ctx.open && !vanished && !ctx.audioMode) ? 1.0 : 0.0
 
     Behavior on dist { NumberAnimation { duration: Config.petalDistAnim; easing.type: Easing.OutBack } }
     Behavior on opacity { NumberAnimation { duration: Config.petalOpacityAnim } }

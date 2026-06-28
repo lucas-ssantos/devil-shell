@@ -40,9 +40,6 @@ PanelWindow {
     readonly property real menuHalf: hitOuterR + Config.menuMargin
     readonly property real dotRingR: ballRadius * Config.dotRingFactor
     readonly property real gothicR: Config.gothicR
-    readonly property real layoutRowH: Config.layoutRowH
-    readonly property real layoutPillW: Config.layoutPillW
-    readonly property real layoutBow: Config.layoutBow
     property real petalRotation: 0
     Behavior on petalRotation { NumberAnimation { duration: Config.petalRotAnim; easing.type: Easing.OutCubic } }
 
@@ -52,13 +49,12 @@ PanelWindow {
     property bool overBall: false
     property int  hoverIndex: -1
     property int  selectedIndex: -1
-    property bool layoutMode: false
     property bool audioMode: false      // submenu de áudio (config) aberto
     property int  petalSection: -1      // seção da pétala multi-botão sob o cursor
     property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
-    // a bola fica aberta tb enquanto um popup (tray/áudio) estiver visível (não recolher sozinha)
-    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible)
+    // a bola fica aberta tb enquanto um popup (tray/áudio/layout) estiver visível (não recolher sozinha)
+    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || layoutMenu.visible)
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
         return -1
@@ -76,7 +72,7 @@ PanelWindow {
         return -1
     }
     onHoverOpenChanged: if (!hoverOpen) dismissed = false
-    onOpenChanged: if (!open) { selectedIndex = -1; layoutMode = false; audioMode = false }
+    onOpenChanged: if (!open) { selectedIndex = -1; audioMode = false }
 
     Timer { id: hoverCloseTimer; interval: Config.hoverCloseMs; onTriggered: win.hoverOpen = false }
     Timer { id: selectTimer; interval: Config.selectMs; onTriggered: { win.dismissed = true; win.pinned = false; win.selectedIndex = -1 } }
@@ -102,10 +98,9 @@ PanelWindow {
     }
     readonly property string currentLayoutSymbol: monData ? (monData.layout_symbol ?? "?") : "?"
     readonly property string currentLayoutName: mango ? (mango.layoutNames[currentLayoutSymbol] ?? currentLayoutSymbol) : currentLayoutSymbol
-    readonly property bool showLayoutName: layoutMode || hoverIndex === 0
-    readonly property string displayLayoutName: layoutMode
-        ? (hoverIndex >= 0 ? (layoutItems[hoverIndex].label ?? "") : currentLayoutName)
-        : currentLayoutName
+    // nome do layout na bola: ao passar na 1ª pétala ou com o menu de layout aberto
+    readonly property bool showLayoutName: hoverIndex === 0 || layoutMenu.visible
+    readonly property string displayLayoutName: currentLayoutName
 
     // Troca para o workspace `n` NESTE monitor. O `view` do mango age no monitor
     // FOCADO, então, se este monitor não estiver focado, focamos ele antes (direção
@@ -127,22 +122,6 @@ PanelWindow {
         proc.exec(["sh", "-c", "mmsg dispatch focusmon," + dir + "; mmsg dispatch view," + n + ",0"])
     }
 
-    // ── Submenu de layouts: posição de cada opção (lista curvada) ──
-    function layoutPillX(i) {
-        const t = (i + 0.5) / layoutItems.length
-        return ballCX + layoutBow * Math.sin(t * Math.PI)
-    }
-    function layoutPillY(i) {
-        return (ballCY - ballRadius - Config.layoutGap) - layoutRowH / 2 - i * layoutRowH
-    }
-    function layoutAt(mx, my) {
-        const n = layoutItems.length
-        for (let i = 0; i < n; i++)
-            if (Math.abs(mx - layoutPillX(i)) <= layoutPillW / 2
-             && Math.abs(my - layoutPillY(i)) <= layoutRowH / 2) return i
-        return -1
-    }
-
     // ── Pétalas multi-botão (áudio/captura) ─────────────
     // seção (0 = junto à bola … n-1 = na ponta) sob o cursor, dividindo a pétala em n
     function petalSectionAt(mx, my, n) {
@@ -161,7 +140,7 @@ PanelWindow {
     }
     // posição vertical de cada slider do submenu de áudio (0=headphone, 1=mic)
     function audioPillY(i) {
-        return (ballCY - ballRadius - Config.layoutGap) - Config.audioSliderH / 2 - i * (Config.audioSliderH + 8)
+        return (ballCY - ballRadius - 8) - Config.audioSliderH / 2 - i * (Config.audioSliderH + 8)
     }
     function audioSliderAt(mx, my) {
         for (let i = 0; i < 2; i++)
@@ -210,8 +189,6 @@ PanelWindow {
             if (audioMode) {
                 hoverIndex = -1; petalSection = -1
                 audioSliderHover = overBall ? -1 : audioSliderAt(mx, my)
-            } else if (layoutMode) {
-                hoverIndex = overBall ? -1 : layoutAt(mx, my); petalSection = -1; audioSliderHover = -1
             } else {
                 hoverIndex = overBall ? -1 : petalAt(mx, my)
                 const ns = petalSections(hoverIndex)
@@ -275,6 +252,9 @@ PanelWindow {
     // seletor de dispositivo de áudio (direito no headphone/mic da pétala de áudio)
     AudioDevices { id: audioDevices; ctx: win }
 
+    // menu de seleção de layout (1ª pétala) — popup estilizado
+    LayoutMenu { id: layoutMenu; ctx: win }
+
     // ── Máscara de input ────────────────────────────────
     //  Fechado: só a bola é clicável. Aberto: só a região central (resto = click-through).
     mask: Region {
@@ -302,7 +282,6 @@ PanelWindow {
         delegate: Petal { ctx: win }
     }
 
-    LayoutMenu { ctx: win }                                 // submenu de layouts
     AudioMenu { ctx: win }                                  // submenu de áudio (sliders)
 
     // barra fina no fundo (a bola se funde nela)
@@ -357,7 +336,7 @@ PanelWindow {
         onClicked: (mouse) => {
             // Botão direito: bandeja -> menu do app; áudio -> seletor de dispositivo
             if (mouse.button === Qt.RightButton) {
-                if (win.layoutMode || win.audioMode) return   // ignora durante submenus
+                if (win.audioMode) return   // ignora durante o submenu de sliders
                 const rpi = win.petalAt(mouseX, mouseY)
                 if (rpi === win.trayIndex) {
                     if (trayMenu.visible) { trayMenu.visible = false; return }   // direito de novo fecha
@@ -386,25 +365,13 @@ PanelWindow {
             }
             // 2) bola?
             if (win.overBallAt(mouseX, mouseY)) {
-                if (trayMenu.visible || audioDevices.visible) {   // fecha popup + bola
-                    trayMenu.visible = false; audioDevices.visible = false
+                if (trayMenu.visible || audioDevices.visible || layoutMenu.visible) {   // fecha popup + bola
+                    trayMenu.visible = false; audioDevices.visible = false; layoutMenu.visible = false
                     win.pinned = false; win.dismissed = true; return
                 }
                 if (win.audioMode)  { win.audioMode = false; return }   // volta ao menu principal
-                if (win.layoutMode) { win.layoutMode = false; return }  // volta ao menu principal
                 if (win.pinned) { win.pinned = false; win.dismissed = true }
                 else            { win.pinned = true;  win.dismissed = false }
-                return
-            }
-            // 3) submenu de layouts -> escolher na lista
-            if (win.layoutMode) {
-                const li = win.layoutAt(mouseX, mouseY)
-                if (li >= 0) {
-                    proc.exec(["mmsg", "dispatch", "setlayout," + win.layoutItems[li].name])
-                    selectTimer.restart()
-                } else {
-                    win.pinned = false
-                }
                 return
             }
             // 3b) submenu de áudio -> clique no slider não faz nada (scroll ajusta); fora recolhe
@@ -446,7 +413,9 @@ PanelWindow {
                         if (it) win.focusTrayApp(it)
                     }
                 } else if (pi === 0) {
-                    win.layoutMode = true   // 1ª pétala = abre o submenu de layouts
+                    // 1ª pétala = abre o popup de seleção de layout
+                    win.dismissed = false
+                    layoutMenu.openAt(Math.round(mouseX), Math.round(mouseY))
                 } else {
                     const item = win.menuItems[pi]
                     if (item.spawn)                              // app gráfico: lança pelo mango (env Wayland)
@@ -461,6 +430,7 @@ PanelWindow {
             // 5) fora -> recolhe (e fecha os popups, se abertos)
             trayMenu.visible = false
             audioDevices.visible = false
+            layoutMenu.visible = false
             win.pinned = false
         }
     }
@@ -480,7 +450,7 @@ PanelWindow {
                     return
                 }
                 // na região das pétalas (aberto, fora da bola) -> gira o anel
-                if (win.open && !win.overBall && !win.layoutMode) {
+                if (win.open && !win.overBall && !layoutMenu.visible) {
                     win.petalRotation += dir * Config.petalStepDeg
                     return
                 }

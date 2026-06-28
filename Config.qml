@@ -35,12 +35,8 @@ Singleton {
     readonly property real hitMargin: 8        // folga radial do hit-test
     readonly property real menuMargin: 16      // folga lateral da máscara quando aberto
 
-    // ── Submenu de layouts ──────────────────────────────
-    readonly property real layoutRowH: 23
-    readonly property real layoutPillW: 132
-    readonly property real layoutBow: 38       // curvatura horizontal (segue a bola)
-    readonly property real layoutTilt: 0.34    // inclinação por deslocamento
-    readonly property real layoutGap: 8        // folga bola → 1ª opção
+    // ── Menu de layouts (popup estilizado, 1ª pétala) ───
+    readonly property real layoutMenuW: 200    // largura do popup de seleção de layout
 
     // ── Cava ────────────────────────────────────────────
     readonly property real cavaMaxH: 180       // altura máx das barras lineares
