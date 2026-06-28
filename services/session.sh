@@ -14,14 +14,15 @@ pgrep -x swaybg >/dev/null || setsid swaybg -i "$HOME/Pictures/Wallpapers/vigna/
 # Applet do Bluetooth (aparece na bandeja do shell).
 pgrep -x blueman-applet >/dev/null || setsid blueman-applet &
 
-# Idle / lock / dpms. swayidle dispara o hyprlock (ext-session-lock-v1, suportado pelo
-# mango; o antigo swaylock-effects usava o wlr_input_inhibit deprecated). Efeitos/cores
-# do lock ficam em ~/.config/hypr/hyprlock.conf. 'pidof hyprlock ||' evita duas instâncias.
+# Idle / lock / dpms. swayidle dispara o swaylock-effects (v1.7+, ext-session-lock-v1,
+# o protocolo moderno suportado pelo mango — a ressalva antiga do wlr_input_inhibit
+# deprecated não vale mais nesta versão). Efeitos/cores do lock (tema Crimson Devil)
+# ficam em ~/.config/swaylock/config. 'pidof swaylock ||' evita duas instâncias.
 # dpms: mango é wlroots (não sway) -> sem 'swaymsg'; usa-se wlr-randr por output (sem '*'):
 # lista os nomes (linhas não indentadas) e liga/desliga cada um.
 pgrep -x swayidle >/dev/null || \
     setsid swayidle -w \
-        timeout 300 'pidof hyprlock || hyprlock' \
+        timeout 300 'pidof swaylock || swaylock' \
         timeout 600 'wlr-randr | grep -E "^[^[:space:]]" | cut -d" " -f1 | while read -r o; do wlr-randr --output "$o" --off; done' \
         resume       'wlr-randr | grep -E "^[^[:space:]]" | cut -d" " -f1 | while read -r o; do wlr-randr --output "$o" --on;  done' \
-        before-sleep 'pidof hyprlock || hyprlock' &
+        before-sleep 'pidof swaylock || swaylock' &

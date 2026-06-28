@@ -7,7 +7,7 @@ import Quickshell.Io
 // applet do bluetooth, idle/lock/dpms).
 //
 // COMO: esses daemons são apps GRÁFICOS Wayland (swaybg = layer-shell; blueman = GTK;
-// swayidle fala o protocolo idle e dispara o hyprlock). Lançá-los pelo Process do
+// swayidle fala o protocolo idle e dispara o swaylock). Lançá-los pelo Process do
 // quickshell NÃO funciona — o filho não herda um WAYLAND_DISPLAY utilizável (a mesma
 // armadilha do CaptureService). Por isso pedimos ao COMPOSITOR para lançá-los, via
 // `mmsg dispatch spawn`, apontando para o script services/session.sh (guardas pgrep +
