@@ -81,6 +81,10 @@ PanelWindow {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].tray) return i
         return -1
     }
+    readonly property int settingsIndex: {
+        for (let i = 0; i < menuItems.length; i++) if (menuItems[i].settings) return i
+        return -1
+    }
     onHoverOpenChanged: if (!hoverOpen) dismissed = false
     onOpenChanged: if (!open) { selectedIndex = -1; audioMode = false }
 
@@ -438,6 +442,10 @@ PanelWindow {
                         const it = items[win.petalSectionAt(mouseX, mouseY, items.length)]
                         if (it) win.focusTrayApp(it)
                     }
+                } else if (pi === win.settingsIndex) {
+                    // 3ª pétala = abre a janela de configurações do shell (recolhe o menu)
+                    Settings.open = true
+                    win.pinned = false; win.dismissed = true
                 } else if (pi === 0) {
                     // 1ª pétala = alterna o popup de seleção de layout
                     if (layoutMenu.visible) {

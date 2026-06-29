@@ -30,7 +30,7 @@ Scope {
     readonly property var menuItems: [
         { icon: "⬡", label: "Layout", command: [] },                    // 1ª = mudar layout do mango
         { icon: "", label: "Atualizações", update: true },             // 2ª = updates do sistema + MangoWC
-        { icon: "●", label: "Item 3", command: [] },
+        { icon: "⚙", label: "Configurações", settings: true },         // 3ª = abre a janela de configurações do shell
         { icon: "☰", label: "Lançador", spawn: "rofi -show drun" },     // 4ª = abre o launcher
         { icon: "📷", label: "Captura", capture: true },                // 5ª = print + gravação (2 seções)
         { icon: "🔊", label: "Áudio", audio: true },                    // 6ª = controle de áudio (3 seções)
@@ -54,6 +54,9 @@ Scope {
 
     // ── Notificações: uma única janela no topo-centro do monitor focado ──
     NotificationWindow { mango: mangoSvc }
+
+    // ── Configurações: overlay modal único no centro do monitor focado (3ª pétala) ──
+    SettingsWindow { mango: mangoSvc }
 
     // ── Uma instância por monitor: janela do cava (camada de baixo) + shell (camada de cima) ──
     Variants {

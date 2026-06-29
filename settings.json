@@ -1,0 +1,3 @@
+{
+  "updateCheckCmd": "sudo -n nala update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable"
+}

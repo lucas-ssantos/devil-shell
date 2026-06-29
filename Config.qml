@@ -1,201 +1,203 @@
 pragma Singleton
 import Quickshell
 import QtQuick
-import "root:/themes"   // Theme (paleta ativa); subpasta -> precisa de import explícito
+import "root:/themes"     // Theme (paleta ativa); subpasta -> precisa de import explícito
+import "root:/services"   // Settings (overrides do usuário, da janela de configurações)
 
-// Configuração central (singleton). Edite aqui para customizar aparência/comportamento
-// sem mexer na lógica. Acesse de qualquer componente como `Config.<algo>`.
+// Configuração central (singleton). Os valores literais abaixo são os PADRÕES; cada
+// um pode ser sobrescrito em runtime pela janela de configurações (3ª pétala), que
+// grava em ~/.config/quickshell/settings.json via Settings. A regra é sempre:
+//   readonly property <t> nome: Settings.get("nome", <padrão>)
+// Assim, sem override, vale o padrão; "Restaurar padrão" só apaga os overrides.
+// As cores semânticas caem em Theme.<cor> (a paleta escolhida + overrides pal_*).
 Singleton {
     id: cfg
 
     // ── Janela ──────────────────────────────────────────
-    readonly property int  shellHeight: 360   // altura da janela do shell (espaço p/ submenu)
-    readonly property int  cavaHeight: 260    // altura da janela do cava
-    readonly property int  barHeight: 1       // espessura da barra de fundo
+    readonly property int  shellHeight: Settings.get("shellHeight", 360)   // altura da janela do shell (espaço p/ submenu)
+    readonly property int  cavaHeight: Settings.get("cavaHeight", 260)     // altura da janela do cava
+    readonly property int  barHeight: Settings.get("barHeight", 1)         // espessura da barra de fundo
 
     // ── Bola / menu ─────────────────────────────────────
-    readonly property real ballRadius: 46
-    readonly property real ballPeek: 28        // fatia visível quando recolhida
-    readonly property real dotRingFactor: 0.62 // raio do anel de workspaces (× ballRadius)
-    readonly property real dotSize: 8          // diâmetro do ponto de workspace
-    readonly property real dotActiveSize: 11   // diâmetro do ponto ativo
-    readonly property real dotHitR: 9          // raio de clique do ponto
-    readonly property real gothicR: 32         // raio dos cantos góticos (bola ↔ barra)
+    readonly property real ballRadius: Settings.get("ballRadius", 46)
+    readonly property real ballPeek: Settings.get("ballPeek", 28)               // fatia visível quando recolhida
+    readonly property real dotRingFactor: Settings.get("dotRingFactor", 0.62)   // raio do anel de workspaces (× ballRadius)
+    readonly property real dotSize: Settings.get("dotSize", 8)                  // diâmetro do ponto de workspace
+    readonly property real dotActiveSize: Settings.get("dotActiveSize", 11)     // diâmetro do ponto ativo
+    readonly property real dotHitR: Settings.get("dotHitR", 9)                  // raio de clique do ponto
+    readonly property real gothicR: Settings.get("gothicR", 32)                 // raio dos cantos góticos (bola ↔ barra)
 
     // ── Pétalas ─────────────────────────────────────────
-    readonly property real petalW: 25
-    readonly property real petalH: 84
-    readonly property real petalGap: 10        // folga bola → pétala
-    readonly property real petalShrink: 0.8    // escala das não-hover
-    readonly property real petalHoverScale: 1.2
-    readonly property real petalHoverExtend: 5 // quanto a pétala em hover estende p/ a bola (px)
-    readonly property real petalFlare: 8       // tamanho dos cantos góticos da pétala
-    readonly property real petalStartDeg: 180  // ângulo da 1ª pétala (0=dir, 90=topo, 180=esq)
-    readonly property real petalStepDeg: 30    // passo entre pétalas (e do scroll)
-    readonly property int  petalDir: -1        // sentido do anel (+1 / -1)
-    readonly property real hitMargin: 8        // folga radial do hit-test
-    readonly property real menuMargin: 16      // folga lateral da máscara quando aberto
+    readonly property real petalW: Settings.get("petalW", 25)
+    readonly property real petalH: Settings.get("petalH", 84)
+    readonly property real petalGap: Settings.get("petalGap", 10)                  // folga bola → pétala
+    readonly property real petalShrink: Settings.get("petalShrink", 0.8)           // escala das não-hover
+    readonly property real petalHoverScale: Settings.get("petalHoverScale", 1.2)
+    readonly property real petalHoverExtend: Settings.get("petalHoverExtend", 5)   // quanto a pétala em hover estende p/ a bola (px)
+    readonly property real petalFlare: Settings.get("petalFlare", 8)               // tamanho dos cantos góticos da pétala
+    readonly property real petalStartDeg: Settings.get("petalStartDeg", 180)       // ângulo da 1ª pétala (0=dir, 90=topo, 180=esq)
+    readonly property real petalStepDeg: Settings.get("petalStepDeg", 30)          // passo entre pétalas (e do scroll)
+    readonly property int  petalDir: Settings.get("petalDir", -1)                  // sentido do anel (+1 / -1)
+    readonly property real hitMargin: Settings.get("hitMargin", 8)                 // folga radial do hit-test
+    readonly property real menuMargin: Settings.get("menuMargin", 16)              // folga lateral da máscara quando aberto
 
     // ── Menu de layouts (popup estilizado, 1ª pétala) ───
-    readonly property real layoutMenuW: 200    // largura do popup de seleção de layout
+    readonly property real layoutMenuW: Settings.get("layoutMenuW", 200)   // largura do popup de seleção de layout
 
     // ── Cava ────────────────────────────────────────────
-    readonly property real cavaMaxH: 180       // altura máx das barras lineares
-    readonly property real cavaRadMax: 70      // comprimento máx dos espetos radiais (círculo)
-    readonly property real cavaBarFactor: 0.6  // largura da barra (× slot)
-    readonly property real cavaBarsOpacity: 0.5
-    readonly property real cavaRingOpacity: 0.85
-    // Visualizador CAVA usa o tema 'cava' do Theme.qml (hoje Infernal Rose), de propósito
-    // diferente do resto do shell. O espectro vem de Theme.cava* (interno → meio → pontas).
-    // gradiente radial do círculo (Cavasik): base interna → meio → pontas dos picos
+    readonly property real cavaMaxH: Settings.get("cavaMaxH", 180)              // altura máx das barras lineares
+    readonly property real cavaRadMax: Settings.get("cavaRadMax", 70)           // comprimento máx dos espetos radiais (círculo)
+    readonly property real cavaBarFactor: Settings.get("cavaBarFactor", 0.6)    // largura da barra (× slot)
+    readonly property real cavaBarsOpacity: Settings.get("cavaBarsOpacity", 0.5)
+    readonly property real cavaRingOpacity: Settings.get("cavaRingOpacity", 0.85)
+    // Visualizador CAVA usa o tema 'cava' do Theme.qml, de propósito diferente do resto
+    // do shell. O espectro vem de Theme.cava* (interno → meio → pontas).
     readonly property color cavaColor1: Theme.cavaInner   // interno (base do espectro)
     readonly property color cavaColor2: Theme.cavaMid     // meio
     readonly property color cavaColor3: Theme.cavaTip     // pontas (picos altos, ethereal)
     readonly property color cavaWave:   Theme.cavaMid     // área das ondas lineares (CavaBars)
 
     // ── Áudio (5ª pétala) ───────────────────────────────
-    readonly property string iconFont: "JetBrainsMono Nerd Font"   // fonte dos ícones (instalada; tem os glifos + logos de distro)
-    readonly property string iconOutput: ""            // volume (headphone/saída)
-    readonly property string iconOutputMuted: ""       // volume mudo
-    readonly property string iconInput: ""             // microfone (entrada)
-    readonly property string iconInputMuted: ""        // microfone mudo
-    readonly property string iconConfig: ""            // engrenagem (config)
-    readonly property int    audioIconSize: 17               // tamanho dos ícones (maiores)
-    readonly property real   audioBtnMargin: 3               // recuo do painel de botões
-    readonly property real   audioBtnDarken: 1.22            // fundo do botão (× mais escuro)
-    readonly property real   audioBtnHoverDarken: 1.5        // botão sob o cursor
-    readonly property color  audioMutedColor: Theme.red
-    readonly property real   volStep: 0.05       // passo do scroll (5%)
-    readonly property real   sinkVolMax: 1.5     // headphone até 150%
-    readonly property real   sourceVolMax: 1.0   // microfone até 100%
-    readonly property real   audioSliderW: 150
-    readonly property real   audioSliderH: 22
-    readonly property real   audioDevW: 280      // largura do seletor de dispositivos (direito no áudio)
-    readonly property color  audioSliderBg: Theme.surface0
-    readonly property color  audioSliderFill: Theme.mauve
-    readonly property color  audioSliderText: Theme.text
+    readonly property string iconFont: Settings.get("iconFont", "JetBrainsMono Nerd Font")   // fonte dos ícones (tem os glifos + logos de distro)
+    readonly property string iconOutput: Settings.get("iconOutput", "")            // volume (headphone/saída)
+    readonly property string iconOutputMuted: Settings.get("iconOutputMuted", "")  // volume mudo
+    readonly property string iconInput: Settings.get("iconInput", "")              // microfone (entrada)
+    readonly property string iconInputMuted: Settings.get("iconInputMuted", "")    // microfone mudo
+    readonly property string iconConfig: Settings.get("iconConfig", "")            // engrenagem (config)
+    readonly property int    audioIconSize: Settings.get("audioIconSize", 17)            // tamanho dos ícones
+    readonly property real   audioBtnMargin: Settings.get("audioBtnMargin", 3)           // recuo do painel de botões
+    readonly property real   audioBtnDarken: Settings.get("audioBtnDarken", 1.22)        // fundo do botão (× mais escuro)
+    readonly property real   audioBtnHoverDarken: Settings.get("audioBtnHoverDarken", 1.5)  // botão sob o cursor
+    readonly property color  audioMutedColor: Settings.get("audioMutedColor", Theme.red)
+    readonly property real   volStep: Settings.get("volStep", 0.05)        // passo do scroll (5%)
+    readonly property real   sinkVolMax: Settings.get("sinkVolMax", 1.5)   // headphone até 150%
+    readonly property real   sourceVolMax: Settings.get("sourceVolMax", 1.0)  // microfone até 100%
+    readonly property real   audioSliderW: Settings.get("audioSliderW", 150)
+    readonly property real   audioSliderH: Settings.get("audioSliderH", 22)
+    readonly property real   audioDevW: Settings.get("audioDevW", 280)     // largura do seletor de dispositivos
+    readonly property color  audioSliderBg: Settings.get("audioSliderBg", Theme.surface0)
+    readonly property color  audioSliderFill: Settings.get("audioSliderFill", Theme.mauve)
+    readonly property color  audioSliderText: Settings.get("audioSliderText", Theme.text)
 
     // ── Captura (4ª pétala) ─────────────────────────────
-    readonly property string iconScreenshot: ""   // câmera (print)
-    readonly property string iconRecord: ""       // filmadora (gravar)
-    readonly property string iconRecording: ""    // parar (enquanto grava)
-    readonly property color  captureRecColor: Theme.red // vermelho enquanto grava
+    readonly property string iconScreenshot: Settings.get("iconScreenshot", "")   // câmera (print)
+    readonly property string iconRecord: Settings.get("iconRecord", "")           // filmadora (gravar)
+    readonly property string iconRecording: Settings.get("iconRecording", "")     // parar (enquanto grava)
+    readonly property color  captureRecColor: Settings.get("captureRecColor", Theme.red)  // vermelho enquanto grava
 
     // ── Atualizações (2ª pétala) ─────────────────────────
-    readonly property int    updateInterval: 3600000  // checa pacotes de 1 em 1 hora (ms)
-    readonly property string iconUpdate: ""    // logo do Debian (nf-linux-debian)
-    readonly property string iconMango: "🥭"           // manga (emoji; renderiza na fonte padrão)
+    readonly property int    updateInterval: Settings.get("updateInterval", 3600000)  // checa pacotes de 1 em 1 hora (ms)
+    readonly property string iconUpdate: Settings.get("iconUpdate", "")    // logo do Debian (nf-linux-debian)
+    readonly property string iconMango: Settings.get("iconMango", "🥭")           // manga (emoji)
     // checagem (background, sem terminal): `sudo nala update` p/ refrescar e CONTA os atualizáveis.
-    // Precisa de NOPASSWD p/ `nala update` (senão pula o refresh e conta as listas já existentes).
-    readonly property string updateCheckCmd: "sudo -n nala update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable"
+    readonly property string updateCheckCmd: Settings.get("updateCheckCmd", "sudo -n nala update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable")
     // clique: abre um TERMINAL e roda `sudo nala upgrade` SEM -y (você confirma ou não).
-    readonly property string updateUpgradeSpawn: "kitty -e bash -lc 'sudo nala upgrade; echo; echo Concluido; read -n1 -s'"
+    readonly property string updateUpgradeSpawn: Settings.get("updateUpgradeSpawn", "kitty -e bash -lc 'sudo nala upgrade; echo; echo Concluido; read -n1 -s'")
     // atualização do MangoWC EM BACKGROUND via script do usuário; saída via notify-send
-    // (-r 9102 reaproveita o mesmo toast: "Atualizando…" → "✓/✗"; precisa de libnotify-bin).
-    readonly property string updateMangoSpawn: "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; notify-send -a MangoWC -r 9102 \"Atualizando o MangoWC…\"; if \"$HOME/.config/mango/scripts/update-mango.sh\" >/tmp/qs-mango.log 2>&1; then notify-send -a MangoWC -r 9102 \"✓ MangoWC atualizado (reinicie a sessão)\"; else notify-send -a MangoWC -r 9102 -u critical \"✗ Falha no Mango — veja /tmp/qs-mango.log\"; fi'"
+    readonly property string updateMangoSpawn: Settings.get("updateMangoSpawn", "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; notify-send -a MangoWC -r 9102 \"Atualizando o MangoWC…\"; if \"$HOME/.config/mango/scripts/update-mango.sh\" >/tmp/qs-mango.log 2>&1; then notify-send -a MangoWC -r 9102 \"✓ MangoWC atualizado (reinicie a sessão)\"; else notify-send -a MangoWC -r 9102 -u critical \"✗ Falha no Mango — veja /tmp/qs-mango.log\"; fi'")
 
     // ── Bandeja / system tray (7ª pétala) ───────────────
-    readonly property string iconTray: "󰀻"       // ícone genérico quando a bandeja está vazia (nf-md-apps)
-    readonly property int    trayIconSize: 16     // tamanho dos ícones dos apps na pétala
+    readonly property string iconTray: Settings.get("iconTray", "󰀻")       // ícone genérico quando a bandeja está vazia
+    readonly property int    trayIconSize: Settings.get("trayIconSize", 16)     // tamanho dos ícones dos apps na pétala
 
     // menu estilizado do clique direito (TrayMenu.qml)
-    readonly property color  trayMenuBg: Theme.base
-    readonly property color  trayMenuBorder: Theme.surface0
-    readonly property color  trayMenuHover: Theme.surface1
-    readonly property color  trayMenuText: Theme.text
-    readonly property color  trayMenuTextDisabled: Theme.overlay0
-    readonly property real   trayMenuW: 220       // largura fixa do menu
-    readonly property real   trayMenuRadius: 10
-    readonly property real   trayMenuPad: 6       // recuo interno do painel
-    readonly property real   trayMenuRowH: 28
-    readonly property real   trayMenuRowRadius: 6
-    readonly property real   trayMenuSepH: 9      // altura da faixa do separador
-    readonly property int    trayMenuTextSize: 13
-    readonly property int    trayMenuIconSize: 16 // ícone dentro do menu
-    readonly property real   trayMenuGap: 21      // folga acima da pétala (o menu abre pra cima)
-    readonly property int    trayMenuAnim: 140    // duração da animação de entrada do menu (ms)
+    readonly property color  trayMenuBg: Settings.get("trayMenuBg", Theme.base)
+    readonly property color  trayMenuBorder: Settings.get("trayMenuBorder", Theme.surface0)
+    readonly property color  trayMenuHover: Settings.get("trayMenuHover", Theme.surface1)
+    readonly property color  trayMenuText: Settings.get("trayMenuText", Theme.text)
+    readonly property color  trayMenuTextDisabled: Settings.get("trayMenuTextDisabled", Theme.overlay0)
+    readonly property real   trayMenuW: Settings.get("trayMenuW", 220)       // largura fixa do menu
+    readonly property real   trayMenuRadius: Settings.get("trayMenuRadius", 10)
+    readonly property real   trayMenuPad: Settings.get("trayMenuPad", 6)       // recuo interno do painel
+    readonly property real   trayMenuRowH: Settings.get("trayMenuRowH", 28)
+    readonly property real   trayMenuRowRadius: Settings.get("trayMenuRowRadius", 6)
+    readonly property real   trayMenuSepH: Settings.get("trayMenuSepH", 9)      // altura da faixa do separador
+    readonly property int    trayMenuTextSize: Settings.get("trayMenuTextSize", 13)
+    readonly property int    trayMenuIconSize: Settings.get("trayMenuIconSize", 16) // ícone dentro do menu
+    readonly property real   trayMenuGap: Settings.get("trayMenuGap", 21)      // folga acima da pétala (o menu abre pra cima)
+    readonly property int    trayMenuAnim: Settings.get("trayMenuAnim", 140)    // duração da animação de entrada do menu (ms)
 
     // ── Notificações (topo-centro da tela) ──────────────
-    readonly property real   notifWidth: 360       // largura do toast
-    readonly property real   notifTopMargin: 12    // folga do topo da tela
-    readonly property real   notifSpacing: 8       // espaço entre toasts
-    readonly property real   notifPad: 12          // recuo interno do card
-    readonly property real   notifRadius: 14
-    readonly property int    notifTimeout: 5000    // auto-dismiss (ms); urgência crítica não some
-    readonly property int    notifAnim: 160        // animação de entrada do toast (ms)
-    readonly property real   notifIconSize: 38     // ícone do app no toast
-    readonly property int    notifAppSize: 11      // tamanho do nome do app
-    readonly property int    notifSummarySize: 13  // título (negrito)
-    readonly property int    notifBodySize: 12     // corpo
-    readonly property int    notifBodyMaxLines: 6  // limite de linhas do corpo
-    readonly property color  notifBg: Theme.base
-    readonly property color  notifBorder: Theme.surface0
-    readonly property color  notifAppText: Theme.subtext0
-    readonly property color  notifSummary: Theme.text
-    readonly property color  notifBody: Theme.subtext1
-    readonly property color  notifLow: Theme.overlay0      // faixa de urgência baixa
-    readonly property color  notifNormal: Theme.mauve      // normal (acento)
-    readonly property color  notifCritical: Theme.red      // crítica (vermelho)
+    readonly property real   notifWidth: Settings.get("notifWidth", 360)       // largura do toast
+    readonly property real   notifTopMargin: Settings.get("notifTopMargin", 12)    // folga do topo da tela
+    readonly property real   notifSpacing: Settings.get("notifSpacing", 8)       // espaço entre toasts
+    readonly property real   notifPad: Settings.get("notifPad", 12)          // recuo interno do card
+    readonly property real   notifRadius: Settings.get("notifRadius", 14)
+    readonly property int    notifTimeout: Settings.get("notifTimeout", 5000)    // auto-dismiss (ms); urgência crítica não some
+    readonly property int    notifAnim: Settings.get("notifAnim", 160)       // animação de entrada do toast (ms)
+    readonly property real   notifIconSize: Settings.get("notifIconSize", 38)     // ícone do app no toast
+    readonly property int    notifAppSize: Settings.get("notifAppSize", 11)      // tamanho do nome do app
+    readonly property int    notifSummarySize: Settings.get("notifSummarySize", 13)  // título (negrito)
+    readonly property int    notifBodySize: Settings.get("notifBodySize", 12)     // corpo
+    readonly property int    notifBodyMaxLines: Settings.get("notifBodyMaxLines", 6)  // limite de linhas do corpo
+    readonly property color  notifBg: Settings.get("notifBg", Theme.base)
+    readonly property color  notifBorder: Settings.get("notifBorder", Theme.surface0)
+    readonly property color  notifAppText: Settings.get("notifAppText", Theme.subtext0)
+    readonly property color  notifSummary: Settings.get("notifSummary", Theme.text)
+    readonly property color  notifBody: Settings.get("notifBody", Theme.subtext1)
+    readonly property color  notifLow: Settings.get("notifLow", Theme.overlay0)      // faixa de urgência baixa
+    readonly property color  notifNormal: Settings.get("notifNormal", Theme.mauve)      // normal (acento)
+    readonly property color  notifCritical: Settings.get("notifCritical", Theme.red)      // crítica (vermelho)
 
     // ── Cápsulas do topo (mídia à esquerda, clima à direita) ──
-    readonly property real   capsuleW: 200         // largura da cápsula
-    readonly property real   capsuleH: 32          // altura (quando estendida)
-    readonly property real   capsulePeek: 6        // fatia visível quando retraída
-    readonly property real   capsuleEdge: 0.10     // distância das margens (10%)
-    readonly property real   capsuleRadius: 12     // cantos inferiores
-    readonly property int    capsuleAnim: 200      // animação de descida (ms)
-    readonly property int    capsuleIconSize: 14
-    readonly property int    capsuleTextSize: 12
-    readonly property color  capsuleBg: Theme.base
-    readonly property color  capsuleText: Theme.text
-    readonly property string iconMedia: ""   // nota musical (nf-fa-music)
-    readonly property string iconWeather: "" // termômetro (nf-weather-thermometer)
+    readonly property real   capsuleW: Settings.get("capsuleW", 200)         // largura da cápsula
+    readonly property real   capsuleH: Settings.get("capsuleH", 32)          // altura (quando estendida)
+    readonly property real   capsulePeek: Settings.get("capsulePeek", 6)        // fatia visível quando retraída
+    readonly property real   capsuleEdge: Settings.get("capsuleEdge", 0.10)     // distância das margens (10%)
+    readonly property real   capsuleRadius: Settings.get("capsuleRadius", 12)     // cantos inferiores
+    readonly property int    capsuleAnim: Settings.get("capsuleAnim", 200)      // animação de descida (ms)
+    readonly property int    capsuleIconSize: Settings.get("capsuleIconSize", 14)
+    readonly property int    capsuleTextSize: Settings.get("capsuleTextSize", 12)
+    readonly property color  capsuleBg: Settings.get("capsuleBg", Theme.base)
+    readonly property color  capsuleText: Settings.get("capsuleText", Theme.text)
+    readonly property string iconMedia: Settings.get("iconMedia", "")   // nota musical (nf-fa-music)
+    readonly property string iconWeather: Settings.get("iconWeather", "") // termômetro (nf-weather-thermometer)
 
     // ── Clima (cápsula direita) ─────────────────────────
-    readonly property string weatherLocation: ""   // local p/ wttr.in; VAZIO = auto por IP. Ex.: "Brasilia", "Sao+Paulo"
-    readonly property int    weatherInterval: 1800000  // atualiza a cada 30 min (ms)
+    readonly property string weatherLocation: Settings.get("weatherLocation", "")   // local p/ wttr.in; VAZIO = auto por IP
+    readonly property int    weatherInterval: Settings.get("weatherInterval", 1800000)  // atualiza a cada 30 min (ms)
 
     // ── Relógio (data à esquerda da bola, hora à direita) ──
-    readonly property string dateFormat: "d/M"
-    readonly property string timeFormat: "HH:mm"
-    readonly property real   clockSideGap: 40   // distância do centro da bola até a borda interna de cada texto
+    readonly property string dateFormat: Settings.get("dateFormat", "d/M")
+    readonly property string timeFormat: Settings.get("timeFormat", "HH:mm")
+    readonly property real   clockSideGap: Settings.get("clockSideGap", 40)   // distância do centro da bola até a borda interna de cada texto
 
     // ── Fontes (px) ─────────────────────────────────────
-    readonly property int  petalIconSize: 13
-    readonly property int  ballNumberSize: 18
-    readonly property int  ballLayoutSize: 11
-    readonly property int  layoutTextSize: 12
-    readonly property int  clockSize: 13
+    readonly property int  petalIconSize: Settings.get("petalIconSize", 13)
+    readonly property int  ballNumberSize: Settings.get("ballNumberSize", 18)
+    readonly property int  ballLayoutSize: Settings.get("ballLayoutSize", 11)
+    readonly property int  layoutTextSize: Settings.get("layoutTextSize", 12)
+    readonly property int  clockSize: Settings.get("clockSize", 13)
 
-    // ── Cores (semânticas → paleta em Theme.qml) ────────
-    readonly property color ball: Theme.crust
-    readonly property color petal: Theme.maroon
-    readonly property color petalHover: Theme.red
-    readonly property color petalIcon: Theme.base
-    readonly property color accent: Theme.mauve
-    readonly property color ballText: Theme.red          // nº do workspace (vermelho vivo na bola preta)
-    readonly property color clock: Theme.text
-    readonly property color layoutPill: Theme.surface0
-    readonly property color layoutPillHover: Theme.mauve
-    readonly property color layoutText: Theme.text
-    readonly property color layoutTextHover: Theme.crust
-    readonly property color dotActive: Theme.red         // workspace atual (vermelho vivo)
-    readonly property color dotUrgent: Theme.peach        // urgente (laranja-chama, distinto do ativo)
-    readonly property color dotOccupied: Theme.maroon    // ocupado (vermelho escuro)
-    readonly property color dotEmpty: Theme.surface1     // vazio (cinza metálico)
+    // ── Cores (semânticas → paleta em Theme.qml; override por nome do componente) ──
+    readonly property color ball: Settings.get("ball", Theme.crust)
+    readonly property color petal: Settings.get("petal", Theme.maroon)
+    readonly property color petalHover: Settings.get("petalHover", Theme.red)
+    readonly property color petalIcon: Settings.get("petalIcon", Theme.base)
+    readonly property color accent: Settings.get("accent", Theme.mauve)
+    readonly property color ballText: Settings.get("ballText", Theme.red)          // nº do workspace
+    readonly property color clock: Settings.get("clock", Theme.text)
+    readonly property color layoutPill: Settings.get("layoutPill", Theme.surface0)
+    readonly property color layoutPillHover: Settings.get("layoutPillHover", Theme.mauve)
+    readonly property color layoutText: Settings.get("layoutText", Theme.text)
+    readonly property color layoutTextHover: Settings.get("layoutTextHover", Theme.crust)
+    readonly property color dotActive: Settings.get("dotActive", Theme.red)         // workspace atual
+    readonly property color dotUrgent: Settings.get("dotUrgent", Theme.peach)        // urgente
+    readonly property color dotOccupied: Settings.get("dotOccupied", Theme.maroon)    // ocupado
+    readonly property color dotEmpty: Settings.get("dotEmpty", Theme.surface1)     // vazio
 
     // ── Tempos (ms) ─────────────────────────────────────
-    readonly property int  ballAnim: 220
-    readonly property int  petalRotAnim: 220
-    readonly property int  petalDistAnim: 200
-    readonly property int  petalOpacityAnim: 150
-    readonly property int  petalScaleAnim: 130
-    readonly property int  petalRadiusAnim: 150
-    readonly property int  petalFlareAnim: 160
-    readonly property int  layoutAnim: 180
-    readonly property int  layoutColorAnim: 120
-    readonly property int  dotAnim: 120
-    readonly property int  clockAnim: 150
-    readonly property int  hoverCloseMs: 130
-    readonly property int  selectMs: 200
+    readonly property int  ballAnim: Settings.get("ballAnim", 220)
+    readonly property int  petalRotAnim: Settings.get("petalRotAnim", 220)
+    readonly property int  petalDistAnim: Settings.get("petalDistAnim", 200)
+    readonly property int  petalOpacityAnim: Settings.get("petalOpacityAnim", 150)
+    readonly property int  petalScaleAnim: Settings.get("petalScaleAnim", 130)
+    readonly property int  petalRadiusAnim: Settings.get("petalRadiusAnim", 150)
+    readonly property int  petalFlareAnim: Settings.get("petalFlareAnim", 160)
+    readonly property int  layoutAnim: Settings.get("layoutAnim", 180)
+    readonly property int  layoutColorAnim: Settings.get("layoutColorAnim", 120)
+    readonly property int  dotAnim: Settings.get("dotAnim", 120)
+    readonly property int  clockAnim: Settings.get("clockAnim", 150)
+    readonly property int  hoverCloseMs: Settings.get("hoverCloseMs", 130)
+    readonly property int  selectMs: Settings.get("selectMs", 200)
 }
