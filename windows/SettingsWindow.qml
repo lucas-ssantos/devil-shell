@@ -234,6 +234,7 @@ PanelWindow {
             { key: "iconInput", label: "Entrada", ftype: "string" },
             { key: "iconInputMuted", label: "Entrada mudo", ftype: "string" },
             { key: "iconConfig", label: "Config", ftype: "string" },
+            { key: "iconPower", label: "Energia", ftype: "string" },
             { key: "iconScreenshot", label: "Print", ftype: "string" },
             { key: "iconRecord", label: "Gravar", ftype: "string" },
             { key: "iconRecording", label: "Parar", ftype: "string" },

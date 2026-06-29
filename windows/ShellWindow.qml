@@ -62,9 +62,9 @@ PanelWindow {
     property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
     // a bola fica aberta tb enquanto um popup (tray/áudio/layout) estiver visível (não recolher sozinha)
-    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || layoutMenu.visible)
-    // algum menu/popup aberto? (tray, dispositivos de áudio, layout, ou sliders de áudio)
-    readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || layoutMenu.visible || audioMode
+    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || layoutMenu.visible || powerMenu.visible)
+    // algum menu/popup aberto? (tray, dispositivos de áudio, layout, energia, ou sliders de áudio)
+    readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || layoutMenu.visible || powerMenu.visible || audioMode
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
         return -1
@@ -149,6 +149,7 @@ PanelWindow {
         if (i === audioIndex) return 3
         if (i === captureIndex) return 2
         if (i === updateIndex) return 2
+        if (i === settingsIndex) return 2
         if (i === trayIndex) return SystemTray.items.values.length
         return 0
     }
@@ -198,6 +199,7 @@ PanelWindow {
         trayMenu.visible = false
         audioDevices.visible = false
         layoutMenu.visible = false
+        powerMenu.visible = false
         audioMode = false
         pinned = false
         dismissed = true
@@ -277,6 +279,9 @@ PanelWindow {
 
     // menu de seleção de layout (1ª pétala) — popup estilizado
     LayoutMenu { id: layoutMenu; ctx: win }
+
+    // menu de ações de energia (seção de baixo da pétala de Sistema)
+    PowerMenu { id: powerMenu; ctx: win }
 
     // ESC fecha todos os menus (a janela só recebe o teclado quando há um menu aberto)
     Item {
@@ -383,6 +388,10 @@ PanelWindow {
                     win.dismissed = false
                     if (s === 2)      audioDevices.openAt("sink",   Math.round(mouseX), Math.round(mouseY))  // headphone -> saídas
                     else if (s === 1) audioDevices.openAt("source", Math.round(mouseX), Math.round(mouseY))  // mic -> entradas
+                } else if (rpi === win.settingsIndex) {
+                    // pétala de Sistema: botão direito lança o wlogout (grade gráfica, via mango)
+                    powerMenu.visible = false
+                    proc.exec(["mmsg", "dispatch", "spawn,sh -c 'pidof wlogout || wlogout'"])
                 }
                 return
             }
@@ -395,8 +404,8 @@ PanelWindow {
             }
             // 2) bola?
             if (win.overBallAt(mouseX, mouseY)) {
-                if (trayMenu.visible || audioDevices.visible || layoutMenu.visible) {   // fecha popup + bola
-                    trayMenu.visible = false; audioDevices.visible = false; layoutMenu.visible = false
+                if (trayMenu.visible || audioDevices.visible || layoutMenu.visible || powerMenu.visible) {   // fecha popup + bola
+                    trayMenu.visible = false; audioDevices.visible = false; layoutMenu.visible = false; powerMenu.visible = false
                     win.pinned = false; win.dismissed = true; return
                 }
                 if (win.audioMode)  { win.audioMode = false; return }   // volta ao menu principal
@@ -443,9 +452,17 @@ PanelWindow {
                         if (it) win.focusTrayApp(it)
                     }
                 } else if (pi === win.settingsIndex) {
-                    // 3ª pétala = abre a janela de configurações do shell (recolhe o menu)
-                    Settings.open = true
-                    win.pinned = false; win.dismissed = true
+                    // 3ª pétala (sistema): topo = configurações, base = menu de energia
+                    const s = win.petalSectionAt(mouseX, mouseY, 2)
+                    if (s === 1) {
+                        Settings.open = true                       // engrenagem -> janela de configurações
+                        win.pinned = false; win.dismissed = true
+                    } else if (powerMenu.visible) {
+                        powerMenu.visible = false                  // clicar de novo fecha
+                    } else {
+                        win.dismissed = false                      // energia -> lista de ações
+                        powerMenu.openAt(Math.round(mouseX), Math.round(mouseY))
+                    }
                 } else if (pi === 0) {
                     // 1ª pétala = alterna o popup de seleção de layout
                     if (layoutMenu.visible) {
@@ -469,6 +486,7 @@ PanelWindow {
             trayMenu.visible = false
             audioDevices.visible = false
             layoutMenu.visible = false
+            powerMenu.visible = false
             win.pinned = false
         }
     }
@@ -488,7 +506,7 @@ PanelWindow {
                     return
                 }
                 // na região das pétalas (aberto, fora da bola) -> gira o anel
-                if (win.open && !win.overBall && !layoutMenu.visible) {
+                if (win.open && !win.overBall && !layoutMenu.visible && !powerMenu.visible) {
                     win.petalRotation += dir * Config.petalStepDeg
                     return
                 }

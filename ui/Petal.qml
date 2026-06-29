@@ -252,6 +252,51 @@ Item {
             }
         }
 
+        // ── Painel de sistema: 2 botões (configurações + energia/wlogout) ──
+        Item {
+            visible: petal.modelData.power ?? false
+            anchors.fill: parent
+            anchors.margins: Config.audioBtnMargin
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Qt.darker(Config.petal, Config.audioBtnDarken)
+            }
+            // destaque (sec1=topo=configurações, sec0=baixo=energia)
+            Rectangle {
+                visible: petal.hovered && petal.ctx.petalSection >= 0
+                width: parent.width
+                height: parent.height / 2
+                y: (1 - petal.ctx.petalSection) * (parent.height / 2)
+                radius: 6
+                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
+            }
+            // divisória
+            Rectangle {
+                width: parent.width * 0.7
+                height: 1.5
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: parent.height / 2 - height / 2
+                color: Config.petalIcon
+                opacity: 0.3
+            }
+            // ícones (i0=engrenagem topo=config, i1=energia baixo=wlogout)
+            Repeater {
+                model: 2
+                delegate: Text {
+                    required property int index
+                    rotation: -petal.rotation
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: index * (parent.height / 2) + (parent.height / 2 - height) / 2
+                    font.family: Config.iconFont
+                    font.pixelSize: Config.audioIconSize
+                    color: Config.petalIcon
+                    text: index === 0 ? Config.iconConfig : Config.iconPower
+                }
+            }
+        }
+
         // ── Painel da bandeja (system tray): 1 seção por app (só na 7ª pétala) ──
         Item {
             id: trayPanel
@@ -341,7 +386,7 @@ Item {
 
     // ── Pétala normal: ícone único ──
     Text {
-        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.capture ?? false) && !(petal.modelData.tray ?? false) && !(petal.modelData.update ?? false)
+        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.capture ?? false) && !(petal.modelData.tray ?? false) && !(petal.modelData.update ?? false) && !(petal.modelData.power ?? false)
         anchors.centerIn: parent
         rotation: -petal.rotation
         text: petal.index === 0 ? petal.ctx.currentLayoutSymbol : (petal.modelData.icon ?? "")

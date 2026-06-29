@@ -90,8 +90,9 @@ Item {
                     onEditingFinished: {
                         let v = text.trim()
                         if (v.length === 6 && v[0] !== "#") v = "#" + v
-                        if (/^#[0-9a-fA-F]{6}$/.test(v)) Settings.set(field.key, v.toLowerCase())
-                        else text = ("" + field.cur)   // inválido -> volta
+                        v = v.toLowerCase()
+                        if (!/^#[0-9a-fA-F]{6}$/.test(v)) { text = ("" + field.cur); return }   // inválido -> volta
+                        if (v !== ("" + field.cur).toLowerCase()) Settings.set(field.key, v)    // só grava se mudou
                     }
                 }
             }
@@ -118,7 +119,7 @@ Item {
                     let n = Number(v)
                     if (isNaN(n)) { text = "" + field.cur; return }
                     if (field.ftype === "int") n = Math.round(n)
-                    Settings.set(field.key, n)
+                    if (n !== Number(field.cur)) Settings.set(field.key, n)   // só grava se mudou
                 }
                 onEditingFinished: commit(text)
             }
@@ -150,7 +151,7 @@ Item {
                 selectByMouse: true
                 clip: true
                 text: "" + field.cur
-                onEditingFinished: Settings.set(field.key, text)
+                onEditingFinished: if (text !== ("" + field.cur)) Settings.set(field.key, text)   // só grava se mudou
             }
         }
 

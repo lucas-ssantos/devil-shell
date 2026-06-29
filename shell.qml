@@ -30,7 +30,7 @@ Scope {
     readonly property var menuItems: [
         { icon: "⬡", label: "Layout", command: [] },                    // 1ª = mudar layout do mango
         { icon: "", label: "Atualizações", update: true },             // 2ª = updates do sistema + MangoWC
-        { icon: "⚙", label: "Configurações", settings: true },         // 3ª = abre a janela de configurações do shell
+        { icon: "⚙", label: "Sistema", settings: true, power: true },   // 3ª = configurações (cima) + energia/wlogout (baixo, 2 seções)
         { icon: "☰", label: "Lançador", spawn: "rofi -show drun" },     // 4ª = abre o launcher
         { icon: "📷", label: "Captura", capture: true },                // 5ª = print + gravação (2 seções)
         { icon: "🔊", label: "Áudio", audio: true },                    // 6ª = controle de áudio (3 seções)

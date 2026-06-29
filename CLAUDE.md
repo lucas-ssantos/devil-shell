@@ -76,16 +76,18 @@ cargo) "somem" e scripts que dependem deles travam silenciosamente. Por isso o `
 Os `.qml` ficam organizados em subpastas por papel:
 
 ```
-shell.qml          ponto de entrada (raiz)
-Config.qml         config central, singleton (raiz)
-themes/            Theme (seletor) + paletas (CrimsonDevil, InfernalRose)
-services/          singletons/escopos não-visuais (mango, áudio, captura, mídia, clima,
-                   updates, notificações, StartupService) + session.sh
-cava/              tudo do visualizador CAVA (serviço, janela, barras, anel) + cava.conf
-layouts/           LayoutMenu (seletor de layout do mango)
-windows/           janelas interativas: ShellWindow, NotificationWindow
-ui/                componentes visuais "burros": MenuBall, Petal, GothicCorners, AudioMenu,
-                   AudioDevices, TrayMenu, Capsule, TopCapsules
+shell.qml             ponto de entrada (raiz)
+Config.qml            config central, singleton (raiz) — lê overrides do Settings
+settings.json         overrides do usuário (gerado/atualizado em runtime pela SettingsWindow)
+settings.default.json "padrão de fábrica" lido pelo botão Restaurar padrão
+themes/               Theme (seletor) + paletas (CrimsonDevil, InfernalRose)
+services/             singletons/escopos não-visuais (mango, áudio, captura, mídia, clima,
+                      updates, notificações, StartupService, Settings, ThemeExport) + session.sh
+cava/                 tudo do visualizador CAVA (serviço, janela, barras, anel) + cava.conf
+layouts/              LayoutMenu (seletor de layout do mango)
+windows/              janelas interativas: ShellWindow, NotificationWindow, SettingsWindow
+ui/                   componentes visuais "burros": MenuBall, Petal, GothicCorners, AudioMenu,
+                      AudioDevices, TrayMenu, PowerMenu, SettingsField, Capsule, TopCapsules
 ```
 
 ⚠️ **A auto-descoberta do Quickshell por nome só vale para a PASTA RAIZ.** Um arquivo na raiz
@@ -111,14 +113,18 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    [CavaService.qml](cava/CavaService.qml) (níveis do cava), [MediaService.qml](services/MediaService.qml) (MPRIS),
    [WeatherService.qml](services/WeatherService.qml) (wttr.in), [UpdateService.qml](services/UpdateService.qml)
    (pacotes/MangoWC), [NotificationService.qml](services/NotificationService.qml) (servidor freedesktop),
-   [StartupService.qml](services/StartupService.qml) (sobe os daemons da sessão).
-2. **Dados data-driven:** `menuItems` (pétalas; flags `audio`/`capture`/`tray`/`update` marcam pétalas
-   especiais) e `layoutItems` (layouts do mango). Adicionar/remover itens reorganiza o anel automaticamente.
+   [StartupService.qml](services/StartupService.qml) (sobe os daemons da sessão),
+   [Settings.qml](services/Settings.qml) (overrides do usuário, persistidos), [ThemeExport.qml](services/ThemeExport.qml)
+   (regenera os temas dos apps externos).
+2. **Dados data-driven:** `menuItems` (pétalas; flags `audio`/`capture`/`tray`/`update`/`settings`/`power`
+   marcam pétalas especiais) e `layoutItems` (layouts do mango). Adicionar/remover itens reorganiza o anel
+   automaticamente. (A 3ª pétala combina `settings`+`power`: 2 seções — configurações em cima, energia embaixo.)
 3. **Uma instância por monitor** via `Variants { model: Quickshell.screens }`: uma
    [CavaWindow.qml](cava/CavaWindow.qml) (camada **Bottom**, atrás dos apps, click-through), uma
    [ShellWindow.qml](windows/ShellWindow.qml) (camada **Top**, a UI interativa) e uma
-   [TopCapsules.qml](ui/TopCapsules.qml) (cápsulas de mídia/temperatura no topo). A
-   [NotificationWindow.qml](windows/NotificationWindow.qml) é única (monitor focado).
+   [TopCapsules.qml](ui/TopCapsules.qml) (cápsulas de mídia/temperatura no topo). As janelas únicas
+   (monitor focado) são a [NotificationWindow.qml](windows/NotificationWindow.qml) e a
+   [SettingsWindow.qml](windows/SettingsWindow.qml) (overlay modal de configurações).
 
 ### Inicialização da sessão centralizada no Quickshell
 Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) foram trazidos do
@@ -156,24 +162,48 @@ recebem o controlador na propriedade `ctx`. Pontos-chave:
 
 ### Componentes visuais (recebem `ctx`)
 [MenuBall.qml](ui/MenuBall.qml) (bola: nº do workspace / nome do layout / anel de pontos),
-[Petal.qml](ui/Petal.qml) (uma pétala; renderiza ícone único, ou painel de áudio de 3 seções, ou
-painel de captura de 2 seções, conforme as flags do item), [LayoutMenu.qml](layouts/LayoutMenu.qml)
-(lista curvada de layouts), [AudioMenu.qml](ui/AudioMenu.qml) (sliders), [AudioDevices.qml](ui/AudioDevices.qml)
+[Petal.qml](ui/Petal.qml) (uma pétala; renderiza ícone único, ou painel multi-seção conforme as flags
+do item: áudio 3 seções, captura/updates/sistema 2 seções, bandeja N seções), [LayoutMenu.qml](layouts/LayoutMenu.qml)
+(lista curvada de layouts), [PowerMenu.qml](ui/PowerMenu.qml) (popup de ações de energia — bloquear/sair/
+suspender/hibernar/reiniciar/desligar), [AudioMenu.qml](ui/AudioMenu.qml) (sliders), [AudioDevices.qml](ui/AudioDevices.qml)
 (seletor de dispositivo), [TrayMenu.qml](ui/TrayMenu.qml) (menu do item da bandeja),
+[SettingsField.qml](ui/SettingsField.qml) (uma linha editável da janela de configurações: cor/número/texto/seletor/toggle),
 [GothicCorners.qml](ui/GothicCorners.qml) (filetes côncavos `Canvas` que fundem a bola na barra fina),
 [Capsule.qml](ui/Capsule.qml)/[TopCapsules.qml](ui/TopCapsules.qml) (cápsulas retráteis do topo),
 [CavaRing.qml](cava/CavaRing.qml)/[CavaBars.qml](cava/CavaBars.qml) (visualizador radial/linear).
 
-### Config centralizada + Tema
+### Config centralizada + Tema + overrides em runtime
 **[Config.qml](Config.qml)** é um singleton (na raiz) com TODOS os valores ajustáveis (geometria,
 fontes, tempos, ângulos das pétalas, áudio, captura, clima, updates) e os nomes **semânticos** de cor
-(`ball`, `petal`, `accent`…). **[Theme.qml](themes/Theme.qml)** é o **seletor de tema**: escolhe qual
-paleta crua vai para o shell e qual vai para o CAVA. As paletas (a única fonte dos hex) são
-[CrimsonDevil.qml](themes/CrimsonDevil.qml) e [InfernalRose.qml](themes/InfernalRose.qml) (mesmos nomes:
-`base`, `text`, `mauve`, `red`, `surface0`, `cavaInner`…). O `Config` só mapeia semântico → `Theme.<cor>`.
-Trocar de tema = editar uma linha em `Theme.qml`. Regra do projeto: **nada de valores hardcoded na
-lógica** — cor nova vem de uma paleta, exposta por `Theme`, nomeada em `Config`, e os componentes usam
-`Config.<algo>` (nunca hex direto). `Config` importa `root:/themes`.
+(`ball`, `petal`, `accent`…). Cada property segue o padrão `Settings.get("nome", <padrão>)`: o literal
+é o PADRÃO, e o usuário pode sobrescrever em runtime pela janela de configurações (ver abaixo).
+**[Theme.qml](themes/Theme.qml)** é o **seletor de tema**: escolhe qual paleta crua vai para o shell e
+qual para o CAVA — agora pelo nome guardado no Settings (`themeShell`/`themeCava`), e cada cor crua aceita
+override `pal_<nome>`. As paletas (a única fonte dos hex) são [CrimsonDevil.qml](themes/CrimsonDevil.qml)
+e [InfernalRose.qml](themes/InfernalRose.qml) (mesmos nomes: `base`, `text`, `mauve`, `red`, `surface0`,
+`cavaInner`…). Regra do projeto: **nada de valores hardcoded na lógica** — cor nova vem de uma paleta,
+exposta por `Theme`, nomeada em `Config`, e os componentes usam `Config.<algo>` (nunca hex direto).
+`Config` importa `root:/themes` e `root:/services`; `Theme` importa `root:/services` (mútuo, sem ciclo de
+init — `Settings` não toca `Theme`/`ThemeExport` na construção, só em timers/funções).
+
+### Configurações em runtime + export de temas (3ª pétala = "Sistema")
+A 3ª pétala tem 2 seções: **engrenagem** (cima) abre a [SettingsWindow.qml](windows/SettingsWindow.qml)
+(overlay modal central com TODAS as opções por grupo, via schema → [SettingsField.qml](ui/SettingsField.qml));
+**energia** (baixo) abre o [PowerMenu.qml](ui/PowerMenu.qml) no clique esquerdo e lança o **wlogout** no
+clique direito.
+- **[Settings.qml](services/Settings.qml)** (singleton) guarda só os overrides num JSON
+  (`~/.config/quickshell/settings.json`, via `FileView`). `get/set/unset/reset`; reatribui o mapa inteiro a
+  cada `set` para os bindings de `Config`/`Theme` (que leem `get()`) reavaliarem. `reset()` recarrega
+  `settings.default.json` (o "padrão de fábrica"; edite-o para mudar o que "Restaurar padrão" faz).
+- **[ThemeExport.qml](services/ThemeExport.qml)** regenera os temas dos apps **externos** a partir da
+  paleta efetiva (`Theme.*`), com **backup** (`<arquivo>.bak-<ts>`) e **reload ao vivo**. Disparado
+  automaticamente quando muda `pal_*`/`theme*` (debounce no Settings) e pelo botão "Exportar temas".
+  Alvos (escreve nos MESMOS arquivos que os apps já incluem → não mexe noutras linhas): **kitty**
+  (`themes/crimson-devil.conf`, `include` no kitty.conf), **rofi** (`themes/crimson-devil.rasi`, `@theme`),
+  **mango** (`devil-shell/theme.conf`, `source=` → reload via `mmsg dispatch reload_config`), **vesktop**
+  (`themes/devil-shell.css`, habilitar 1x), **wlogout** (`style.css`+`layout`) e **swaylock** (`config`).
+  kitty recarrega com `pkill -USR1 kitty`; rofi/vesktop/swaylock pegam no próximo uso. A escrita usa
+  `Qt.btoa` (base64) num único `sh -c` p/ evitar escaping → mantenha os comentários gerados em ASCII.
 
 ## Convenções e armadilhas de QML/Quickshell
 
