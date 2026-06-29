@@ -59,11 +59,11 @@ Singleton {
 
     // ── Áudio (5ª pétala) ───────────────────────────────
     readonly property string iconFont: Settings.get("iconFont", "JetBrainsMono Nerd Font")   // fonte dos ícones (tem os glifos + logos de distro)
-    readonly property string iconOutput: Settings.get("iconOutput", "")            // volume (headphone/saída)
-    readonly property string iconOutputMuted: Settings.get("iconOutputMuted", "")  // volume mudo
-    readonly property string iconInput: Settings.get("iconInput", "")              // microfone (entrada)
-    readonly property string iconInputMuted: Settings.get("iconInputMuted", "")    // microfone mudo
-    readonly property string iconConfig: Settings.get("iconConfig", "")            // engrenagem (config)
+    readonly property string iconOutput: Settings.get("iconOutput", "")            // volume (headphone/saída)
+    readonly property string iconOutputMuted: Settings.get("iconOutputMuted", "")  // volume mudo
+    readonly property string iconInput: Settings.get("iconInput", "")              // microfone (entrada)
+    readonly property string iconInputMuted: Settings.get("iconInputMuted", "")    // microfone mudo
+    readonly property string iconConfig: Settings.get("iconConfig", "")            // engrenagem (config)
     readonly property string iconPower: Settings.get("iconPower", "")         // botão de energia (nf-fa-power_off) — pétala de sistema
     readonly property int    audioIconSize: Settings.get("audioIconSize", 17)            // tamanho dos ícones
     readonly property real   audioBtnMargin: Settings.get("audioBtnMargin", 3)           // recuo do painel de botões
@@ -81,14 +81,14 @@ Singleton {
     readonly property color  audioSliderText: Settings.get("audioSliderText", Theme.text)
 
     // ── Captura (4ª pétala) ─────────────────────────────
-    readonly property string iconScreenshot: Settings.get("iconScreenshot", "")   // câmera (print)
-    readonly property string iconRecord: Settings.get("iconRecord", "")           // filmadora (gravar)
-    readonly property string iconRecording: Settings.get("iconRecording", "")     // parar (enquanto grava)
+    readonly property string iconScreenshot: Settings.get("iconScreenshot", "")   // câmera (print)
+    readonly property string iconRecord: Settings.get("iconRecord", "")           // filmadora (gravar)
+    readonly property string iconRecording: Settings.get("iconRecording", "")     // parar (enquanto grava)
     readonly property color  captureRecColor: Settings.get("captureRecColor", Theme.red)  // vermelho enquanto grava
 
     // ── Atualizações (2ª pétala) ─────────────────────────
     readonly property int    updateInterval: Settings.get("updateInterval", 3600000)  // checa pacotes de 1 em 1 hora (ms)
-    readonly property string iconUpdate: Settings.get("iconUpdate", "")    // logo do Debian (nf-linux-debian)
+    readonly property string iconUpdate: Settings.get("iconUpdate", "")    // logo do Debian (nf-linux-debian)
     readonly property string iconMango: Settings.get("iconMango", "🥭")           // manga (emoji)
     // checagem (background, sem terminal): `sudo nala update` p/ refrescar e CONTA os atualizáveis.
     readonly property string updateCheckCmd: Settings.get("updateCheckCmd", "sudo -n nala update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable")
@@ -151,8 +151,8 @@ Singleton {
     readonly property int    capsuleTextSize: Settings.get("capsuleTextSize", 12)
     readonly property color  capsuleBg: Settings.get("capsuleBg", Theme.base)
     readonly property color  capsuleText: Settings.get("capsuleText", Theme.text)
-    readonly property string iconMedia: Settings.get("iconMedia", "")   // nota musical (nf-fa-music)
-    readonly property string iconWeather: Settings.get("iconWeather", "") // termômetro (nf-weather-thermometer)
+    readonly property string iconMedia: Settings.get("iconMedia", "")   // nota musical (nf-fa-music)
+    readonly property string iconWeather: Settings.get("iconWeather", "") // termômetro (nf-weather-thermometer)
 
     // ── Clima (cápsula direita) ─────────────────────────
     readonly property string weatherLocation: Settings.get("weatherLocation", "")   // local p/ wttr.in; VAZIO = auto por IP

@@ -22,6 +22,11 @@ pkill quickshell; qs   # reinicia
 
 - **Hot reload:** salvar qualquer `.qml` recarrega automaticamente. Um erro de QML aborta o
   carregamento inteiro (a tela some); cheque a saída do terminal.
+- **Glifos Nerd Font em strings:** os ícones do `Config.qml` (`iconOutput`, `iconConfig`, `iconUpdate`…)
+  são caracteres da Área de Uso Privado (ex.: U+F028, U+F013). Editores/ferramentas (cat -v, alguns
+  diffs) os mostram como vazios `""` — eles ESTÃO lá. Ao reescrever o `Config.qml`, NÃO apague o
+  conteúdo das aspas (já aconteceu de perder todos e os ícones "sumirem"). Para conferir os
+  codepoints reais: `python3 -c "..."` lendo o arquivo, ou recupere do git (`git show <commit>:Config.qml`).
 - **Logs (`console.log`) só aparecem se o `qs` for iniciado por um terminal.** Em uso normal ele
   é lançado pelo `~/.config/mango/scripts/autostart.sh` (`pgrep -x qs || setsid qs &`), sem
   terminal visível. Para ver os logs do qs em execução: `qs log` (lê o `.qslog` da instância ativa).
