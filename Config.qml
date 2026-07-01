@@ -65,6 +65,8 @@ Singleton {
     readonly property string iconInputMuted: Settings.get("iconInputMuted", "")    // microfone mudo
     readonly property string iconConfig: Settings.get("iconConfig", "")            // engrenagem (config)
     readonly property string iconPower: Settings.get("iconPower", "")         // botão de energia (nf-fa-power_off) — pétala de sistema
+    readonly property string iconIdle: Settings.get("iconIdle", "")     // lâmpada (nf-fa-lightbulb_o) — toggle de inibir lock/idle
+    readonly property color  idleOnColor: Settings.get("idleOnColor", Theme.peach)   // lâmpada "acesa" (idle inibido = tela fica acordada)
     readonly property int    audioIconSize: Settings.get("audioIconSize", 17)            // tamanho dos ícones
     readonly property real   audioBtnMargin: Settings.get("audioBtnMargin", 3)           // recuo do painel de botões
     readonly property real   audioBtnDarken: Settings.get("audioBtnDarken", 1.22)        // fundo do botão (× mais escuro)

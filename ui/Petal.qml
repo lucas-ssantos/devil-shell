@@ -252,7 +252,7 @@ Item {
             }
         }
 
-        // ── Painel de sistema: 2 botões (configurações + energia/wlogout) ──
+        // ── Painel de sistema: 3 botões (configurações + energia + toggle de lock) ──
         Item {
             visible: petal.modelData.power ?? false
             anchors.fill: parent
@@ -263,36 +263,44 @@ Item {
                 radius: width / 2
                 color: Qt.darker(Config.petal, Config.audioBtnDarken)
             }
-            // destaque (sec1=topo=configurações, sec0=baixo=energia)
+            // destaque da seção sob o cursor (sec2=topo=config … sec0=baixo=lâmpada)
             Rectangle {
                 visible: petal.hovered && petal.ctx.petalSection >= 0
                 width: parent.width
-                height: parent.height / 2
-                y: (1 - petal.ctx.petalSection) * (parent.height / 2)
+                height: parent.height / 3
+                y: (2 - petal.ctx.petalSection) * (parent.height / 3)
                 radius: 6
                 color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
             }
-            // divisória
-            Rectangle {
-                width: parent.width * 0.7
-                height: 1.5
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: parent.height / 2 - height / 2
-                color: Config.petalIcon
-                opacity: 0.3
-            }
-            // ícones (i0=engrenagem topo=config, i1=energia baixo=wlogout)
+            // divisórias entre os botões
             Repeater {
                 model: 2
+                delegate: Rectangle {
+                    required property int index
+                    width: parent.width * 0.7
+                    height: 1.5
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: (index + 1) * (parent.height / 3) - height / 2
+                    color: Config.petalIcon
+                    opacity: 0.3
+                }
+            }
+            // ícones (i0=engrenagem topo=config, i1=energia meio=wlogout, i2=lâmpada baixo=toggle lock)
+            Repeater {
+                model: 3
                 delegate: Text {
                     required property int index
+                    // lâmpada "acesa" (cor de acento) quando o lock/idle está inibido
+                    readonly property bool lampOn: index === 2 && IdleService.inhibited
                     rotation: -petal.rotation
                     anchors.horizontalCenter: parent.horizontalCenter
-                    y: index * (parent.height / 2) + (parent.height / 2 - height) / 2
+                    y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
                     font.family: Config.iconFont
                     font.pixelSize: Config.audioIconSize
-                    color: Config.petalIcon
-                    text: index === 0 ? Config.iconConfig : Config.iconPower
+                    color: lampOn ? Config.idleOnColor : Config.petalIcon
+                    opacity: (index === 2 && !IdleService.inhibited) ? 0.55 : 1.0
+                    text: index === 0 ? Config.iconConfig
+                        : index === 1 ? Config.iconPower : Config.iconIdle
                 }
             }
         }

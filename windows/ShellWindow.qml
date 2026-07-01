@@ -149,7 +149,7 @@ PanelWindow {
         if (i === audioIndex) return 3
         if (i === captureIndex) return 2
         if (i === updateIndex) return 2
-        if (i === settingsIndex) return 2
+        if (i === settingsIndex) return 3
         if (i === trayIndex) return SystemTray.items.values.length
         return 0
     }
@@ -389,9 +389,14 @@ PanelWindow {
                     if (s === 2)      audioDevices.openAt("sink",   Math.round(mouseX), Math.round(mouseY))  // headphone -> saídas
                     else if (s === 1) audioDevices.openAt("source", Math.round(mouseX), Math.round(mouseY))  // mic -> entradas
                 } else if (rpi === win.settingsIndex) {
-                    // pétala de Sistema: botão direito lança o wlogout (grade gráfica, via mango)
-                    powerMenu.visible = false
-                    proc.exec(["mmsg", "dispatch", "spawn,sh -c 'pidof wlogout || wlogout'"])
+                    // pétala de Sistema: sobre a lâmpada (seção 0) o direito também faz o toggle;
+                    // nas demais seções, lança o wlogout (grade gráfica, via mango)
+                    if (win.petalSectionAt(mouseX, mouseY, 3) === 0) {
+                        IdleService.toggle()
+                    } else {
+                        powerMenu.visible = false
+                        proc.exec(["mmsg", "dispatch", "spawn,sh -c 'pidof wlogout || wlogout'"])
+                    }
                 }
                 return
             }
@@ -452,11 +457,13 @@ PanelWindow {
                         if (it) win.focusTrayApp(it)
                     }
                 } else if (pi === win.settingsIndex) {
-                    // 3ª pétala (sistema): topo = configurações, base = menu de energia
-                    const s = win.petalSectionAt(mouseX, mouseY, 2)
-                    if (s === 1) {
+                    // 3ª pétala (sistema): topo=configurações, meio=energia, base=toggle de lock
+                    const s = win.petalSectionAt(mouseX, mouseY, 3)
+                    if (s === 2) {
                         Settings.open = true                       // engrenagem -> janela de configurações
                         win.pinned = false; win.dismissed = true
+                    } else if (s === 0) {
+                        IdleService.toggle()                       // lâmpada -> inibe/reativa lock/idle
                     } else if (powerMenu.visible) {
                         powerMenu.visible = false                  // clicar de novo fecha
                     } else {
