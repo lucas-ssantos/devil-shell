@@ -41,7 +41,7 @@ Singleton {
         d[key] = value
         data = d
         saveTimer.restart()
-        // mudou cor da paleta ou tema -> regenera os temas externos (kitty/rofi/mango/vesktop)
+        // mudou cor da paleta ou tema -> regenera os temas externos (kitty/rofi/vesktop…)
         if (key.indexOf("pal_") === 0 || key.indexOf("theme") === 0) exportTimer.restart()
     }
 

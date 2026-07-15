@@ -41,8 +41,8 @@ Singleton {
     readonly property real hitMargin: Settings.get("hitMargin", 8)                 // folga radial do hit-test
     readonly property real menuMargin: Settings.get("menuMargin", 16)              // folga lateral da máscara quando aberto
 
-    // ── Menu de layouts (popup estilizado, 1ª pétala) ───
-    readonly property real layoutMenuW: Settings.get("layoutMenuW", 200)   // largura do popup de seleção de layout
+    // ── Popup de energia (pétala de Sistema) ───────────
+    readonly property real layoutMenuW: Settings.get("layoutMenuW", 200)   // largura do popup de energia
 
     // ── Cava ────────────────────────────────────────────
     readonly property real cavaMaxH: Settings.get("cavaMaxH", 180)              // altura máx das barras lineares
@@ -57,14 +57,13 @@ Singleton {
     readonly property color cavaColor3: Theme.cavaTip     // pontas (picos altos, ethereal)
     readonly property color cavaWave:   Theme.cavaMid     // área das ondas lineares (CavaBars)
 
-    // ── Áudio (5ª pétala) ───────────────────────────────
+    // ── Áudio (pétala de áudio) ─────────────────────────
     readonly property string iconFont: Settings.get("iconFont", "JetBrainsMono Nerd Font")   // fonte dos ícones (tem os glifos + logos de distro)
     readonly property string iconOutput: Settings.get("iconOutput", "")            // volume (headphone/saída)
     readonly property string iconOutputMuted: Settings.get("iconOutputMuted", "")  // volume mudo
     readonly property string iconInput: Settings.get("iconInput", "")              // microfone (entrada)
     readonly property string iconInputMuted: Settings.get("iconInputMuted", "")    // microfone mudo
     readonly property string iconConfig: Settings.get("iconConfig", "")            // engrenagem (config)
-    readonly property string iconPower: Settings.get("iconPower", "")         // botão de energia (nf-fa-power_off) — pétala de sistema
     readonly property string iconIdle: Settings.get("iconIdle", "")     // lâmpada (nf-fa-lightbulb_o) — toggle de inibir lock/idle
     readonly property color  idleOnColor: Settings.get("idleOnColor", Theme.peach)   // lâmpada "acesa" (idle inibido = tela fica acordada)
     readonly property int    audioIconSize: Settings.get("audioIconSize", 17)            // tamanho dos ícones
@@ -82,24 +81,12 @@ Singleton {
     readonly property color  audioSliderFill: Settings.get("audioSliderFill", Theme.mauve)
     readonly property color  audioSliderText: Settings.get("audioSliderText", Theme.text)
 
-    // ── Captura (4ª pétala) ─────────────────────────────
-    readonly property string iconScreenshot: Settings.get("iconScreenshot", "")   // câmera (print)
+    // ── Gravação de tela (pétala de Sistema) ────────
     readonly property string iconRecord: Settings.get("iconRecord", "")           // filmadora (gravar)
     readonly property string iconRecording: Settings.get("iconRecording", "")     // parar (enquanto grava)
-    readonly property color  captureRecColor: Settings.get("captureRecColor", Theme.red)  // vermelho enquanto grava
+    readonly property color  captureRecColor: Settings.get("captureRecColor", Theme.red)  // vermelho enquanto grava (pétala de Sistema)
 
-    // ── Atualizações (2ª pétala) ─────────────────────────
-    readonly property int    updateInterval: Settings.get("updateInterval", 3600000)  // checa pacotes de 1 em 1 hora (ms)
-    readonly property string iconUpdate: Settings.get("iconUpdate", "")    // logo do Debian (nf-linux-debian)
-    readonly property string iconMango: Settings.get("iconMango", "🥭")           // manga (emoji)
-    // checagem (background, sem terminal): `sudo nala update` p/ refrescar e CONTA os atualizáveis.
-    readonly property string updateCheckCmd: Settings.get("updateCheckCmd", "sudo -n nala update >/dev/null 2>&1; apt list --upgradable 2>/dev/null | grep -c upgradable")
-    // clique: abre um TERMINAL e roda `sudo nala upgrade` SEM -y (você confirma ou não).
-    readonly property string updateUpgradeSpawn: Settings.get("updateUpgradeSpawn", "kitty -e bash -lc 'sudo nala upgrade; echo; echo Concluido; read -n1 -s'")
-    // atualização do MangoWC EM BACKGROUND via script do usuário; saída via notify-send
-    readonly property string updateMangoSpawn: Settings.get("updateMangoSpawn", "sh -c 'export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; notify-send -a MangoWC -r 9102 \"Atualizando o MangoWC…\"; if \"$HOME/.config/mango/scripts/update-mango.sh\" >/tmp/qs-mango.log 2>&1; then notify-send -a MangoWC -r 9102 \"✓ MangoWC atualizado (reinicie a sessão)\"; else notify-send -a MangoWC -r 9102 -u critical \"✗ Falha no Mango — veja /tmp/qs-mango.log\"; fi'")
-
-    // ── Bandeja / system tray (7ª pétala) ───────────────
+    // ── Bandeja / system tray (pétala da bandeja) ───────
     readonly property string iconTray: Settings.get("iconTray", "󰀻")       // ícone genérico quando a bandeja está vazia
     readonly property int    trayIconSize: Settings.get("trayIconSize", 16)     // tamanho dos ícones dos apps na pétala
 
@@ -119,6 +106,24 @@ Singleton {
     readonly property int    trayMenuIconSize: Settings.get("trayMenuIconSize", 16) // ícone dentro do menu
     readonly property real   trayMenuGap: Settings.get("trayMenuGap", 21)      // folga acima da pétala (o menu abre pra cima)
     readonly property int    trayMenuAnim: Settings.get("trayMenuAnim", 140)    // duração da animação de entrada do menu (ms)
+
+    // ── Lançador (janela própria; substitui o rofi) ─────
+    readonly property real   launcherW: Settings.get("launcherW", 640)              // largura do painel
+    readonly property real   launcherListMaxH: Settings.get("launcherListMaxH", 420) // teto da lista (rola além disso)
+    readonly property real   launcherRowH: Settings.get("launcherRowH", 44)         // altura de cada resultado
+    readonly property real   launcherRadius: Settings.get("launcherRadius", 16)
+    readonly property real   launcherYFactor: Settings.get("launcherYFactor", 0.16) // posição vertical (fração da tela)
+    readonly property int    launcherAnim: Settings.get("launcherAnim", 170)        // animação de abrir/fechar (ms)
+    readonly property int    launcherFontSize: Settings.get("launcherFontSize", 13)
+    readonly property int    launcherInputSize: Settings.get("launcherInputSize", 16) // texto do campo de busca
+    readonly property int    launcherIconSize: Settings.get("launcherIconSize", 24)  // ícone/miniatura das linhas
+    readonly property int    launcherTopUsed: Settings.get("launcherTopUsed", 6)     // nº de "mais usados" no topo
+    readonly property string launcherTerminal: Settings.get("launcherTerminal", "kitty") // p/ .desktop Terminal=true
+    readonly property color  launcherBg: Settings.get("launcherBg", Theme.base)
+    readonly property color  launcherBorder: Settings.get("launcherBorder", Theme.surface0)
+    readonly property color  launcherSel: Settings.get("launcherSel", Theme.surface1)   // linha selecionada
+    readonly property color  launcherText: Settings.get("launcherText", Theme.text)
+    readonly property color  launcherSub: Settings.get("launcherSub", Theme.subtext0)   // texto secundário/dicas
 
     // ── Notificações (topo-centro da tela) ──────────────
     readonly property real   notifWidth: Settings.get("notifWidth", 360)       // largura do toast
@@ -168,8 +173,7 @@ Singleton {
     // ── Fontes (px) ─────────────────────────────────────
     readonly property int  petalIconSize: Settings.get("petalIconSize", 13)
     readonly property int  ballNumberSize: Settings.get("ballNumberSize", 18)
-    readonly property int  ballLayoutSize: Settings.get("ballLayoutSize", 11)
-    readonly property int  layoutTextSize: Settings.get("layoutTextSize", 12)
+    readonly property int  layoutTextSize: Settings.get("layoutTextSize", 12)   // texto dos sliders de áudio
     readonly property int  clockSize: Settings.get("clockSize", 13)
 
     // ── Cores (semânticas → paleta em Theme.qml; override por nome do componente) ──
@@ -180,10 +184,6 @@ Singleton {
     readonly property color accent: Settings.get("accent", Theme.mauve)
     readonly property color ballText: Settings.get("ballText", Theme.red)          // nº do workspace
     readonly property color clock: Settings.get("clock", Theme.text)
-    readonly property color layoutPill: Settings.get("layoutPill", Theme.surface0)
-    readonly property color layoutPillHover: Settings.get("layoutPillHover", Theme.mauve)
-    readonly property color layoutText: Settings.get("layoutText", Theme.text)
-    readonly property color layoutTextHover: Settings.get("layoutTextHover", Theme.crust)
     readonly property color dotActive: Settings.get("dotActive", Theme.red)         // workspace atual
     readonly property color dotUrgent: Settings.get("dotUrgent", Theme.peach)        // urgente
     readonly property color dotOccupied: Settings.get("dotOccupied", Theme.maroon)    // ocupado
@@ -197,8 +197,7 @@ Singleton {
     readonly property int  petalScaleAnim: Settings.get("petalScaleAnim", 130)
     readonly property int  petalRadiusAnim: Settings.get("petalRadiusAnim", 150)
     readonly property int  petalFlareAnim: Settings.get("petalFlareAnim", 160)
-    readonly property int  layoutAnim: Settings.get("layoutAnim", 180)
-    readonly property int  layoutColorAnim: Settings.get("layoutColorAnim", 120)
+    readonly property int  layoutAnim: Settings.get("layoutAnim", 180)   // sliders de áudio
     readonly property int  dotAnim: Settings.get("dotAnim", 120)
     readonly property int  clockAnim: Settings.get("clockAnim", 150)
     readonly property int  hoverCloseMs: Settings.get("hoverCloseMs", 130)

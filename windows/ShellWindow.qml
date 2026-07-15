@@ -4,13 +4,12 @@ import Quickshell.Wayland
 import Quickshell.Services.SystemTray
 import QtQuick
 import "root:/ui"         // MenuBall, Petal, GothicCorners, AudioMenu, AudioDevices, TrayMenu
-import "root:/layouts"    // LayoutMenu
 import "root:/cava"       // CavaRing
-import "root:/services"   // AudioService, CaptureService, UpdateService
+import "root:/services"   // AudioService, CaptureService
 import "root:/"           // Config (raiz)
 
-// Janela do shell (camada de cima): bola/menu, pétalas, submenu de layouts,
-// cava radial, barra e TODA a lógica de interação (hover/clique/scroll).
+// Janela do shell (camada de cima): bola/menu, pétalas, cava radial, barra e TODA a
+// lógica de interação (hover/clique/scroll).
 // Funciona como "controlador": os componentes visuais recebem `win` e leem o estado daqui.
 PanelWindow {
     id: win
@@ -18,8 +17,7 @@ PanelWindow {
     // ── Entradas ──
     property var modelData          // a screen (monitor)
     property var menuItems: []      // itens das pétalas
-    property var layoutItems: []    // opções de layout do Mango
-    property var mango              // serviço MangoLayout
+    property var niri               // serviço NiriService
     property var levels: []         // níveis do cava
 
     screen: modelData
@@ -61,20 +59,12 @@ PanelWindow {
     property int  petalSection: -1      // seção da pétala multi-botão sob o cursor
     property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
-    // a bola fica aberta tb enquanto um popup (tray/áudio/layout) estiver visível (não recolher sozinha)
-    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || layoutMenu.visible || powerMenu.visible)
-    // algum menu/popup aberto? (tray, dispositivos de áudio, layout, energia, ou sliders de áudio)
-    readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || layoutMenu.visible || powerMenu.visible || audioMode
+    // a bola fica aberta tb enquanto um popup (tray/áudio) estiver visível (não recolher sozinha)
+    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible)
+    // algum menu/popup aberto? (tray, dispositivos de áudio, ou sliders de áudio)
+    readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || audioMode
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
-        return -1
-    }
-    readonly property int captureIndex: {
-        for (let i = 0; i < menuItems.length; i++) if (menuItems[i].capture) return i
-        return -1
-    }
-    readonly property int updateIndex: {
-        for (let i = 0; i < menuItems.length; i++) if (menuItems[i].update) return i
         return -1
     }
     readonly property int trayIndex: {
@@ -96,12 +86,12 @@ PanelWindow {
     readonly property string dateText: Qt.formatDateTime(sysClock.date, Config.dateFormat)
     readonly property string timeText: Qt.formatDateTime(sysClock.date, Config.timeFormat)
 
-    // ── Estado do MangoWC p/ ESTE monitor/workspace ──────
+    // ── Estado do Niri p/ ESTE monitor/workspace ─────────
     readonly property var monData: {
-        if (!mango || !modelData) return null
-        const byName = mango.monitorByName(modelData.name)
+        if (!niri || !modelData) return null
+        const byName = niri.monitorByName(modelData.name)
         if (byName) return byName
-        const list = mango.monitors ?? []
+        const list = niri.monitors ?? []
         return (list.find(m => m.active) ?? list[0]) ?? null
     }
     readonly property var tags: (monData && monData.tags) ? monData.tags : []
@@ -110,33 +100,22 @@ PanelWindow {
             if (tags[i].is_active) return tags[i].index
         return 0
     }
-    readonly property string currentLayoutSymbol: monData ? (monData.layout_symbol ?? "?") : "?"
-    readonly property string currentLayoutName: mango ? (mango.layoutNames[currentLayoutSymbol] ?? currentLayoutSymbol) : currentLayoutSymbol
-    // nome do layout na bola: ao passar na 1ª pétala ou com o menu de layout aberto
-    readonly property bool showLayoutName: hoverIndex === 0 || layoutMenu.visible
-    readonly property string displayLayoutName: currentLayoutName
 
-    // Troca para o workspace `n` NESTE monitor. O `view` do mango age no monitor
-    // FOCADO, então, se este monitor não estiver focado, focamos ele antes (direção
-    // calculada pela posição do monitor focado vs. este — vale p/ 2 monitores).
+    // Troca para o workspace `n` (idx do niri, 1-based) NESTE monitor. O
+    // `focus-workspace` do niri age no monitor FOCADO, então, se este monitor não
+    // estiver focado, focamos ele antes (`focus-monitor <nome>` aceita o nome direto).
     function viewTagHere(n) {
         const me = monData
         if (!me) return
         if (me.active) {                                   // já focado -> troca direto
-            proc.exec(["mmsg", "dispatch", "view," + n + ",0"])
+            proc.exec(["niri", "msg", "action", "focus-workspace", "" + n])
             return
         }
-        const list = mango ? (mango.monitors ?? []) : []
-        const cur = list.find(m => m.active)
-        let dir = "right"
-        if (cur) {
-            if ((me.x ?? 0) !== (cur.x ?? 0))      dir = (me.x > cur.x) ? "right" : "left"
-            else if ((me.y ?? 0) !== (cur.y ?? 0)) dir = (me.y > cur.y) ? "down" : "up"
-        }
-        proc.exec(["sh", "-c", "mmsg dispatch focusmon," + dir + "; mmsg dispatch view," + n + ",0"])
+        proc.exec(["sh", "-c",
+            "niri msg action focus-monitor '" + modelData.name + "'; niri msg action focus-workspace " + n])
     }
 
-    // ── Pétalas multi-botão (áudio/captura) ─────────────
+    // ── Pétalas multi-botão (áudio/sistema) ─────────────
     // seção (0 = junto à bola … n-1 = na ponta) sob o cursor, dividindo a pétala em n
     function petalSectionAt(mx, my, n) {
         const dx = mx - ballCX, dy = ballCY - my
@@ -144,11 +123,9 @@ PanelWindow {
         const r0 = petalDist - petalH / 2, r1 = petalDist + petalH / 2
         return Math.max(0, Math.min(n - 1, Math.floor((r - r0) / (r1 - r0) * n)))
     }
-    // nº de seções da pétala i (áudio=3, captura=2, bandeja=nº de apps, demais=0)
+    // nº de seções da pétala i (áudio=3, sistema=3, bandeja=nº de apps, demais=0)
     function petalSections(i) {
         if (i === audioIndex) return 3
-        if (i === captureIndex) return 2
-        if (i === updateIndex) return 2
         if (i === settingsIndex) return 3
         if (i === trayIndex) return SystemTray.items.values.length
         return 0
@@ -192,14 +169,12 @@ PanelWindow {
         return -1
     }
     function overBallAt(mx, my) { return Math.hypot(mx - ballCX, my - ballCY) <= ballRadius }
-    // fecha o menu (usado antes de capturas, p/ não roubar o arrasto do slurp)
+    // fecha o menu (usado antes de capturas, p/ não roubar o arrasto da seleção)
     function closeMenu() { dismissed = true; pinned = false }
     // fecha TODOS os menus/popups e recolhe a bola (usado pelo ESC)
     function closeAllMenus() {
         trayMenu.visible = false
         audioDevices.visible = false
-        layoutMenu.visible = false
-        powerMenu.visible = false
         audioMode = false
         pinned = false
         dismissed = true
@@ -225,24 +200,24 @@ PanelWindow {
         else hoverCloseTimer.restart()
     }
 
-    // processo p/ comandos one-shot (mmsg view/setlayout, ações das pétalas)
+    // processo p/ comandos one-shot (niri msg, ações das pétalas)
     Process { id: proc }
 
     // ── Foco da janela do app a partir do tray (esquerdo) ──────────────
     // O activate() do SNI é incoerente (alterna/não rouba foco). Em vez disso, achamos
-    // a janela do app (mmsg get all-clients, casando por appid/título) e focamos com
-    // `focusid`, que foca qualquer janela incondicionalmente. Sem janela -> activate().
+    // a janela do app (niri msg --json windows, casando por app_id/título) e focamos com
+    // `focus-window --id`, que foca qualquer janela incondicionalmente. Sem janela -> activate().
     property var pendingFocusTray: null
     function focusTrayApp(it) {
         pendingFocusTray = it
-        clientsProc.exec(["mmsg", "get", "all-clients"])
+        clientsProc.exec(["niri", "msg", "--json", "windows"])
     }
     function matchTrayClient(clients, tray) {
         function norm(s) { return (s || "").toString().toLowerCase() }
         const fields = [norm(tray.id), norm(tray.title), norm(tray.tooltipTitle)].filter(s => s.length > 0)
-        // 1) por appid (sinal mais confiável: ex. tray "steam" -> appid "steam")
+        // 1) por app_id (sinal mais confiável: ex. tray "steam" -> app_id "steam")
         for (let i = 0; i < clients.length; i++) {
-            const a = norm(clients[i].appid)
+            const a = norm(clients[i].app_id)
             if (!a) continue
             for (let j = 0; j < fields.length; j++)
                 if (a.indexOf(fields[j]) >= 0 || fields[j].indexOf(a) >= 0) return clients[i]
@@ -262,10 +237,10 @@ PanelWindow {
                 const it = win.pendingFocusTray
                 win.pendingFocusTray = null
                 if (!it) return
-                let data
-                try { data = JSON.parse(line) } catch (e) { it.activate(); return }
-                const c = win.matchTrayClient(data.clients ?? [], it)
-                if (c) proc.exec(["mmsg", "dispatch", "focusid", "client," + c.id])
+                let clients
+                try { clients = JSON.parse(line) } catch (e) { it.activate(); return }
+                const c = win.matchTrayClient(clients ?? [], it)
+                if (c) proc.exec(["niri", "msg", "action", "focus-window", "--id", "" + c.id])
                 else it.activate()   // app sem janela aberta -> abre/ativa
             }
         }
@@ -276,12 +251,6 @@ PanelWindow {
 
     // seletor de dispositivo de áudio (direito no headphone/mic da pétala de áudio)
     AudioDevices { id: audioDevices; ctx: win }
-
-    // menu de seleção de layout (1ª pétala) — popup estilizado
-    LayoutMenu { id: layoutMenu; ctx: win }
-
-    // menu de ações de energia (seção de baixo da pétala de Sistema)
-    PowerMenu { id: powerMenu; ctx: win }
 
     // ESC fecha todos os menus (a janela só recebe o teclado quando há um menu aberto)
     Item {
@@ -301,7 +270,7 @@ PanelWindow {
     }
 
     // ── Componentes visuais ─────────────────────────────
-    // CavaRing (círculo Cavasik): à frente das janelas do mango (a ShellWindow é camada
+    // CavaRing (círculo Cavasik): à frente das janelas do niri (a ShellWindow é camada
     // Top) e atrás de TODO o shell (z 0 < pétala z1 < barra/gótico z2 < bola z3 …).
     CavaRing {
         z: 0
@@ -389,13 +358,9 @@ PanelWindow {
                     if (s === 2)      audioDevices.openAt("sink",   Math.round(mouseX), Math.round(mouseY))  // headphone -> saídas
                     else if (s === 1) audioDevices.openAt("source", Math.round(mouseX), Math.round(mouseY))  // mic -> entradas
                 } else if (rpi === win.settingsIndex) {
-                    // pétala de Sistema: sobre a lâmpada (seção 0) o direito também faz o toggle;
-                    // nas demais seções, lança o wlogout (grade gráfica, via mango)
+                    // pétala de Sistema: sobre a lâmpada (seção 0) o direito também faz o toggle
                     if (win.petalSectionAt(mouseX, mouseY, 3) === 0) {
                         IdleService.toggle()
-                    } else {
-                        powerMenu.visible = false
-                        proc.exec(["mmsg", "dispatch", "spawn,sh -c 'pidof wlogout || wlogout'"])
                     }
                 }
                 return
@@ -409,8 +374,8 @@ PanelWindow {
             }
             // 2) bola?
             if (win.overBallAt(mouseX, mouseY)) {
-                if (trayMenu.visible || audioDevices.visible || layoutMenu.visible || powerMenu.visible) {   // fecha popup + bola
-                    trayMenu.visible = false; audioDevices.visible = false; layoutMenu.visible = false; powerMenu.visible = false
+                if (trayMenu.visible || audioDevices.visible) {   // fecha popup + bola
+                    trayMenu.visible = false; audioDevices.visible = false
                     win.pinned = false; win.dismissed = true; return
                 }
                 if (win.audioMode)  { win.audioMode = false; return }   // volta ao menu principal
@@ -427,61 +392,43 @@ PanelWindow {
             const pi = win.petalAt(mouseX, mouseY)
             if (pi >= 0) {
                 if (pi === win.audioIndex) {
-                    // 5ª pétala (áudio): seção define a ação
+                    // pétala de áudio: seção define a ação
                     const s = win.petalSectionAt(mouseX, mouseY, 3)
                     if (s === 2)      AudioService.toggleSinkMute()    // headphone (saída)
                     else if (s === 1) AudioService.toggleSourceMute()  // microfone (entrada)
                     else if (s === 0) win.audioMode = true             // config (abre sliders)
-                } else if (pi === win.updateIndex) {
-                    // 2ª pétala (atualizações): topo = upgrade do sistema, base = update do MangoWC
-                    const s = win.petalSectionAt(mouseX, mouseY, 2)
-                    win.closeMenu()
-                    if (s === 1) UpdateService.runUpgrade()
-                    else         UpdateService.updateMango()
-                } else if (pi === win.captureIndex) {
-                    // 4ª pétala (captura): topo = print, base = gravar/parar
-                    const s = win.petalSectionAt(mouseX, mouseY, 2)
-                    if (s === 1) {
-                        win.closeMenu(); CaptureService.screenshot()       // print (fecha o menu p/ não atrapalhar)
-                    } else if (CaptureService.recording) {
-                        CaptureService.stopRecording()                     // parar gravação
-                    } else {
-                        // grava este monitor inteiro (a tela é escolhida por qual bola se clica)
-                        win.closeMenu(); CaptureService.startRecording(win.modelData.name)
-                    }
                 } else if (pi === win.trayIndex) {
-                    // 7ª pétala (bandeja): esquerdo = traz/foca a janela do app (via mango)
+                    // pétala da bandeja: esquerdo = traz/foca a janela do app (via niri)
                     const items = SystemTray.items.values
                     if (items.length > 0) {
                         const it = items[win.petalSectionAt(mouseX, mouseY, items.length)]
                         if (it) win.focusTrayApp(it)
                     }
                 } else if (pi === win.settingsIndex) {
-                    // 3ª pétala (sistema): topo=configurações, meio=energia, base=toggle de lock
+                    // pétala de sistema: topo=configurações, meio=gravar/parar, base=toggle de lock
                     const s = win.petalSectionAt(mouseX, mouseY, 3)
                     if (s === 2) {
                         Settings.open = true                       // engrenagem -> janela de configurações
                         win.pinned = false; win.dismissed = true
-                    } else if (s === 0) {
+                    } else if (s === 1) {
+                        if (CaptureService.recording) {
+                            CaptureService.stopRecording()         // parar gravação
+                        } else {
+                            // grava este monitor inteiro (a tela é escolhida por qual bola se clica)
+                            win.closeMenu(); CaptureService.startRecording(win.modelData.name)
+                        }
+                    } else {
                         IdleService.toggle()                       // lâmpada -> inibe/reativa lock/idle
-                    } else if (powerMenu.visible) {
-                        powerMenu.visible = false                  // clicar de novo fecha
-                    } else {
-                        win.dismissed = false                      // energia -> lista de ações
-                        powerMenu.openAt(Math.round(mouseX), Math.round(mouseY))
-                    }
-                } else if (pi === 0) {
-                    // 1ª pétala = alterna o popup de seleção de layout
-                    if (layoutMenu.visible) {
-                        layoutMenu.visible = false
-                    } else {
-                        win.dismissed = false
-                        layoutMenu.openAt(Math.round(mouseX), Math.round(mouseY))
                     }
                 } else {
                     const item = win.menuItems[pi]
-                    if (item.spawn)                              // app gráfico: lança pelo mango (env Wayland)
-                        proc.exec(["mmsg", "dispatch", "spawn," + item.spawn])
+                    if (item.launcher) {                         // lançador próprio (LauncherWindow)
+                        LauncherService.toggle()
+                        win.pinned = false; win.dismissed = true
+                        return
+                    }
+                    if (item.spawn)                              // app gráfico: lança pelo niri (env Wayland)
+                        proc.exec(["niri", "msg", "action", "spawn-sh", "--", item.spawn])
                     else if ((item.command ?? []).length > 0)    // comando direto (sem env Wayland)
                         proc.exec(item.command)
                     win.selectedIndex = pi
@@ -492,8 +439,6 @@ PanelWindow {
             // 5) fora -> recolhe (e fecha os popups, se abertos)
             trayMenu.visible = false
             audioDevices.visible = false
-            layoutMenu.visible = false
-            powerMenu.visible = false
             win.pinned = false
         }
     }
@@ -513,7 +458,7 @@ PanelWindow {
                     return
                 }
                 // na região das pétalas (aberto, fora da bola) -> gira o anel
-                if (win.open && !win.overBall && !layoutMenu.visible && !powerMenu.visible) {
+                if (win.open && !win.overBall) {
                     win.petalRotation += dir * Config.petalStepDeg
                     return
                 }

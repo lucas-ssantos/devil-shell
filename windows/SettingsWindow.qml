@@ -6,19 +6,19 @@ import "root:/themes"     // Theme
 import "root:/services"   // Settings, ThemeExport
 import "root:/"           // Config
 
-// Janela de configurações do shell (3ª pétala). Overlay modal no centro da tela
-// focada: lista TODAS as opções do Config + a escolha de paletas (shell/cava) +
+// Janela de configurações do shell (pétala de Sistema). Overlay modal no centro da
+// tela focada: lista TODAS as opções do Config + a escolha de paletas (shell/cava) +
 // overrides de cor crua. Grava tudo via Settings (settings.json). Botões para
-// restaurar o padrão e regenerar os temas externos (kitty/rofi/mango/vesktop).
+// restaurar o padrão e regenerar os temas externos (kitty/rofi/vesktop…).
 PanelWindow {
     id: win
-    property var mango   // MangoLayout, p/ achar o monitor focado
+    property var niri   // NiriService, p/ achar o monitor focado
 
     visible: Settings.open
 
     // monitor focado (fallback: o primeiro)
     screen: {
-        const list = mango ? (mango.monitors ?? []) : []
+        const list = niri ? (niri.monitors ?? []) : []
         const a = list.find(m => m.active)
         if (a) {
             const s = Quickshell.screens.find(sc => sc.name === a.name)
@@ -83,10 +83,6 @@ PanelWindow {
             { key: "accent", label: "Acento", ftype: "color" },
             { key: "ballText", label: "Texto da bola", ftype: "color" },
             { key: "clock", label: "Relógio", ftype: "color" },
-            { key: "layoutPill", label: "Pílula layout", ftype: "color" },
-            { key: "layoutPillHover", label: "Pílula layout (hover)", ftype: "color" },
-            { key: "layoutText", label: "Texto layout", ftype: "color" },
-            { key: "layoutTextHover", label: "Texto layout (hover)", ftype: "color" },
             { key: "dotActive", label: "Ponto ativo", ftype: "color" },
             { key: "dotUrgent", label: "Ponto urgente", ftype: "color" },
             { key: "dotOccupied", label: "Ponto ocupado", ftype: "color" },
@@ -117,7 +113,7 @@ PanelWindow {
             { key: "petalDir", label: "Sentido (+1/-1)", ftype: "int" },
             { key: "hitMargin", label: "Folga do hit-test", ftype: "real" },
             { key: "menuMargin", label: "Folga da máscara", ftype: "real" },
-            { key: "layoutMenuW", label: "Largura menu layout", ftype: "real" },
+            { key: "layoutMenuW", label: "Largura menu energia", ftype: "real" },
             { key: "petalIconSize", label: "Tamanho do ícone", ftype: "int" }
         ]},
         { title: "CAVA", fields: [
@@ -143,11 +139,28 @@ PanelWindow {
             { key: "audioSliderFill", label: "Slider preench.", ftype: "color" },
             { key: "audioSliderText", label: "Slider texto", ftype: "color" }
         ]},
-        { title: "Captura", fields: [
+        { title: "Gravação", fields: [
             { key: "captureRecColor", label: "Cor gravando", ftype: "color" }
         ]},
-        { title: "Atualizações e clima", fields: [
-            { key: "updateInterval", label: "Intervalo updates (ms)", ftype: "int" },
+        { title: "Lançador", fields: [
+            { key: "launcherW", label: "Largura", ftype: "real" },
+            { key: "launcherListMaxH", label: "Altura máx da lista", ftype: "real" },
+            { key: "launcherRowH", label: "Altura da linha", ftype: "real" },
+            { key: "launcherRadius", label: "Raio", ftype: "real" },
+            { key: "launcherYFactor", label: "Posição vertical (0–1)", ftype: "real" },
+            { key: "launcherAnim", label: "Animação (ms)", ftype: "int" },
+            { key: "launcherFontSize", label: "Texto", ftype: "int" },
+            { key: "launcherInputSize", label: "Texto da busca", ftype: "int" },
+            { key: "launcherIconSize", label: "Ícone", ftype: "int" },
+            { key: "launcherTopUsed", label: "Nº de mais usados", ftype: "int" },
+            { key: "launcherTerminal", label: "Terminal (apps de texto)", ftype: "string" },
+            { key: "launcherBg", label: "Fundo", ftype: "color" },
+            { key: "launcherBorder", label: "Borda", ftype: "color" },
+            { key: "launcherSel", label: "Seleção", ftype: "color" },
+            { key: "launcherText", label: "Texto (cor)", ftype: "color" },
+            { key: "launcherSub", label: "Texto secundário", ftype: "color" }
+        ]},
+        { title: "Clima", fields: [
             { key: "weatherInterval", label: "Intervalo clima (ms)", ftype: "int" },
             { key: "weatherLocation", label: "Local do clima", ftype: "string" }
         ]},
@@ -209,8 +222,7 @@ PanelWindow {
             { key: "clockSideGap", label: "Folga do relógio", ftype: "real" },
             { key: "clockSize", label: "Tamanho relógio", ftype: "int" },
             { key: "ballNumberSize", label: "Nº na bola", ftype: "int" },
-            { key: "ballLayoutSize", label: "Layout na bola", ftype: "int" },
-            { key: "layoutTextSize", label: "Texto do layout", ftype: "int" }
+            { key: "layoutTextSize", label: "Texto dos sliders", ftype: "int" }
         ]},
         { title: "Tempos (ms)", fields: [
             { key: "ballAnim", label: "Bola", ftype: "int" },
@@ -220,8 +232,7 @@ PanelWindow {
             { key: "petalScaleAnim", label: "Escala pétalas", ftype: "int" },
             { key: "petalRadiusAnim", label: "Raio pétalas", ftype: "int" },
             { key: "petalFlareAnim", label: "Flare pétalas", ftype: "int" },
-            { key: "layoutAnim", label: "Layout", ftype: "int" },
-            { key: "layoutColorAnim", label: "Cor do layout", ftype: "int" },
+            { key: "layoutAnim", label: "Sliders de áudio", ftype: "int" },
             { key: "dotAnim", label: "Pontos", ftype: "int" },
             { key: "clockAnim", label: "Relógio", ftype: "int" },
             { key: "hoverCloseMs", label: "Fechar hover", ftype: "int" },
@@ -234,20 +245,11 @@ PanelWindow {
             { key: "iconInput", label: "Entrada", ftype: "string" },
             { key: "iconInputMuted", label: "Entrada mudo", ftype: "string" },
             { key: "iconConfig", label: "Config", ftype: "string" },
-            { key: "iconPower", label: "Energia", ftype: "string" },
-            { key: "iconScreenshot", label: "Print", ftype: "string" },
             { key: "iconRecord", label: "Gravar", ftype: "string" },
             { key: "iconRecording", label: "Parar", ftype: "string" },
-            { key: "iconUpdate", label: "Update", ftype: "string" },
-            { key: "iconMango", label: "MangoWC", ftype: "string" },
             { key: "iconTray", label: "Bandeja", ftype: "string" },
             { key: "iconMedia", label: "Mídia", ftype: "string" },
             { key: "iconWeather", label: "Clima", ftype: "string" }
-        ]},
-        { title: "Comandos (avançado)", fields: [
-            { key: "updateCheckCmd", label: "Checar updates", ftype: "string" },
-            { key: "updateUpgradeSpawn", label: "Aplicar updates", ftype: "string" },
-            { key: "updateMangoSpawn", label: "Atualizar Mango", ftype: "string" }
         ]}
     ]
 

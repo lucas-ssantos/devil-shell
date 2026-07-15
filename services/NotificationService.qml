@@ -3,8 +3,8 @@ import Quickshell
 import Quickshell.Services.Notifications
 
 // Serviço de notificações (singleton): recebe as notificações freedesktop (D-Bus)
-// — Vesktop, apps do sistema, `notify-send` (ex.: um keybind de reload do mango que
-// chame notify-send), etc. — e mantém a lista das ativas em `list`.
+// — Vesktop, apps do sistema, `notify-send` (ex.: um keybind do niri que chame
+// notify-send), etc. — e mantém a lista das ativas em `list`.
 // O auto-dismiss e o visual ficam na NotificationWindow.
 Singleton {
     id: svc

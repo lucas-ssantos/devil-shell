@@ -2,7 +2,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
 import QtQuick
-import "root:/services"   // NotificationService, MangoLayout (via property)
+import "root:/services"   // NotificationService, NiriService (via property)
 import "root:/"           // Config (raiz)
 
 // Painel de notificações (toasts) no TOPO-CENTRO da tela focada. Lê as notificações
@@ -10,11 +10,11 @@ import "root:/"           // Config (raiz)
 // Clicar num card fecha (dismiss). A janela só existe quando há notificações.
 PanelWindow {
     id: win
-    property var mango   // serviço MangoLayout, p/ achar o monitor focado
+    property var niri   // serviço NiriService, p/ achar o monitor focado
 
     // mostra no monitor focado (fallback: o primeiro)
     screen: {
-        const list = mango ? (mango.monitors ?? []) : []
+        const list = niri ? (niri.monitors ?? []) : []
         const a = list.find(m => m.active)
         if (a) {
             const s = Quickshell.screens.find(sc => sc.name === a.name)

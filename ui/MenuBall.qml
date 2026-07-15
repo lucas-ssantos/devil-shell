@@ -1,7 +1,7 @@
 import QtQuick
 import "root:/"   // Config (raiz)
 
-// A bola/menu central: número do workspace ativo OU nome do layout, e o anel de workspaces.
+// A bola/menu central: número do workspace ativo e o anel de workspaces.
 Rectangle {
     id: ball
     property var ctx
@@ -17,26 +17,12 @@ Rectangle {
     antialiasing: true
     border.width: 0
 
-    // número do workspace ativo (some quando mostrando o layout)
+    // número do workspace ativo
     Text {
         anchors.centerIn: parent
-        visible: !ball.ctx.showLayoutName
         text: ball.ctx.activeTag > 0 ? ball.ctx.activeTag : ""
         color: Config.ballText
         font.pixelSize: Config.ballNumberSize
-        font.bold: true
-    }
-
-    // nome do layout (focando a 1ª pétala / no submenu de layouts)
-    Text {
-        anchors.centerIn: parent
-        width: parent.width - 14
-        visible: ball.ctx.showLayoutName
-        horizontalAlignment: Text.AlignHCenter
-        wrapMode: Text.WordWrap
-        text: ball.ctx.displayLayoutName
-        color: Config.ballText
-        font.pixelSize: Config.ballLayoutSize
         font.bold: true
     }
 

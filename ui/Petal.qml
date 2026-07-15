@@ -1,11 +1,10 @@
 import QtQuick
 import Quickshell.Services.SystemTray
-import "root:/services"   // AudioService, CaptureService, UpdateService
+import "root:/services"   // AudioService, CaptureService
 import "root:/"           // Config (raiz)
 
 // Uma pétala do menu radial (visual). Lê o estado do controlador `ctx` e os
-// valores customizáveis de `Config`. A 1ª pétala (index 0) mostra a sigla do
-// layout atual; as demais, o ícone do item.
+// valores customizáveis de `Config`.
 Item {
     id: petal
     property var ctx
@@ -90,7 +89,7 @@ Item {
             }
         }
 
-        // ── Painel de áudio: 3 botões + divisórias (só na 5ª pétala) ──
+        // ── Painel de áudio: 3 botões + divisórias (só na pétala de áudio) ──
         Item {
             visible: petal.modelData.audio ?? false
             anchors.fill: parent
@@ -145,9 +144,9 @@ Item {
             }
         }
 
-        // ── Painel de captura: 2 botões (só na 4ª pétala) ──
+        // ── Painel de sistema: 3 botões (configurações + gravação + toggle de lock) ──
         Item {
-            visible: petal.modelData.capture ?? false
+            visible: petal.modelData.settings ?? false
             anchors.fill: parent
             anchors.margins: Config.audioBtnMargin
 
@@ -156,114 +155,7 @@ Item {
                 radius: width / 2
                 color: Qt.darker(Config.petal, Config.audioBtnDarken)
             }
-            // destaque (sec1=topo, sec0=baixo)
-            Rectangle {
-                visible: petal.hovered && petal.ctx.petalSection >= 0
-                width: parent.width
-                height: parent.height / 2
-                y: (1 - petal.ctx.petalSection) * (parent.height / 2)
-                radius: 6
-                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
-            }
-            // divisória
-            Rectangle {
-                width: parent.width * 0.7
-                height: 1.5
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: parent.height / 2 - height / 2
-                color: Config.petalIcon
-                opacity: 0.3
-            }
-            // ícones (i0=print topo, i1=gravar baixo)
-            Repeater {
-                model: 2
-                delegate: Text {
-                    required property int index
-                    readonly property bool rec: CaptureService.recording
-                    rotation: -petal.rotation
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: index * (parent.height / 2) + (parent.height / 2 - height) / 2
-                    font.family: Config.iconFont
-                    font.pixelSize: Config.audioIconSize
-                    color: (index === 1 && rec) ? Config.captureRecColor : Config.petalIcon
-                    text: index === 0 ? Config.iconScreenshot
-                                      : (rec ? Config.iconRecording : Config.iconRecord)
-                }
-            }
-        }
-
-        // ── Painel de atualizações: 2 botões (só na 2ª pétala) ──
-        Item {
-            visible: petal.modelData.update ?? false
-            anchors.fill: parent
-            anchors.margins: Config.audioBtnMargin
-
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: Qt.darker(Config.petal, Config.audioBtnDarken)
-            }
-            // destaque (sec1=topo, sec0=baixo)
-            Rectangle {
-                visible: petal.hovered && petal.ctx.petalSection >= 0
-                width: parent.width
-                height: parent.height / 2
-                y: (1 - petal.ctx.petalSection) * (parent.height / 2)
-                radius: 6
-                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
-            }
-            // divisória
-            Rectangle {
-                width: parent.width * 0.7
-                height: 1.5
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: parent.height / 2 - height / 2
-                color: Config.petalIcon
-                opacity: 0.3
-            }
-            // topo: ícone do Debian (acento quando há updates) + contador
-            Text {
-                rotation: -petal.rotation
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: (parent.height / 2 - height) / 2 - 3
-                font.family: Config.iconFont
-                font.pixelSize: Config.audioIconSize
-                color: UpdateService.packages > 0 ? Config.accent : Config.petalIcon
-                opacity: UpdateService.packages > 0 ? 1.0 : 0.55
-                text: Config.iconUpdate
-            }
-            Text {
-                visible: UpdateService.packages > 0
-                rotation: -petal.rotation
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: parent.height / 2 - height - 1   // logo acima da divisória
-                font.pixelSize: 9
-                font.bold: true
-                color: Config.accent
-                text: UpdateService.packages
-            }
-            // base: manga (emoji) -> atualizar o MangoWC. Sem iconFont (fonte padrão renderiza o emoji).
-            Text {
-                rotation: -petal.rotation
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: parent.height / 2 + (parent.height / 2 - height) / 2
-                font.pixelSize: Config.audioIconSize
-                text: Config.iconMango
-            }
-        }
-
-        // ── Painel de sistema: 3 botões (configurações + energia + toggle de lock) ──
-        Item {
-            visible: petal.modelData.power ?? false
-            anchors.fill: parent
-            anchors.margins: Config.audioBtnMargin
-
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: Qt.darker(Config.petal, Config.audioBtnDarken)
-            }
-            // destaque da seção sob o cursor (sec2=topo=config … sec0=baixo=lâmpada)
+            // destaque da seção sob o cursor (sec2=topo=config, sec1=meio=gravar, sec0=baixo=lâmpada)
             Rectangle {
                 visible: petal.hovered && petal.ctx.petalSection >= 0
                 width: parent.width
@@ -285,11 +177,12 @@ Item {
                     opacity: 0.3
                 }
             }
-            // ícones (i0=engrenagem topo=config, i1=energia meio=wlogout, i2=lâmpada baixo=toggle lock)
+            // ícones (i0=engrenagem topo=config, i1=gravar meio, i2=lâmpada baixo=toggle lock)
             Repeater {
                 model: 3
                 delegate: Text {
                     required property int index
+                    readonly property bool rec: index === 1 && CaptureService.recording
                     // lâmpada "acesa" (cor de acento) quando o lock/idle está inibido
                     readonly property bool lampOn: index === 2 && IdleService.inhibited
                     rotation: -petal.rotation
@@ -297,15 +190,17 @@ Item {
                     y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
                     font.family: Config.iconFont
                     font.pixelSize: Config.audioIconSize
-                    color: lampOn ? Config.idleOnColor : Config.petalIcon
+                    color: rec ? Config.captureRecColor
+                         : lampOn ? Config.idleOnColor : Config.petalIcon
                     opacity: (index === 2 && !IdleService.inhibited) ? 0.55 : 1.0
                     text: index === 0 ? Config.iconConfig
-                        : index === 1 ? Config.iconPower : Config.iconIdle
+                        : index === 1 ? (rec ? Config.iconRecording : Config.iconRecord)
+                        : Config.iconIdle
                 }
             }
         }
 
-        // ── Painel da bandeja (system tray): 1 seção por app (só na 7ª pétala) ──
+        // ── Painel da bandeja (system tray): 1 seção por app (só na pétala da bandeja) ──
         Item {
             id: trayPanel
             visible: petal.modelData.tray ?? false
@@ -394,12 +289,11 @@ Item {
 
     // ── Pétala normal: ícone único ──
     Text {
-        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.capture ?? false) && !(petal.modelData.tray ?? false) && !(petal.modelData.update ?? false) && !(petal.modelData.power ?? false)
+        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.tray ?? false) && !(petal.modelData.settings ?? false)
         anchors.centerIn: parent
         rotation: -petal.rotation
-        text: petal.index === 0 ? petal.ctx.currentLayoutSymbol : (petal.modelData.icon ?? "")
+        text: petal.modelData.icon ?? ""
         font.pixelSize: Config.petalIconSize
-        font.bold: petal.index === 0
         color: Config.petalIcon
     }
 

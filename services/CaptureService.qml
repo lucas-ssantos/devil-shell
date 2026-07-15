@@ -3,48 +3,43 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// Serviço de captura (singleton): screenshot e gravação de tela.
+// Serviço de captura (singleton): gravação de tela.
 //
-// IMPORTANTE: os comandos são lançados pelo PRÓPRIO compositor via `mmsg dispatch
-// spawn` (igual a um keybind). Lançar pelo Process do quickshell NÃO funciona: o
-// processo filho não herda um WAYLAND_DISPLAY válido e o slurp/wayfreeze nunca abrem
-// (o mmsg funciona porque usa o socket do mango, não o Wayland). Já o que o mango
-// mesmo spawna recebe o ambiente Wayland correto.
+// Gravação: gpu-screen-recorder gravando UM monitor inteiro (-w <saída>). Requer também: pgrep.
+// Setup ÚNICO (o gsr-kms-server precisa de CAP_SYS_ADMIN; sem isso, e sem pkexec, a captura
+// KMS falha na hora): `sudo setcap cap_sys_admin+ep /usr/bin/gsr-kms-server`.
+// O gpu-screen-recorder é lançado pelo PRÓPRIO compositor via `niri msg action spawn-sh`
+// (igual a um keybind), garantindo um ambiente Wayland correto p/ o processo filho.
 //
-// Screenshot: script ~/.config/mango/scripts/printscreen_edit.sh (wayfreeze + slurp -d + swappy).
-// Gravação:   wf-recorder gravando UM monitor inteiro (-o <saída>). Requer também: pgrep.
+// ⚠️ pgrep/pkill -x casam com o comm do kernel, truncado em 15 chars: "gpu-screen-reco"
+// (o nome completo dá zero matches; -f é pior — casa com qualquer cmdline contendo o texto).
 Singleton {
     id: svc
     property bool recording: false
 
-    readonly property string shotScript: "~/.config/mango/scripts/printscreen_edit.sh"
-
-    // pede ao mango para rodar `sh -c '<script>'` no ambiente dele (Wayland OK).
-    // O PATH do mango é mínimo (não inclui ~/.cargo/bin nem ~/.local/bin), então
-    // ferramentas instaladas ali (ex.: wayfreeze, via cargo) não seriam encontradas
-    // e o script travaria. Por isso estendemos o PATH antes de rodar.
+    // pede ao niri para rodar `<script>` pela shell, no ambiente dele (Wayland OK).
+    // Estende o PATH antes: ferramentas instaladas em ~/.cargo/bin / ~/.local/bin
+    // podem não estar no PATH mínimo do compositor.
     function spawn(script) {
         const full = "export PATH=\"$HOME/.cargo/bin:$HOME/.local/bin:$PATH\"; " + script
-        launchProc.exec(["mmsg", "dispatch", "spawn,sh -c '" + full + "'"])
+        launchProc.exec(["niri", "msg", "action", "spawn-sh", "--", full])
     }
-
-    function screenshot() { spawn(shotScript) }
 
     // grava UM monitor inteiro (output = nome da saída, ex.: "DP-2"/"HDMI-A-1").
     // A "seleção da tela" é por onde se clica: cada monitor tem sua própria bola.
     function startRecording(output) {
-        spawn("mkdir -p ~/Videos/Screencasts; " +
-              "exec wf-recorder -o \"" + output + "\" -f ~/Videos/Screencasts/$(date +%Y%m%d)_$(date %H%M%S).mp4")
+        spawn("mkdir -p ~/Vídeos/Screencasts; " +
+              "exec gpu-screen-recorder -w \"" + output + "\" -o ~/Vídeos/Screencasts/$(date +%Y%m%d)_$(date +%H%M%S).mp4")
     }
-    function stopRecording() { spawn("pkill -INT -x wf-recorder") }   // SIGINT finaliza e salva
+    function stopRecording() { spawn("pkill -INT -x gpu-screen-reco") }   // SIGINT finaliza e salva
     function toggleRecording(output) { if (recording) stopRecording(); else startRecording(output) }
 
     Process { id: launchProc }
 
-    // ── sincroniza `recording` com a realidade (wf-recorder roda fora do quickshell) ──
+    // ── sincroniza `recording` com a realidade (o recorder roda fora do quickshell) ──
     Timer {
         interval: 1000; running: true; repeat: true
-        onTriggered: pollProc.exec(["sh", "-c", "pgrep -x wf-recorder >/dev/null && echo 1 || echo 0"])
+        onTriggered: pollProc.exec(["sh", "-c", "pgrep -x gpu-screen-reco >/dev/null && echo 1 || echo 0"])
     }
     Process {
         id: pollProc

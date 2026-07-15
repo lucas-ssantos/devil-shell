@@ -4,59 +4,48 @@
 //   quickshell (pkill quickshell; qs) — hot-reload não basta.
 import Quickshell
 import QtQuick
-import "root:/services"   // MangoLayout, StartupService
+import "root:/services"   // NiriService, StartupService
 import "root:/cava"       // CavaService, CavaWindow
 import "root:/windows"    // ShellWindow, NotificationWindow
 import "root:/ui"         // TopCapsules
 
 // Ponto de entrada: só liga os serviços, os dados e as janelas por monitor.
-// A lógica/visual fica nos componentes (ShellWindow, MenuBall, Petal, LayoutMenu,
-// GothicCorners, CavaWindow, CavaBars, CavaRing, CavaService, MangoLayout).
+// A lógica/visual fica nos componentes (ShellWindow, MenuBall, Petal,
+// GothicCorners, CavaWindow, CavaBars, CavaRing, CavaService, NiriService).
 Scope {
     id: root
 
     // ── Serviços ──
-    MangoLayout  { id: mangoSvc }   // estado do MangoWC (monitores, tags, layouts)
+    NiriService  { id: niriSvc }    // estado do Niri (monitores, workspaces)
     CavaService  { id: cava }    // níveis de áudio do cava
 
     // Sobe os daemons da sessão (wallpaper, blueman, idle/lock) centralizados no qs.
-    // Ver services/StartupService.qml e services/session.sh.
-    Component.onCompleted: StartupService.start()
+    // Ver services/StartupService.qml e services/session.sh. O ThemeExport.init()
+    // só instancia o singleton p/ registrar o IPC (`qs ipc call theme exportAll`).
+    Component.onCompleted: {
+        StartupService.start()
+        ThemeExport.init()
+    }
 
     // ── Dados (data-driven) ──
-    //  Pétalas: a 1ª é o seletor de LAYOUT (tratada à parte); as demais são livres.
+    //  Pétalas do menu radial (a ordem define o anel).
     //  Item: { icon: "símbolo", label: "nome", command: [argv] }  (command [] = sem ação)
-    //  `spawn: "cmd"` -> lança pelo compositor (mango) c/ ambiente Wayland correto (p/ apps gráficos).
+    //  `spawn: "cmd"` -> lança pelo compositor (niri spawn-sh) c/ ambiente Wayland correto (p/ apps gráficos).
     readonly property var menuItems: [
-        { icon: "⬡", label: "Layout", command: [] },                    // 1ª = mudar layout do mango
-        { icon: "", label: "Atualizações", update: true },             // 2ª = updates do sistema + MangoWC
-        { icon: "⚙", label: "Sistema", settings: true, power: true },   // 3ª = configurações (cima) + energia/wlogout (baixo, 2 seções)
-        { icon: "☰", label: "Lançador", spawn: "rofi -show drun" },     // 4ª = abre o launcher
-        { icon: "📷", label: "Captura", capture: true },                // 5ª = print + gravação (2 seções)
-        { icon: "🔊", label: "Áudio", audio: true },                    // 6ª = controle de áudio (3 seções)
-        { icon: "󰀻", label: "Bandeja", tray: true }                     // 7ª = system tray (Discord, Steam…)
-    ]
-
-    //  Opções de layout do Mango (symbol = sigla; name = comando do mmsg; label = nome).
-    readonly property var layoutItems: [
-        { symbol: "T",  name: "tile",              label: "Tiling" },
-        { symbol: "CT", name: "center_tile",       label: "Center Tiling" },
-        { symbol: "RT", name: "right_tile",        label: "Right Tiling" },
-        { symbol: "VT", name: "vertical_tile",     label: "Vertical Tiling" },
-        { symbol: "S",  name: "scroller",          label: "Scrolling" },
-        { symbol: "VS", name: "vertical_scroller", label: "Vertical Scrolling" },
-        { symbol: "M",  name: "monocle",           label: "Monocle" },
-        { symbol: "K",  name: "deck",              label: "Deck" },
-        { symbol: "VK", name: "vertical_deck",     label: "Vertical Deck" },
-        { symbol: "G",  name: "grid",              label: "Grid" },
-        { symbol: "VG", name: "vertical_grid",     label: "Vertical Grid" }
+        { icon: "⚙", label: "Sistema", settings: true },   // configurações (cima) + gravação (meio) + toggle de lock (baixo)
+        { icon: "☰", label: "Lançador", launcher: true },               // lançador próprio (LauncherWindow)
+        { icon: "🔊", label: "Áudio", audio: true },                    // controle de áudio (3 seções)
+        { icon: "󰀻", label: "Bandeja", tray: true }                     // system tray (Discord, Steam…)
     ]
 
     // ── Notificações: uma única janela no topo-centro do monitor focado ──
-    NotificationWindow { mango: mangoSvc }
+    NotificationWindow { niri: niriSvc }
 
-    // ── Configurações: overlay modal único no centro do monitor focado (3ª pétala) ──
-    SettingsWindow { mango: mangoSvc }
+    // ── Configurações: overlay modal único no centro do monitor focado (pétala de Sistema) ──
+    SettingsWindow { niri: niriSvc }
+
+    // ── Lançador próprio (pétala "Lançador" / `qs ipc call launcher toggle`) ──
+    LauncherWindow { niri: niriSvc }
 
     // ── Uma instância por monitor: janela do cava (camada de baixo) + shell (camada de cima) ──
     Variants {
@@ -74,8 +63,7 @@ Scope {
                 ShellWindow {
                     modelData: unit.modelData
                     menuItems: root.menuItems
-                    layoutItems: root.layoutItems
-                    mango: mangoSvc
+                    niri: niriSvc
                     levels: cava.levels
                 }
 
