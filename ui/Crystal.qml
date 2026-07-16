@@ -67,7 +67,8 @@ Item {
             anchors.margins: -pad
             antialiasing: true
 
-            property color bodyColor: crystal.hovered ? Config.crystalHover : Config.crystal
+            property color bodyColor: Config.crystal
+            property color hoverColor: Config.crystalHover
             property color engraveColor: Config.crystalEngrave
             property color glowColor: Config.crystalGlow
             property real edgeDarken: Config.crystalEdgeDarken
@@ -78,14 +79,25 @@ Item {
             property real btnHoverDarken: Config.audioBtnHoverDarken
             property int  nSections: crystal.sections
             property int  hlSection: (crystal.hovered && crystal.sections > 0) ? crystal.ctx.crystalSection : -1
-            // intensidade do glow (0–1): fraco em repouso, cheio no hover/seleção
-            property real glowAmt: (crystal.hovered || crystal.selected) ? 1.0 : Config.crystalGlowRest
-            Behavior on glowAmt { NumberAnimation { duration: Config.crystalScaleAnim } }
+            // preenchimento do brilho de hover (0–1): sobe da base à ponta ao entrar,
+            // e "escorre" de volta ao sair
+            property real fillAmt: (crystal.hovered || crystal.selected) ? 1.0 : 0.0
+            Behavior on fillAmt { NumberAnimation { duration: Config.crystalFillAnim; easing.type: Easing.OutCubic } }
+            // pulso do glow no hover: respiração não-linear (cai devagar, volta rápido)
+            property real pulse: 1.0
+            SequentialAnimation on pulse {
+                running: crystal.hovered || crystal.selected
+                loops: Animation.Infinite
+                NumberAnimation { to: Config.crystalPulseMin; duration: Config.crystalPulseTime; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1.0; duration: Config.crystalPulseTime * 0.6; easing.type: Easing.OutCubic }
+            }
 
             onBodyColorChanged: requestPaint()
+            onHoverColorChanged: requestPaint()
             onEngraveColorChanged: requestPaint()
             onGlowColorChanged: requestPaint()
-            onGlowAmtChanged: requestPaint()
+            onFillAmtChanged: requestPaint()
+            onPulseChanged: requestPaint()
             onEdgeDarkenChanged: requestPaint()
             onCoreFactorChanged: requestPaint()
             onEngraveOpChanged: requestPaint()
@@ -118,17 +130,13 @@ Item {
                 g.closePath()                                       // base reta
             }
 
-            onPaint: {
-                const g = getContext("2d")
-                g.reset()
-                g.translate(pad, pad)
-                const w = width - 2 * pad, h = height - 2 * pad, cx = w / 2
-
+            // pinta o cristal completo numa cor/intensidade de glow (uma "passada")
+            function drawGem(g, w, h, cx, body, glowA) {
                 // borda (silhueta externa) com GLOW: a sombra do próprio path faz o halo
                 crystalPath(g, 1.0, 0.5, h)
-                g.shadowColor = Qt.rgba(glowColor.r, glowColor.g, glowColor.b, 0.9 * glowAmt)
-                g.shadowBlur = Config.crystalGlowBlur * glowAmt
-                g.fillStyle = Qt.darker(bodyColor, edgeDarken)
+                g.shadowColor = Qt.rgba(glowColor.r, glowColor.g, glowColor.b, 0.9 * glowA)
+                g.shadowBlur = Config.crystalGlowBlur * glowA
+                g.fillStyle = Qt.darker(body, edgeDarken)
                 g.fill()
                 g.fill()   // 2ª passada reforça o halo
                 g.shadowColor = "transparent"
@@ -136,7 +144,7 @@ Item {
 
                 // núcleo (nos painéis multi-seção fica um tom mais escuro = clicável)
                 crystalPath(g, coreFactor, 0.06 * h, 0.97 * h)
-                g.fillStyle = crystal.multi ? Qt.darker(bodyColor, btnDarken) : bodyColor
+                g.fillStyle = crystal.multi ? Qt.darker(body, btnDarken) : body
                 g.fill()
 
                 // daqui em diante tudo é recortado pela silhueta
@@ -148,7 +156,7 @@ Item {
                 if (hlSection >= 0 && nSections > 0) {
                     const slot = h / nSections
                     g.globalAlpha = 0.6
-                    g.fillStyle = Qt.darker(bodyColor, btnHoverDarken)
+                    g.fillStyle = Qt.darker(body, btnHoverDarken)
                     g.fillRect(0, (nSections - 1 - hlSection) * slot, w, slot)
                     g.globalAlpha = 1.0
                 }
@@ -184,6 +192,31 @@ Item {
                 g.lineTo(w, 0.11 * h)
                 g.stroke()
                 g.restore()
+                g.globalAlpha = 1.0
+            }
+
+            onPaint: {
+                const g = getContext("2d")
+                g.reset()
+                g.translate(pad, pad)
+                const w = width - 2 * pad, h = height - 2 * pad, cx = w / 2
+
+                // passada de repouso: cor base + glow fraco
+                drawGem(g, w, h, cx, bodyColor, Config.crystalGlowRest)
+
+                // camada "acesa" do hover: cor de hover + glow pulsante, recortada por
+                // um retângulo que sobe da base (junto à bola) até a ponta conforme
+                // fillAmt cresce — o brilho "preenche" o cristal de baixo p/ cima.
+                // O retângulo inclui o pad p/ o halo não ser decepado nas laterais.
+                if (fillAmt > 0.003) {
+                    g.save()
+                    const yTop = h + pad - fillAmt * (h + 2 * pad)
+                    g.beginPath()
+                    g.rect(-pad, yTop, w + 2 * pad, h + 2 * pad - yTop)
+                    g.clip()
+                    drawGem(g, w, h, cx, hoverColor, pulse)
+                    g.restore()
+                }
             }
         }
 

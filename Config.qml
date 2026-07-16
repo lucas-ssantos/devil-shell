@@ -39,6 +39,7 @@ Singleton {
     readonly property real crystalEngraveWidth: Settings.get("crystalEngraveWidth", 1) // espessura dos entalhes (px)
     readonly property real crystalGlowBlur: Settings.get("crystalGlowBlur", 12)        // raio do glow do cristal (px; hover = cheio)
     readonly property real crystalGlowRest: Settings.get("crystalGlowRest", 0.25)      // intensidade do glow em repouso (0–1)
+    readonly property real crystalPulseMin: Settings.get("crystalPulseMin", 0.72)      // piso do pulso do glow no hover (0–1; 1 = sem pulso)
     readonly property real crystalShrink: Settings.get("crystalShrink", 0.8)           // escala dos não-hover
     readonly property real crystalHoverScale: Settings.get("crystalHoverScale", 1.2)
     readonly property real crystalHoverExtend: Settings.get("crystalHoverExtend", 0)   // quanto o cristal em hover estende p/ a bola (px; c/ base já sob a bola, 0 evita afundar os botões)
@@ -213,6 +214,8 @@ Singleton {
     readonly property int  crystalDistAnim: Settings.get("crystalDistAnim", 200)
     readonly property int  crystalOpacityAnim: Settings.get("crystalOpacityAnim", 150)
     readonly property int  crystalScaleAnim: Settings.get("crystalScaleAnim", 130)
+    readonly property int  crystalFillAnim: Settings.get("crystalFillAnim", 340)      // subida do brilho base→ponta no hover
+    readonly property int  crystalPulseTime: Settings.get("crystalPulseTime", 620)    // meio-período do pulso do glow no hover
     readonly property int  layoutAnim: Settings.get("layoutAnim", 180)   // sliders de áudio
     readonly property int  clockAnim: Settings.get("clockAnim", 150)
     readonly property int  hoverCloseMs: Settings.get("hoverCloseMs", 130)
