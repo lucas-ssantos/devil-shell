@@ -142,12 +142,13 @@ Rectangle {
                 g.stroke()
             }
             // 2ª passada: o colorido do ativo. `f` é a fração do arco coberta por ele.
-            // O arco que o destaque DEIXA encolhe ancorado na borda horária (a esquerda
-            // retrai até sobrar a bolinha na direita — lineCap redondo com comprimento
-            // ~zero); o arco em que ele ENTRA nasce como bolinha na borda anti-horária
-            // (esquerda) e se estica p/ a direita até preencher. A direção da viagem só
-            // decide qual arco está saindo/entrando e a ordem da varredura — indo p/
-            // frente (1→2) o fluxo escorre rumo ao próximo; p/ trás, o espelho disso.
+            // São DUAS animações espelhadas, uma por sentido, sempre fluindo rumo ao
+            // destino: no sentido HORÁRIO (1→2) o arco de origem encolhe até a bolinha
+            // na borda direita (divisa com o próximo) e o seguinte nasce como bolinha
+            // na borda esquerda, crescendo p/ a direita; no ANTI-HORÁRIO (2→1) o
+            // espelho — encolhe até a bolinha na esquerda e o anterior nasce na borda
+            // direita, crescendo p/ a esquerda. (A bolinha é o lineCap redondo com
+            // comprimento ~zero.)
             for (let i = 0; i < n; i++) {
                 let delta = (pos - i) % n                  // distância assinada do destaque a este arco
                 if (delta > n / 2) delta -= n
@@ -157,11 +158,12 @@ Rectangle {
                 const startDeg = -90 - slot / 2 + i * slot + gap / 2      // borda anti-horária do arco
                 const endDeg = startDeg + (slot - gap)                    // borda horária
                 const len = Math.max(0.02, (slot - gap) * f)              // piso ínfimo garante a bolinha
-                // saindo (delta no sentido da viagem) -> encolhe grudado na borda
-                // horária (direita); entrando -> cresce a partir da anti-horária (esquerda)
+                // saindo = delta no sentido da viagem. Horário: sai ancorado na borda
+                // direita e entra crescendo da esquerda; anti-horário: o espelho.
                 const leaving = travelSign > 0 ? delta >= 0 : delta <= 0
-                const a0 = (leaving ? endDeg - len : startDeg) * Math.PI / 180
-                const a1 = (leaving ? endDeg : startDeg + len) * Math.PI / 180
+                const anchorStart = travelSign > 0 ? !leaving : leaving
+                const a0 = (anchorStart ? startDeg : endDeg - len) * Math.PI / 180
+                const a1 = (anchorStart ? startDeg + len : endDeg) * Math.PI / 180
                 g.beginPath()
                 g.arc(cx, cy, ringR, a0, a1, false)
                 g.lineWidth = arcWActive * wScale
