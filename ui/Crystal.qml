@@ -29,6 +29,10 @@ Item {
     readonly property int sections: (isAudio || isSettings) ? 3
         : isTray ? SystemTray.items.values.length : 0
 
+    // ícones proporcionais à altura na escadaria: o cristal rank 0 (colado à bola)
+    // usa o tamanho configurado; os mais baixos encolhem na mesma proporção
+    readonly property real iconScale: Math.min(1, height / Config.crystalMaxH)
+
     width: ctx.crystalW
     height: ctx.crystalHeight(index)
     x: ctx.crystalCX(index) - width / 2
@@ -136,7 +140,7 @@ Item {
                 g.shadowColor = "transparent"
                 g.shadowBlur = 0
 
-                // núcleo (nos painéis multi-seção fica um tom mais escuro = clicável)
+                // núcleo (fundo cheio; audioBtnDarken > 1 escurece o dos painéis multi-seção)
                 crystalPath(g, coreFactor, 0.06 * h, 0.97 * h)
                 g.fillStyle = crystal.multi ? Qt.darker(body, btnDarken) : body
                 g.fill()
@@ -230,7 +234,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
                     font.family: Config.iconFont
-                    font.pixelSize: Config.audioIconSize
+                    font.pixelSize: Math.round(Config.audioIconSize * crystal.iconScale)
                     color: Config.crystalIcon
                     opacity: muted ? 0.4 : 1.0
                     text: index === 0 ? (muted ? Config.iconOutputMuted : Config.iconOutput)
@@ -257,7 +261,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
                     font.family: Config.iconFont
-                    font.pixelSize: Config.audioIconSize
+                    font.pixelSize: Math.round(Config.audioIconSize * crystal.iconScale)
                     color: rec ? Config.captureRecColor
                          : lampOn ? Config.idleOnColor : Config.crystalIcon
                     opacity: (index === 2 && !IdleService.inhibited) ? 0.55 : 1.0
@@ -283,7 +287,7 @@ Item {
                 anchors.centerIn: parent
                 text: Config.iconTray
                 font.family: Config.iconFont
-                font.pixelSize: Config.audioIconSize
+                font.pixelSize: Math.round(Config.audioIconSize * crystal.iconScale)
                 color: Config.crystalIcon
                 opacity: 0.5
             }

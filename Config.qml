@@ -85,9 +85,9 @@ Singleton {
     readonly property string iconConfig: Settings.get("iconConfig", "")            // engrenagem (config)
     readonly property string iconIdle: Settings.get("iconIdle", "")     // lâmpada (nf-fa-lightbulb_o) — toggle de inibir lock/idle
     readonly property color  idleOnColor: Settings.get("idleOnColor", Theme.peach)   // lâmpada "acesa" (idle inibido = tela fica acordada)
-    readonly property int    audioIconSize: Settings.get("audioIconSize", 17)            // tamanho dos ícones
+    readonly property int    audioIconSize: Settings.get("audioIconSize", 17)            // tamanho dos ícones (no cristal rank 0; os mais baixos escalam junto)
     readonly property real   audioBtnMargin: Settings.get("audioBtnMargin", 3)           // recuo do painel de botões
-    readonly property real   audioBtnDarken: Settings.get("audioBtnDarken", 1.22)        // fundo do botão (× mais escuro)
+    readonly property real   audioBtnDarken: Settings.get("audioBtnDarken", 1.0)         // fundo do botão (× mais escuro; 1.0 = mesmo tom cheio do cristal comum)
     readonly property real   audioBtnHoverDarken: Settings.get("audioBtnHoverDarken", 1.5)  // botão sob o cursor
     readonly property color  audioMutedColor: Settings.get("audioMutedColor", Theme.red)
     readonly property real   volStep: Settings.get("volStep", 0.05)        // passo do scroll (5%)
@@ -107,7 +107,7 @@ Singleton {
 
     // ── Bandeja / system tray (cristal da bandeja) ───────
     readonly property string iconTray: Settings.get("iconTray", "󰀻")       // ícone genérico quando a bandeja está vazia
-    readonly property int    trayIconSize: Settings.get("trayIconSize", 16)     // tamanho dos ícones dos apps no cristal
+    readonly property int    trayIconSize: Settings.get("trayIconSize", 18)     // tamanho dos ícones dos apps no cristal
 
     // menu estilizado do clique direito (TrayMenu.qml)
     readonly property color  trayMenuBg: Settings.get("trayMenuBg", Theme.base)
