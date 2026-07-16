@@ -55,10 +55,11 @@ Rectangle {
 
     // anel tracejado: um arco por workspace (o arco i é centrado em -90° + i·slot,
     // no sentido horário a partir do topo — o hit-test dotAt do controlador usa o mesmo mapa).
-    // O destaque do ativo é um PONTINHO orbital (estilo spinner de loading) que viaja
-    // pelo anel (animPos) acendendo cada arco por onde passa; no wrap N↔1 ele dá a
-    // volta na direção do scroll, varrendo os fantasmas. Com a bola recolhida os arcos
-    // encolhem (vão maior + traço mais fino); aberta, crescem e o ativo cresce mais (openK).
+    // O destaque do ativo é o próprio arco COLORIDO, que age como o "ponto" da viagem
+    // (animPos): a cada passo ele encolhe até sumir no workspace de origem e cresce do
+    // zero no seguinte, arco a arco até o destino; no wrap N↔1 dá a volta na direção do
+    // scroll, varrendo os fantasmas. Com a bola recolhida os arcos encolhem (vão maior
+    // + traço mais fino); aberta, crescem e o ativo cresce mais (openK).
     Canvas {
         id: wsRing
         anchors.fill: parent
@@ -78,9 +79,9 @@ Rectangle {
         readonly property real gapDeg: Config.dotArcGapClosedDeg + (Config.dotArcGapDeg - Config.dotArcGapClosedDeg) * openK
         readonly property real wScale: Config.dotClosedScale + (Config.dotOpenScale - Config.dotClosedScale) * openK
 
-        // posição contínua do pontinho (em slots, desenrolada p/ acumular voltas). No
+        // posição contínua do destaque (em slots, desenrolada p/ acumular voltas). No
         // scroll a viagem segue a DIREÇÃO do gesto (ctx.wsTravelDir): no wrap N→1 o
-        // pontinho dá a volta varrendo os fantasmas, como um spinner de loading.
+        // destaque dá a volta varrendo os fantasmas, como um spinner de loading.
         readonly property int targetIdx: Math.max(0, ball.ctx.activeTag - 1)
         property real animPos: 0
         property int travelDur: Config.dotTravelMs
@@ -97,9 +98,13 @@ Rectangle {
             else if (d > n / 2) d -= n                    // sem dica: caminho mais curto
             else if (d < -n / 2) d += n
             if (d === 0) return
+            travelSign = d > 0 ? 1 : -1                   // ancora o encolher/crescer na borda certa
             travelDur = Math.round(Config.dotTravelMs * Math.abs(d))  // velocidade constante por slot
             animPos = animPos + d
         }
+        // sentido da viagem em curso (+1 horário / -1 anti-horário), p/ o efeito
+        // "carrossel": o colorido sai por uma borda e entra pela borda oposta do próximo
+        property int travelSign: 1
         onTargetIdxChanged: retarget()
         onTagsChanged: { retarget(); requestPaint() }
         onAnimPosChanged: requestPaint()
@@ -123,39 +128,47 @@ Rectangle {
             const gap = Math.min(gapDeg, slot * 0.5)   // vão nunca engole o arco
             const pos = ((animPos % n) + n) % n
             g.lineCap = "round"
+            // 1ª passada: os arcos de fundo (estado do workspace, sem o destaque)
             for (let i = 0; i < n; i++) {
                 const t = tags[i]
-                // intensidade do destaque neste arco: 1 sob ele, decai linearmente ao
-                // passar p/ o vizinho (distância circular) — é o fade da "viagem"
-                let dd = Math.abs(i - pos)
-                dd = Math.min(dd, n - dd)
-                const k = Math.max(0, 1 - dd)
-                const base = t.is_urgent ? cUrgent
-                           : t.client_count > 0 ? cOccupied : cEmpty
                 const a0 = (-90 - slot / 2 + i * slot + gap / 2) * Math.PI / 180
                 const a1 = (-90 - slot / 2 + (i + 1) * slot - gap / 2) * Math.PI / 180
                 g.beginPath()
                 g.arc(cx, cy, ringR, a0, a1, false)
-                g.lineWidth = (arcW + (arcWActive - arcW) * k) * wScale
-                g.strokeStyle = Qt.rgba(base.r + (cActive.r - base.r) * k,
-                                        base.g + (cActive.g - base.g) * k,
-                                        base.b + (cActive.b - base.b) * k, 1)
-                const baseAlpha = (t.is_urgent || t.client_count > 0) ? 1.0 : 0.65
-                g.globalAlpha = baseAlpha + (1 - baseAlpha) * k
+                g.lineWidth = arcW * wScale
+                g.strokeStyle = t.is_urgent ? cUrgent
+                              : t.client_count > 0 ? cOccupied : cEmpty
+                g.globalAlpha = (t.is_urgent || t.client_count > 0) ? 1.0 : 0.65
                 g.stroke()
             }
-            // o pontinho orbital (estilo spinner): bolinha cheia sobre o anel, na posição
-            // contínua da viagem — parado, senta no centro do arco do workspace ativo
-            const oa = (-90 + pos * slot) * Math.PI / 180
-            const or_ = Config.dotOrbR * wScale
-            g.globalAlpha = 1
-            g.fillStyle = cActive
-            g.shadowColor = cActive
-            g.shadowBlur = or_ * 2.5
-            g.beginPath()
-            g.arc(cx + ringR * Math.cos(oa), cy + ringR * Math.sin(oa), or_, 0, 2 * Math.PI)
-            g.fill()
-            g.shadowBlur = 0
+            // 2ª passada: o colorido do ativo. `f` é a fração do arco coberta por ele.
+            // O arco que o destaque DEIXA encolhe ancorado na borda horária (a esquerda
+            // retrai até sobrar a bolinha na direita — lineCap redondo com comprimento
+            // ~zero); o arco em que ele ENTRA nasce como bolinha na borda anti-horária
+            // (esquerda) e se estica p/ a direita até preencher. A direção da viagem só
+            // decide qual arco está saindo/entrando e a ordem da varredura — indo p/
+            // frente (1→2) o fluxo escorre rumo ao próximo; p/ trás, o espelho disso.
+            for (let i = 0; i < n; i++) {
+                let delta = (pos - i) % n                  // distância assinada do destaque a este arco
+                if (delta > n / 2) delta -= n
+                else if (delta < -n / 2) delta += n
+                const f = Math.max(0, 1 - 2 * Math.abs(delta))
+                if (f <= 0) continue
+                const startDeg = -90 - slot / 2 + i * slot + gap / 2      // borda anti-horária do arco
+                const endDeg = startDeg + (slot - gap)                    // borda horária
+                const len = Math.max(0.02, (slot - gap) * f)              // piso ínfimo garante a bolinha
+                // saindo (delta no sentido da viagem) -> encolhe grudado na borda
+                // horária (direita); entrando -> cresce a partir da anti-horária (esquerda)
+                const leaving = travelSign > 0 ? delta >= 0 : delta <= 0
+                const a0 = (leaving ? endDeg - len : startDeg) * Math.PI / 180
+                const a1 = (leaving ? endDeg : startDeg + len) * Math.PI / 180
+                g.beginPath()
+                g.arc(cx, cy, ringR, a0, a1, false)
+                g.lineWidth = arcWActive * wScale
+                g.strokeStyle = cActive
+                g.globalAlpha = 1
+                g.stroke()
+            }
         }
     }
 

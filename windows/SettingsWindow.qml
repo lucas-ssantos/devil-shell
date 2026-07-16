@@ -105,7 +105,6 @@ PanelWindow {
             { key: "dotClosedScale", label: "Escala arcos recolhida", ftype: "real" },
             { key: "dotOpenScale", label: "Escala arcos aberta", ftype: "real" },
             { key: "dotMinCount", label: "Mínimo de workspaces", ftype: "int" },
-            { key: "dotOrbR", label: "Pontinho do anel", ftype: "real" },
             { key: "dotHitR", label: "Clique do anel", ftype: "real" },
             { key: "ballSigilFactor", label: "Raio do sigilo", ftype: "real" },
             { key: "gothicR", label: "Cantos góticos", ftype: "real" }
@@ -251,7 +250,7 @@ PanelWindow {
         ]},
         { title: "Tempos (ms)", fields: [
             { key: "ballAnim", label: "Bola", ftype: "int" },
-            { key: "dotTravelMs", label: "Viagem do pontinho (por slot)", ftype: "int" },
+            { key: "dotTravelMs", label: "Animação do workspace (ms por arco)", ftype: "int" },
             { key: "crystalRiseAnim", label: "Emersão dos cristais", ftype: "int" },
             { key: "crystalOpacityAnim", label: "Opacidade cristais", ftype: "int" },
             { key: "crystalScaleAnim", label: "Escalo cristals", ftype: "int" },

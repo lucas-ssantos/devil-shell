@@ -3,5 +3,6 @@
   "wallpaperDefault": "/home/luke/Pictures/wallpapers/vigna/vigna.jpg",
   "wallpaperAll": "/home/luke/Pictures/wallpapers/pixel/wall_vp6.jpg",
   "wallpaperByOutput": {},
-  "cavaVisibility": "adaptativo"
+  "cavaVisibility": "adaptativo",
+  "dotTravelMs": 2000
 }

@@ -30,7 +30,6 @@ Singleton {
     readonly property real dotArcGapClosedDeg: Settings.get("dotArcGapClosedDeg", 26) // vão entre arcos com a bola RECOLHIDA (maior = arcos menores)
     readonly property real dotClosedScale: Settings.get("dotClosedScale", 0.6)  // escala da espessura dos arcos com a bola recolhida
     readonly property real dotOpenScale: Settings.get("dotOpenScale", 1.15)     // escala da espessura com a bola aberta (o ativo cresce junto)
-    readonly property real dotOrbR: Settings.get("dotOrbR", 4)                  // raio do pontinho orbital do anel (estilo spinner)
     readonly property real ballSigilFactor: Settings.get("ballSigilFactor", 0.52) // raio do sigilo gravado na bola (× ballRadius)
     readonly property real gothicR: Settings.get("gothicR", 32)                 // raio dos cantos góticos (bola ↔ barra)
 
@@ -221,7 +220,7 @@ Singleton {
 
     // ── Tempos (ms) ─────────────────────────────────────
     readonly property int  ballAnim: Settings.get("ballAnim", 220)
-    readonly property int  dotTravelMs: Settings.get("dotTravelMs", 130)         // viagem do pontinho do anel POR SLOT (efeito "loading")
+    readonly property int  dotTravelMs: Settings.get("dotTravelMs", 200)         // velocidade da animação do anel de workspaces (ms POR ARCO; maior = mais lento)
     readonly property int  crystalRiseAnim: Settings.get("crystalRiseAnim", 260)       // emersão do cristal a partir do chão
     readonly property int  crystalOpacityAnim: Settings.get("crystalOpacityAnim", 150)
     readonly property int  crystalScaleAnim: Settings.get("crystalScaleAnim", 130)
