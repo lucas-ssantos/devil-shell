@@ -144,8 +144,9 @@ Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de 
   spawn-sh`) para rodar [session.sh](services/session.sh), que sobe `blueman-applet` e
   `swayidle` (com guardas `pgrep` para não duplicar a cada reload, e `setsid` para sobreviverem).
 - O **swaybg** sobe pelo [WallpaperService.qml](services/WallpaperService.qml)
-  (`WallpaperService.init()` no `shell.qml`, guarda `pgrep`): aplica a última escolha persistida do
-  modo `/bg` do lançador (todos os monitores ou um wallpaper por monitor; carrossel opcional).
+  (`WallpaperService.init()` no `shell.qml`, no boot e a cada reload): compara o argv do swaybg em
+  execução (`pgrep -xa`) com a seleção persistida do modo `/bg` do lançador e (re)aplica só se
+  divergir (todos os monitores ou um wallpaper por monitor; carrossel opcional).
   Trocar wallpaper relança o swaybg (sobe o novo, depois mata o velho — sem frame preto).
 - O próprio `qs` é lançado pelo niri: `spawn-at-startup "qs"` no `~/.config/niri/config.kdl`.
   Certifique-se de que nenhum outro daemon de notificação (swaync/mako/dunst) suba antes do qs,

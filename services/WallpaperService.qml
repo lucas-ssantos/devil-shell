@@ -50,15 +50,16 @@ Singleton {
     }
 
     // ═════════════════════════ swaybg ═════════════════════════
-    // linha completa: -i sem -o vale p/ todos; depois um -o por monitor com override
-    function swaybgLine() {
+    // argv completo: -i sem -o vale p/ todos; depois um -o por monitor com override
+    function swaybgArgv() {
         const m = Config.wallpaperMode
-        let line = "swaybg -i " + shq(Settings.get("wallpaperAll", Config.wallpaperDefault)) + " -m " + shq(m)
+        const argv = ["swaybg", "-i", Settings.get("wallpaperAll", Config.wallpaperDefault), "-m", m]
         const by = Settings.get("wallpaperByOutput", ({}))
         for (const out in by)
-            line += " -o " + shq(out) + " -i " + shq(by[out]) + " -m " + shq(m)
-        return line
+            argv.push("-o", out, "-i", by[out], "-m", m)
+        return argv
     }
+    function swaybgLine() { return swaybgArgv().map(shq).join(" ") }
 
     // relança o swaybg pelo compositor. guarded=true (boot/reload): só sobe se não
     // houver um rodando; guarded=false (troca): sobe o novo e SÓ DEPOIS mata o velho
@@ -72,11 +73,26 @@ Singleton {
     }
     Process { id: spawnProc }
 
-    // chamado uma vez pelo shell.qml (Component.onCompleted): sobe o swaybg da sessão
-    // com a última escolha persistida (guarda pgrep → reload não pisca o wallpaper)
+    // chamado pelo shell.qml (Component.onCompleted — roda no boot E a cada reload):
+    // confere se o swaybg em execução bate com a seleção persistida; se não houver
+    // swaybg ou a linha divergir, aplica. Se já estiver certo, não mexe (sem piscar).
+    // Com carrossel ligado a checagem é dispensada: o 1º tique já aplica uma imagem.
     function init() {
         refresh()
-        apply(true)
+        if (!carouselOn) verify()
+    }
+    function verify() {
+        checkProc.exec(["sh", "-c", "pgrep -xa swaybg | head -n1 | cut -d' ' -f2-; true"])
+    }
+    Process {
+        id: checkProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const cur = text.trim()                       // argv do swaybg rodando ("" = nenhum)
+                if (cur === svc.swaybgArgv().join(" ")) return   // já é a seleção atual
+                svc.apply(cur === "")                            // vazio: só sobe; divergiu: relança
+            }
+        }
     }
 
     // ═════════════════════════ Lista de imagens ═════════════════════════
