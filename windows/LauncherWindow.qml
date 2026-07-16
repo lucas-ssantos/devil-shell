@@ -27,16 +27,12 @@ PanelWindow {
     Behavior on reveal { NumberAnimation { duration: Config.launcherAnim; easing.type: Easing.OutCubic } }
     visible: LauncherService.open || reveal > 0.001
 
-    // monitor focado (fallback: o primeiro) — igual à SettingsWindow
-    screen: {
-        const list = niri ? (niri.monitors ?? []) : []
-        const a = list.find(m => m.active)
-        if (a) {
-            const s = Quickshell.screens.find(sc => sc.name === a.name)
-            if (s) return s
-        }
-        return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
-    }
+    // monitor focado NO MOMENTO DE ABRIR (fallback: o primeiro), travado numa
+    // property — igual à SettingsWindow: um binding vivo em `niri.monitors` faria
+    // a janela seguir o mouse p/ o outro monitor. O latch acontece no
+    // onIsOpenChanged (junto com o reset da busca), antes do fade-in terminar.
+    property var openScreen: null
+    screen: openScreen ?? (Quickshell.screens.length > 0 ? Quickshell.screens[0] : null)
 
     WlrLayershell.layer: WlrLayer.Overlay
     // solta o teclado assim que começa a fechar (não espera o fade-out)
@@ -284,6 +280,11 @@ PanelWindow {
     readonly property bool isOpen: LauncherService.open
     onIsOpenChanged: {
         if (!isOpen) return
+        // trava o monitor focado agora; não muda mais enquanto aberto
+        const mons = niri ? (niri.monitors ?? []) : []
+        const act = mons.find(m => m.active)
+        const scr = act ? Quickshell.screens.find(sc => sc.name === act.name) : undefined
+        openScreen = scr ?? (Quickshell.screens.length > 0 ? Quickshell.screens[0] : null)
         input.text = ""
         LauncherService.cwd = ""
         LauncherService.files = []

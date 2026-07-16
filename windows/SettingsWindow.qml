@@ -19,19 +19,25 @@ PanelWindow {
 
     visible: Settings.open
 
-    // monitor focado (fallback: o primeiro)
-    screen: {
+    // monitor focado NO MOMENTO DE ABRIR (fallback: o primeiro), travado numa
+    // property — um binding vivo em `niri.monitors` faria a janela PULAR de tela
+    // quando o foco muda (ex.: mouse vai ao 2º monitor com a janela aberta).
+    property var openScreen: null
+    screen: openScreen ?? (Quickshell.screens.length > 0 ? Quickshell.screens[0] : null)
+
+    readonly property bool isOpen: Settings.open
+    onIsOpenChanged: {
+        if (!isOpen) return
         const list = niri ? (niri.monitors ?? []) : []
         const a = list.find(m => m.active)
-        if (a) {
-            const s = Quickshell.screens.find(sc => sc.name === a.name)
-            if (s) return s
-        }
-        return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+        const s = a ? Quickshell.screens.find(sc => sc.name === a.name) : undefined
+        openScreen = s ?? (Quickshell.screens.length > 0 ? Quickshell.screens[0] : null)
     }
 
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+    // OnDemand (não Exclusive): com a janela aberta num monitor, o teclado ainda
+    // funciona nos apps do outro (Exclusive prendia TODO o teclado no overlay).
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     color: "transparent"
     anchors { top: true; bottom: true; left: true; right: true }
     exclusiveZone: 0
