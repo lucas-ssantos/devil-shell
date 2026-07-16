@@ -35,10 +35,11 @@ Item {
     z: 1
 
     // emersão: `rise` é a fatia visível acima do chão (peek enterrado, altura toda
-    // erguido); o resto do corpo fica abaixo da borda da janela (cortado pelo chão)
+    // erguido); o resto do corpo fica abaixo da borda da janela (cortado pelo chão).
+    // Easing SEM overshoot: OutBack passava de `height` e a base descolava do chão.
     property real rise: raised ? height : Config.crystalPeek
     y: ctx.height - rise
-    Behavior on rise { NumberAnimation { duration: Config.crystalRiseAnim; easing.type: Easing.OutBack } }
+    Behavior on rise { NumberAnimation { duration: Config.crystalRiseAnim; easing.type: Easing.OutCubic } }
 
     // cresce no hover a partir da BASE (continua plantado no chão)
     transformOrigin: Item.Bottom
