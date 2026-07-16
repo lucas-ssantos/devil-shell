@@ -60,6 +60,7 @@ Scope {
                 CavaWindow {
                     modelData: unit.modelData
                     levels: cava.levels
+                    niri: niriSvc   // p/ ocultar a onda conforme as janelas (Config.cavaVisibility)
                 }
 
                 ShellWindow {

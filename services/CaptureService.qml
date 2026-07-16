@@ -37,8 +37,9 @@ Singleton {
     Process { id: launchProc }
 
     // ── sincroniza `recording` com a realidade (o recorder roda fora do quickshell) ──
+    // fora da gravação basta um poll lento (cada tique lança sh+pgrep; 1s constante pesava)
     Timer {
-        interval: 1000; running: true; repeat: true
+        interval: svc.recording ? 1000 : 5000; running: true; repeat: true
         onTriggered: pollProc.exec(["sh", "-c", "pgrep -x gpu-screen-reco >/dev/null && echo 1 || echo 0"])
     }
     Process {

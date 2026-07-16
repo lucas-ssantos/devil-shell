@@ -46,7 +46,12 @@ pkill quickshell; qs   # reinicia
   `WindowOpenedOrChanged`, `WindowClosed`…). Base do [NiriService.qml](services/NiriService.qml),
   que deriva `monitors` (por output, com os workspaces como "tags" 1-based via `idx`).
 - `niri msg --json workspaces|windows|outputs` — one-shot. Janelas têm `app_id`/`title`/`id`
-  (usado pelo foco a partir da bandeja: `focus-window --id <id>`).
+  (usado pelo foco a partir da bandeja: `focus-window --id <id>`) e `layout` (`tile_size`,
+  `pos_in_scrolling_layout`). ⚠️ `layout.tile_pos_in_workspace_view` (posição em tela) vem
+  **null para janelas em tile** — o niri (26.04, ver src/layout/tile.rs) só preenche para
+  FLUTUANTES. Logo não dá para saber o X em tela de um tile (o offset de scroll do view não é
+  exposto); o modo adaptativo do cava contorna somando larguras de colunas (tela cheia ou não).
+  O evento `WindowLayoutsChanged` (rajadas durante resize) atualiza esses layouts em tempo real.
 - `niri msg action focus-workspace <idx>` — age no monitor FOCADO; para trocar workspace de outro
   monitor, foque-o antes com `niri msg action focus-monitor <nome>` (aceita o nome direto, ex.: `DP-2`).
 - `niri msg action spawn-sh -- '<linha de shell>'` — pede ao compositor para **lançar** um
@@ -130,7 +135,10 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    de Sistema (`settings`) tem 3 seções: configurações em cima, gravar/parar tela no meio,
    toggle de lock embaixo.)
 3. **Uma instância por monitor** via `Variants { model: Quickshell.screens }`: uma
-   [CavaWindow.qml](cava/CavaWindow.qml) (camada **Bottom**, atrás dos apps, click-through), uma
+   [CavaWindow.qml](cava/CavaWindow.qml) (camada **Bottom**, atrás dos apps, click-through;
+   a onda some conforme as janelas do workspace ativo — `Config.cavaVisibility`:
+   `sempre`/`vazio`/`adaptativo` — lendo `NiriService.winsByOutput`; o CavaService descarta
+   frames repetidos do cava p/ não repintar nada no silêncio), uma
    [ShellWindow.qml](windows/ShellWindow.qml) (camada **Top**, a UI interativa) e uma
    [TopCapsules.qml](ui/TopCapsules.qml) (cápsulas de mídia/temperatura no topo). As janelas únicas
    (monitor focado) são a [NotificationWindow.qml](windows/NotificationWindow.qml), a

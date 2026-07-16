@@ -58,6 +58,10 @@ Singleton {
     readonly property real layoutMenuW: Settings.get("layoutMenuW", 200)   // largura do popup de energia
 
     // ── Cava ────────────────────────────────────────────
+    // exibição da onda conforme as janelas do workspace ativo (por monitor):
+    // "sempre" | "vazio" (só workspace sem janelas) | "adaptativo" (some na porção tampada)
+    readonly property string cavaVisibility: Settings.get("cavaVisibility", "adaptativo")
+    readonly property real cavaCoverFrac: Settings.get("cavaCoverFrac", 0.95)   // fração da largura ocupada p/ considerar a tela cheia (os gaps do niri comem o resto)
     readonly property real cavaMaxH: Settings.get("cavaMaxH", 180)              // altura máx das barras lineares
     readonly property real cavaRadMax: Settings.get("cavaRadMax", 70)           // comprimento máx dos espetos radiais (círculo)
     readonly property real cavaBarFactor: Settings.get("cavaBarFactor", 0.6)    // largura da barra (× slot)

@@ -9,17 +9,24 @@ Item {
     anchors.fill: parent
 
     property var levels: []
+    property var holes: []    // intervalos x [ini, fim] tampados por janelas (não desenha ali)
     property real ballCX: width / 2
     property real ballRadius: 46
     property real maxH: 180
 
-    onLevelsChanged: cv.requestPaint()
+    // invisível (janela do cava oculta) -> não repinta; ao reaparecer, pinta 1x
+    onLevelsChanged: if (visible) cv.requestPaint()
+    onHolesChanged: if (visible) cv.requestPaint()
+    onVisibleChanged: if (visible) cv.requestPaint()
     onWidthChanged: cv.requestPaint()
     onHeightChanged: cv.requestPaint()
 
     Canvas {
         id: cv
-        anchors.fill: parent
+        // só a faixa da onda: pintar a janela inteira (cavaHeight) a 60fps desperdiçava
+        // ~1/3 do buffer em pixels sempre transparentes acima de maxH
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+        height: bars.maxH + 20
         onPaint: {
             const g = getContext("2d")
             g.reset()
@@ -54,6 +61,13 @@ Item {
             grad.addColorStop(1, Qt.rgba(a.r, a.g, a.b, 0))
             g.fillStyle = grad
             g.fill()
+
+            // apaga as faixas tampadas por janelas flutuantes (modo adaptativo)
+            const hs = bars.holes ?? []
+            for (let i = 0; i < hs.length; i++) {
+                const x0 = Math.max(0, hs[i][0]), x1 = Math.min(W, hs[i][1])
+                if (x1 > x0) g.clearRect(x0, 0, x1 - x0, H)
+            }
         }
     }
 }

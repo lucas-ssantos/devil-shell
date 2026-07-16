@@ -7,6 +7,9 @@ import QtQuick
 Scope {
     id: svc
     property var levels: []
+    // último frame recebido: frames idênticos (silêncio = zeros a 60fps) são descartados
+    // ANTES do parse/reatribuição, senão todos os Canvas repintam à toa o tempo todo
+    property string lastLine: ""
 
     Process {
         id: proc
@@ -14,6 +17,8 @@ Scope {
         running: true
         stdout: SplitParser {
             onRead: line => {
+                if (line === svc.lastLine) return
+                svc.lastLine = line
                 const parts = line.split(";")
                 const arr = []
                 for (let i = 0; i < parts.length; i++) {

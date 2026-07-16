@@ -133,6 +133,8 @@ PanelWindow {
             { key: "crystalIconSize", label: "Tamanho do ícone", ftype: "int" }
         ]},
         { title: "CAVA", fields: [
+            { key: "cavaVisibility", label: "Mostrar com janelas", ftype: "select", options: ["adaptativo", "sempre", "vazio"] },
+            { key: "cavaCoverFrac", label: "Fração p/ ocultar", ftype: "real" },
             { key: "cavaMaxH", label: "Altura barras", ftype: "real" },
             { key: "cavaRadMax", label: "Raio máx círculo", ftype: "real" },
             { key: "cavaBarFactor", label: "Largura da barra", ftype: "real" },
