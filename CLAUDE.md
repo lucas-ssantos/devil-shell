@@ -88,8 +88,8 @@ settings.json         overrides do usuário (gerado/atualizado em runtime pela S
 settings.default.json "padrão de fábrica" lido pelo botão Restaurar padrão
 themes/               Theme (seletor) + paletas (CrimsonDevil, InfernalRose)
 services/             singletons/escopos não-visuais (niri, áudio, captura, mídia, clima,
-                      notificações, StartupService, IdleService, LauncherService, Settings,
-                      ThemeExport) + session.sh
+                      notificações, StartupService, IdleService, LauncherService,
+                      WallpaperService (swaybg, modo /bg), Settings, ThemeExport) + session.sh
 cava/                 tudo do visualizador CAVA (serviço, janela, barras, anel) + cava.conf
 windows/              janelas interativas: ShellWindow, NotificationWindow, SettingsWindow,
                       LauncherWindow (lançador próprio)
@@ -141,8 +141,12 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
 Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de **dentro do quickshell**:
 - [StartupService.qml](services/StartupService.qml) (singleton) é chamado uma vez por `shell.qml`
   (`Component.onCompleted: StartupService.start()`). Ele pede ao compositor (via `niri msg action
-  spawn-sh`) para rodar [session.sh](services/session.sh), que sobe `swaybg`, `blueman-applet` e
+  spawn-sh`) para rodar [session.sh](services/session.sh), que sobe `blueman-applet` e
   `swayidle` (com guardas `pgrep` para não duplicar a cada reload, e `setsid` para sobreviverem).
+- O **swaybg** sobe pelo [WallpaperService.qml](services/WallpaperService.qml)
+  (`WallpaperService.init()` no `shell.qml`, guarda `pgrep`): aplica a última escolha persistida do
+  modo `/bg` do lançador (todos os monitores ou um wallpaper por monitor; carrossel opcional).
+  Trocar wallpaper relança o swaybg (sobe o novo, depois mata o velho — sem frame preto).
 - O próprio `qs` é lançado pelo niri: `spawn-at-startup "qs"` no `~/.config/niri/config.kdl`.
   Certifique-se de que nenhum outro daemon de notificação (swaync/mako/dunst) suba antes do qs,
   senão o qs não registra o servidor de notificações.
@@ -199,7 +203,10 @@ Substitui o rofi. [LauncherService.qml](services/LauncherService.qml) tem a lóg
 da SettingsWindow). O **modo** deriva do texto digitado: apps (padrão; vazio = "mais usados" pela
 contagem em `launcher-usage.json`, que está no .gitignore), `=expr` calculadora, `/dir` navegador
 de mídia → VLC, `/proc` processos (ordena nome/PID/RAM/CPU; Enter TERM, Shift+Enter KILL),
-`/reload` (`Quickshell.reload(false)`), `/config` (`Settings.open`). Pontos de atenção:
+`/bg` escolhedor de wallpaper ([WallpaperService.qml](services/WallpaperService.qml); chips de alvo
+"Ambos"/por monitor — Tab alterna, Shift+Enter aplica sem fechar — + chip do carrossel; pasta e
+opções no grupo "Papel de parede" das configurações), `/reload` (`Quickshell.reload(false)`),
+`/config` (`Settings.open`). Pontos de atenção:
 - Apps vêm de `DesktopEntries.applications.values` (API do Quickshell); o lançamento usa
   `entry.command` (argv sem field codes) via **`niri msg action spawn-sh`** — NÃO usar
   `entry.execute()` (execDetached não herda o env Wayland). `Terminal=true` → `launcherTerminal -e`.

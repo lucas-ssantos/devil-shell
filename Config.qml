@@ -125,6 +125,13 @@ Singleton {
     readonly property color  launcherText: Settings.get("launcherText", Theme.text)
     readonly property color  launcherSub: Settings.get("launcherSub", Theme.subtext0)   // texto secundário/dicas
 
+    // ── Papel de parede (modo /bg do lançador; swaybg) ──
+    readonly property string wallpaperDir: Settings.get("wallpaperDir", Quickshell.env("HOME") + "/Pictures/Wallpapers")  // pasta varrida pelo /bg
+    readonly property string wallpaperDefault: Settings.get("wallpaperDefault", Quickshell.env("HOME") + "/Pictures/Wallpapers/vigna/vigna.jpg")  // sem escolha salva
+    readonly property string wallpaperMode: Settings.get("wallpaperMode", "fill")   // ajuste do swaybg (-m): fill|fit|stretch|center|tile
+    readonly property bool   wallpaperCarousel: Settings.get("wallpaperCarousel", false)   // troca automática periódica
+    readonly property int    wallpaperCarouselMin: Settings.get("wallpaperCarouselMin", 10)  // intervalo do carrossel (minutos)
+
     // ── Notificações (topo-centro da tela) ──────────────
     readonly property real   notifWidth: Settings.get("notifWidth", 360)       // largura do toast
     readonly property real   notifTopMargin: Settings.get("notifTopMargin", 12)    // folga do topo da tela

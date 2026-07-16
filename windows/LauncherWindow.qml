@@ -10,6 +10,7 @@ import "root:/"           // Config
 //   (vazio/texto)  aplicativos instalados — vazio lista os MAIS USADOS primeiro
 //   /dir           navegador de arquivos (dirs + imagens/vídeos) -> abre no VLC
 //   /proc          processos (ordenável por nome/PID/RAM/CPU; Enter finaliza)
+//   /bg            escolhedor de wallpaper (swaybg; Tab muda o alvo: todos/por monitor)
 //   /reload        recarrega o Quickshell        /config  abre as configurações
 //   =expressão     calculadora (=5+5 -> 10)
 // Teclado: ↑/↓ navega, Enter ativa, Esc fecha, Tab ordena (/proc),
@@ -51,6 +52,7 @@ PanelWindow {
         if (q.length > 0 && q[0] === "=") return "calc"
         if (q === "/dir" || q.indexOf("/dir ") === 0) return "files"
         if (q === "/proc" || q.indexOf("/proc ") === 0) return "proc"
+        if (q === "/bg" || q.indexOf("/bg ") === 0) return "bg"
         if (q.length > 0 && q[0] === "/") return "cmds"
         return "apps"
     }
@@ -59,6 +61,7 @@ PanelWindow {
         if (mode === "calc")  return query.substring(1)
         if (mode === "files") return query.length > 5 ? query.substring(5) : ""   // após "/dir "
         if (mode === "proc")  return query.length > 6 ? query.substring(6) : ""
+        if (mode === "bg")    return query.length > 4 ? query.substring(4) : ""   // após "/bg "
         if (mode === "cmds")  return query.substring(1)
         return query
     }
@@ -67,6 +70,7 @@ PanelWindow {
     readonly property var commands: [
         { cmd: "/dir",    glyph: "🖼", name: "Imagens e vídeos", desc: "navegar pelos arquivos e abrir no VLC", complete: true },
         { cmd: "/proc",   glyph: "⚡", name: "Processos",        desc: "listar e finalizar processos",          complete: true },
+        { cmd: "/bg",     glyph: "🌄", name: "Papel de parede",  desc: "escolher o wallpaper (todos ou por monitor)", complete: true },
         { cmd: "/config", glyph: "⚙", name: "Configurações",    desc: "abrir as configurações do shell",       complete: false },
         { cmd: "/reload", glyph: "↻", name: "Recarregar",       desc: "recarregar o Quickshell",               complete: false }
     ]
@@ -84,6 +88,21 @@ PanelWindow {
         procSort = order[(order.indexOf(procSort) + 1) % order.length]
     }
 
+    // ── Alvo do /bg (todos os monitores ou um específico) ──
+    property string bgTarget: "*"
+    readonly property var bgTargets: {
+        const mons = niri ? (niri.monitors ?? []) : []
+        const out = [{ key: "*", label: mons.length === 2 ? "Ambos" : "Todos" }]
+        for (let i = 0; i < mons.length; i++)
+            out.push({ key: mons[i].name, label: mons[i].name })
+        return out
+    }
+    function cycleBgTarget() {
+        const ts = bgTargets
+        const i = ts.findIndex(t => t.key === bgTarget)
+        bgTarget = ts[(i + 1) % ts.length].key
+    }
+
     // ── Resultados (kind: header|app|cmd|dir|file|proc|calc) ──
     readonly property var results: {
         if (mode === "apps")  return appResults(modeArg)
@@ -91,6 +110,7 @@ PanelWindow {
         if (mode === "calc")  return calcResults(modeArg)
         if (mode === "files") return fileResults(modeArg)
         if (mode === "proc")  return procResults(modeArg)
+        if (mode === "bg")    return bgResults(modeArg)
         return []
     }
 
@@ -171,6 +191,19 @@ PanelWindow {
         }
         return out
     }
+    function bgResults(q) {
+        void Settings.data                              // dependência: "atual" muda com a seleção
+        const ql = q.trim().toLowerCase()
+        const cur = WallpaperService.currentFor(bgTarget)
+        const out = []
+        const list = WallpaperService.wallpapers
+        for (let i = 0; i < list.length; i++) {
+            const w = list[i]
+            if (ql !== "" && w.name.toLowerCase().indexOf(ql) < 0) continue
+            out.push({ kind: "bg", name: w.name, path: w.path, sub: w.path === cur ? "atual" : "" })
+        }
+        return out
+    }
     function procResults(q) {
         const ql = q.trim().toLowerCase()
         const sort = procSort
@@ -226,6 +259,9 @@ PanelWindow {
             LauncherService.openFile(it.path)
         } else if (it.kind === "proc") {
             LauncherService.killProc(it.pid, (mods & Qt.ShiftModifier) !== 0)
+        } else if (it.kind === "bg") {
+            WallpaperService.setFor(bgTarget, it.path)
+            if ((mods & Qt.ShiftModifier) === 0) LauncherService.hide()   // Shift: segue aberto p/ o outro monitor
         } else if (it.kind === "calc") {
             if (it.ok) setQuery("=" + it.value)                 // encadeia a conta
         }
@@ -251,12 +287,16 @@ PanelWindow {
         input.text = ""
         LauncherService.cwd = ""
         LauncherService.files = []
+        bgTarget = "*"
         input.forceActiveFocus()
     }
-    // entrar no modo /dir pela 1ª vez carrega o $HOME; /proc liga o refresh (Timer)
+    // entrar no modo /dir pela 1ª vez carrega o $HOME; /proc liga o refresh (Timer);
+    // /bg relê a pasta de wallpapers (pode ter ganhado imagens novas)
     onModeChanged: {
         if (mode === "files" && LauncherService.cwd === "")
             LauncherService.listDir(LauncherService.home)
+        if (mode === "bg")
+            WallpaperService.refresh()
     }
     Timer {
         interval: 2000; repeat: true; triggeredOnStart: true
@@ -272,6 +312,15 @@ PanelWindow {
         const c = LauncherService.cwd
         return c.indexOf(h) === 0 ? "~" + c.substring(h.length) : c
     }
+    readonly property string bgDirPretty: {
+        const h = LauncherService.home
+        const d = Config.wallpaperDir
+        return d.indexOf(h) === 0 ? "~" + d.substring(h.length) : d
+    }
+    readonly property string bgTargetLabel: {
+        const t = bgTargets.find(t => t.key === bgTarget)
+        return t ? t.label : bgTarget
+    }
     readonly property int resultCount: {
         let n = 0
         for (let i = 0; i < results.length; i++)
@@ -283,6 +332,7 @@ PanelWindow {
         if (mode === "cmds")  return "Enter escolhe o comando"
         if (mode === "files") return "Enter abre no VLC / entra na pasta · Backspace sobe · digite p/ filtrar"
         if (mode === "proc")  return "Enter finaliza (TERM) · Shift+Enter mata (KILL) · Tab muda a ordem"
+        if (mode === "bg")    return "Enter aplica em “" + bgTargetLabel + "” · Shift+Enter aplica sem fechar · Tab muda o alvo"
         if (mode === "calc")  return "Enter usa o resultado na próxima conta"
         return ""
     }
@@ -356,6 +406,7 @@ PanelWindow {
                             ev.accepted = true
                         } else if (ev.key === Qt.Key_Tab) {
                             if (win.mode === "proc") win.cycleSort()
+                            else if (win.mode === "bg") win.cycleBgTarget()
                             ev.accepted = true
                         } else if (ev.key === Qt.Key_Backspace && win.mode === "files" && win.modeArg === ""
                                    && LauncherService.cwd !== "/" && LauncherService.cwd !== LauncherService.home) {
@@ -380,6 +431,7 @@ PanelWindow {
                     text: win.mode === "apps" ? ""              // some E libera a largura p/ o campo
                         : win.mode === "files" ? "ARQUIVOS"
                         : win.mode === "proc" ? "PROCESSOS"
+                        : win.mode === "bg" ? "WALLPAPER"
                         : win.mode === "calc" ? "CALC"
                         : "COMANDOS"
                     color: Config.accent
@@ -389,15 +441,78 @@ PanelWindow {
                 }
             }
 
-            // ── /dir: caminho atual ──
+            // ── /dir e /bg: caminho atual / pasta dos wallpapers ──
             Text {
-                visible: win.mode === "files"
+                visible: win.mode === "files" || win.mode === "bg"
                 width: col.width
-                text: win.cwdPretty
+                text: win.mode === "files" ? win.cwdPretty : win.bgDirPretty
                 color: Config.launcherSub
                 font.pixelSize: Config.launcherFontSize - 1
                 elide: Text.ElideLeft
                 leftPadding: 6
+            }
+
+            // ── /bg: chips do alvo (todos / cada monitor) + toggle do carrossel ──
+            Item {
+                visible: win.mode === "bg"
+                width: col.width
+                height: 24
+
+                Row {
+                    spacing: 6
+                    leftPadding: 6
+                    Repeater {
+                        model: win.bgTargets
+                        delegate: Rectangle {
+                            required property var modelData
+                            readonly property bool sel: win.bgTarget === modelData.key
+                            width: tgtTxt.implicitWidth + 20
+                            height: 24
+                            radius: 12
+                            color: sel ? Config.accent : Theme.surface0
+                            border.color: sel ? Config.accent : Theme.surface2
+                            border.width: 1
+                            Text {
+                                id: tgtTxt
+                                anchors.centerIn: parent
+                                text: parent.modelData.label
+                                color: parent.sel ? Theme.crust : Config.launcherSub
+                                font.pixelSize: 11
+                                font.bold: parent.sel
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: { win.bgTarget = parent.modelData.key; input.forceActiveFocus() }
+                            }
+                        }
+                    }
+                }
+
+                // carrossel: troca automática periódica (WallpaperService observa o Config)
+                Rectangle {
+                    readonly property bool on: Config.wallpaperCarousel
+                    anchors.right: parent.right
+                    width: carTxt.implicitWidth + 20
+                    height: 24
+                    radius: 12
+                    color: on ? Config.accent : Theme.surface0
+                    border.color: on ? Config.accent : Theme.surface2
+                    border.width: 1
+                    Text {
+                        id: carTxt
+                        anchors.centerIn: parent
+                        text: "Carrossel " + (parent.on ? "" + Config.wallpaperCarouselMin + " min" : "off")
+                        color: parent.on ? Theme.crust : Config.launcherSub
+                        font.pixelSize: 11
+                        font.bold: parent.on
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: { Settings.set("wallpaperCarousel", !parent.on); input.forceActiveFocus() }
+                    }
+                }
             }
 
             // ── /proc: chips de ordenação ──
@@ -483,7 +598,8 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 visible: ("" + source) !== ""
                                 source: row.modelData.kind === "app" ? (row.modelData.icon ?? "")
-                                      : (row.modelData.kind === "file" && !row.modelData.isVideo)
+                                      : (row.modelData.kind === "bg"
+                                         || (row.modelData.kind === "file" && !row.modelData.isVideo))
                                         ? win.fileUrl(row.modelData.path) : ""
                                 sourceSize: Qt.size(Config.launcherIconSize * 2, Config.launcherIconSize * 2)
                                 width: Config.launcherIconSize
@@ -619,7 +735,9 @@ PanelWindow {
                 Text {
                     visible: win.resultCount === 0
                     anchors.centerIn: parent
-                    text: win.mode === "files" ? "Nenhuma pasta ou mídia aqui" : "Nada encontrado"
+                    text: win.mode === "files" ? "Nenhuma pasta ou mídia aqui"
+                        : win.mode === "bg" ? "Nenhuma imagem em " + win.bgDirPretty
+                        : "Nada encontrado"
                     color: Config.launcherSub
                     font.pixelSize: Config.launcherFontSize
                 }

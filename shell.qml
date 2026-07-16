@@ -19,11 +19,13 @@ Scope {
     NiriService  { id: niriSvc }    // estado do Niri (monitores, workspaces)
     CavaService  { id: cava }    // níveis de áudio do cava
 
-    // Sobe os daemons da sessão (wallpaper, blueman, idle/lock) centralizados no qs.
-    // Ver services/StartupService.qml e services/session.sh. O ThemeExport.init()
-    // só instancia o singleton p/ registrar o IPC (`qs ipc call theme exportAll`).
+    // Sobe os daemons da sessão (blueman, idle/lock) centralizados no qs — ver
+    // services/StartupService.qml e services/session.sh. O wallpaper (swaybg) sobe
+    // pelo WallpaperService (última escolha persistida; modo /bg do lançador).
+    // O ThemeExport.init() só instancia o singleton p/ registrar o IPC.
     Component.onCompleted: {
         StartupService.start()
+        WallpaperService.init()
         ThemeExport.init()
     }
 

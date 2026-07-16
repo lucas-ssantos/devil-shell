@@ -160,6 +160,13 @@ PanelWindow {
             { key: "launcherText", label: "Texto (cor)", ftype: "color" },
             { key: "launcherSub", label: "Texto secundário", ftype: "color" }
         ]},
+        { title: "Papel de parede", fields: [
+            { key: "wallpaperDir", label: "Pasta dos wallpapers", ftype: "string" },
+            { key: "wallpaperDefault", label: "Wallpaper padrão", ftype: "string" },
+            { key: "wallpaperMode", label: "Ajuste (swaybg)", ftype: "select", options: ["fill","fit","stretch","center","tile"] },
+            { key: "wallpaperCarousel", label: "Carrossel automático", ftype: "bool" },
+            { key: "wallpaperCarouselMin", label: "Intervalo do carrossel (min)", ftype: "int" }
+        ]},
         { title: "Clima", fields: [
             { key: "weatherInterval", label: "Intervalo clima (ms)", ftype: "int" },
             { key: "weatherLocation", label: "Local do clima", ftype: "string" }

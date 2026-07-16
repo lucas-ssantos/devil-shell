@@ -1,2 +1,6 @@
 {
+  "wallpaperDir": "/home/luke/Pictures/wallpapers",
+  "wallpaperDefault": "/home/luke/Pictures/wallpapers/vigna/vigna.jpg",
+  "wallpaperAll": "/home/luke/Pictures/wallpapers/vigna.jpg",
+  "wallpaperByOutput": {}
 }
