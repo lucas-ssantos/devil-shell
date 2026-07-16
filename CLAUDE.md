@@ -53,8 +53,8 @@ pkill quickshell; qs   # reinicia
   processo (a linha é interpretada pela shell — sem escaping manual de argv).
 - Ações úteis já usadas: `screenshot` (UI nativa de print), `power-off-monitors` /
   `power-on-monitors` (dpms no swayidle), `quit --skip-confirmation` (sair da sessão).
-- Workspaces do niri são **dinâmicos por monitor** (sempre há um vazio no fim); o anel de pontos
-  reflete isso (o nº de pontos varia).
+- Workspaces do niri são **dinâmicos por monitor** (sempre há um vazio no fim); o anel tracejado
+  da bola reflete isso (o nº de arcos varia).
 
 ### Lançar ferramentas Wayland (swaybg/blueman/swayidle/gpu-screen-recorder): use `niri msg action spawn-sh`
 Apps gráficos Wayland lançados como filhos do `Process` do Quickshell podem não receber um
@@ -160,13 +160,15 @@ Concentra **geometria, estado e TODA a lógica de interação**; os componentes 
 recebem o controlador na propriedade `ctx`. Pontos-chave:
 - **Um único `MouseArea` + um `WheelHandler`** no topo fazem **hit-testing geométrico** em vez de
   MouseAreas por elemento (isso resolveu instabilidades de hover): `petalAt` (angular), `dotAt`
-  (distância), `overBallAt`, `petalSectionAt` (radial, para pétalas multi-botão), `audioSliderAt`.
+  (setor do anel tracejado de workspaces), `overBallAt`, `petalSectionAt` (radial, para pétalas
+  multi-botão), `audioSliderAt`. As pétalas abrem em **leque simétrico** centrado em
+  `petalStartDeg` (90=topo): nº ímpar põe uma no centro, nº par deixa um vão no meio.
 - **Hover com debounce** (`hoverOpen` + `hoverCloseTimer`) para evitar o loop de feedback
   máscara↔abertura que colapsava o menu.
 - **Máscara de input** (`mask: Region`) muda com `open`: fechado só a bola é clicável; aberto a
   região central inteira; o resto é click-through.
 - **Scroll por região:** sobre a bola troca workspace (com wrap 1↔N); na região das pétalas gira o
-  anel; sobre um slider de áudio ajusta o volume.
+  leque; sobre um slider de áudio ajusta o volume.
 - Estado central: `pinned`/`dismissed`/`hoverOpen` (→ `open`), `hoverIndex`, `selectedIndex`,
   `audioMode`, `petalSection`, `petalRotation`.
 - `monData`/`tags`/`activeTag` derivam de `niri.monitorByName(modelData.name)` — `modelData.name`
@@ -174,9 +176,11 @@ recebem o controlador na propriedade `ctx`. Pontos-chave:
   para gravar um monitor específico (`gpu-screen-recorder -w <name>`).
 
 ### Componentes visuais (recebem `ctx`)
-[MenuBall.qml](ui/MenuBall.qml) (bola: nº do workspace / anel de pontos),
-[Petal.qml](ui/Petal.qml) (uma pétala; renderiza ícone único, ou painel multi-seção conforme as flags
-do item: áudio 3 seções, sistema 3 seções, bandeja N seções),
+[MenuBall.qml](ui/MenuBall.qml) (bola: sigilo/pentáculo gravado, nº do workspace e o anel
+TRACEJADO de workspaces — um arco por workspace, desenhado em `Canvas` casando com o `dotAt`),
+[Petal.qml](ui/Petal.qml) (uma pétala em forma de cristal/runa, desenhada em `Canvas` — borda
+escura, núcleo e entalhes finos; renderiza ícone único, ou painel multi-seção conforme as flags
+do item: áudio 3 seções, sistema 3 seções, bandeja N seções — as divisórias são os entalhes),
 [AudioMenu.qml](ui/AudioMenu.qml) (sliders), [AudioDevices.qml](ui/AudioDevices.qml)
 (seletor de dispositivo), [TrayMenu.qml](ui/TrayMenu.qml) (menu do item da bandeja),
 [SettingsField.qml](ui/SettingsField.qml) (uma linha editável da janela de configurações: cor/número/texto/seletor/toggle),

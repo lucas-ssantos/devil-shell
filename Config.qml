@@ -21,21 +21,28 @@ Singleton {
     // ── Bola / menu ─────────────────────────────────────
     readonly property real ballRadius: Settings.get("ballRadius", 46)
     readonly property real ballPeek: Settings.get("ballPeek", 28)               // fatia visível quando recolhida
-    readonly property real dotRingFactor: Settings.get("dotRingFactor", 0.62)   // raio do anel de workspaces (× ballRadius)
-    readonly property real dotSize: Settings.get("dotSize", 8)                  // diâmetro do ponto de workspace
-    readonly property real dotActiveSize: Settings.get("dotActiveSize", 11)     // diâmetro do ponto ativo
-    readonly property real dotHitR: Settings.get("dotHitR", 9)                  // raio de clique do ponto
+    readonly property real dotRingFactor: Settings.get("dotRingFactor", 0.74)   // raio do anel tracejado de workspaces (× ballRadius)
+    readonly property real dotArcW: Settings.get("dotArcW", 3)                  // espessura do arco de workspace
+    readonly property real dotArcActiveW: Settings.get("dotArcActiveW", 5)      // espessura do arco do workspace ativo
+    readonly property real dotArcGapDeg: Settings.get("dotArcGapDeg", 14)       // vão entre os arcos do anel (graus)
+    readonly property real dotHitR: Settings.get("dotHitR", 9)                  // meia-banda radial de clique do anel
+    readonly property real ballSigilFactor: Settings.get("ballSigilFactor", 0.52) // raio do sigilo gravado na bola (× ballRadius)
     readonly property real gothicR: Settings.get("gothicR", 32)                 // raio dos cantos góticos (bola ↔ barra)
 
-    // ── Pétalas ─────────────────────────────────────────
-    readonly property real petalW: Settings.get("petalW", 25)
-    readonly property real petalH: Settings.get("petalH", 84)
-    readonly property real petalGap: Settings.get("petalGap", 10)                  // folga bola → pétala
+    // ── Pétalas (cristal/runa) ──────────────────────────
+    readonly property real petalW: Settings.get("petalW", 32)
+    readonly property real petalH: Settings.get("petalH", 96)
+    readonly property real petalGap: Settings.get("petalGap", -2)                  // folga bola → pétala (negativa = base enfiada sob a bola, pétala "anexada")
+    readonly property real petalCoreFactor: Settings.get("petalCoreFactor", 0.6)   // largura do núcleo do cristal (× petalW)
+    readonly property real petalEdgeDarken: Settings.get("petalEdgeDarken", 1.5)   // borda do cristal (× mais escura que o corpo)
+    readonly property real petalEngraveOpacity: Settings.get("petalEngraveOpacity", 0.55) // opacidade dos entalhes rúnicos
+    readonly property real petalEngraveWidth: Settings.get("petalEngraveWidth", 1) // espessura dos entalhes (px)
+    readonly property real petalGlowBlur: Settings.get("petalGlowBlur", 12)        // raio do glow do cristal (px; hover = cheio)
+    readonly property real petalGlowRest: Settings.get("petalGlowRest", 0.25)      // intensidade do glow em repouso (0–1)
     readonly property real petalShrink: Settings.get("petalShrink", 0.8)           // escala das não-hover
     readonly property real petalHoverScale: Settings.get("petalHoverScale", 1.2)
-    readonly property real petalHoverExtend: Settings.get("petalHoverExtend", 5)   // quanto a pétala em hover estende p/ a bola (px)
-    readonly property real petalFlare: Settings.get("petalFlare", 8)               // tamanho dos cantos góticos da pétala
-    readonly property real petalStartDeg: Settings.get("petalStartDeg", 180)       // ângulo da 1ª pétala (0=dir, 90=topo, 180=esq)
+    readonly property real petalHoverExtend: Settings.get("petalHoverExtend", 0)   // quanto a pétala em hover estende p/ a bola (px; c/ base já sob a bola, 0 evita afundar os botões)
+    readonly property real petalStartDeg: Settings.get("petalStartDeg", 90)        // CENTRO do leque (90=topo); as pétalas abrem simétricas a partir daqui
     readonly property real petalStepDeg: Settings.get("petalStepDeg", 30)          // passo entre pétalas (e do scroll)
     readonly property int  petalDir: Settings.get("petalDir", -1)                  // sentido do anel (+1 / -1)
     readonly property real hitMargin: Settings.get("hitMargin", 8)                 // folga radial do hit-test
@@ -188,11 +195,14 @@ Singleton {
     readonly property color ball: Settings.get("ball", Theme.crust)
     readonly property color petal: Settings.get("petal", Theme.maroon)
     readonly property color petalHover: Settings.get("petalHover", Theme.red)
-    readonly property color petalIcon: Settings.get("petalIcon", Theme.base)
+    readonly property color petalIcon: Settings.get("petalIcon", Theme.rosewater)   // ícones claros ("branco" da paleta)
+    readonly property color petalEngrave: Settings.get("petalEngrave", Theme.mauve)  // entalhes rúnicos do cristal (nervura/arcos)
+    readonly property color petalGlow: Settings.get("petalGlow", Theme.red)          // glow do cristal (forte no hover)
     readonly property color accent: Settings.get("accent", Theme.mauve)
     readonly property color ballText: Settings.get("ballText", Theme.red)          // nº do workspace
+    readonly property color ballSigil: Settings.get("ballSigil", Theme.dimGreen)   // sigilo (pentáculo) gravado na bola
     readonly property color clock: Settings.get("clock", Theme.text)
-    readonly property color dotActive: Settings.get("dotActive", Theme.red)         // workspace atual
+    readonly property color dotActive: Settings.get("dotActive", Theme.red)         // arco do workspace atual
     readonly property color dotUrgent: Settings.get("dotUrgent", Theme.peach)        // urgente
     readonly property color dotOccupied: Settings.get("dotOccupied", Theme.maroon)    // ocupado
     readonly property color dotEmpty: Settings.get("dotEmpty", Theme.surface1)     // vazio
@@ -203,10 +213,7 @@ Singleton {
     readonly property int  petalDistAnim: Settings.get("petalDistAnim", 200)
     readonly property int  petalOpacityAnim: Settings.get("petalOpacityAnim", 150)
     readonly property int  petalScaleAnim: Settings.get("petalScaleAnim", 130)
-    readonly property int  petalRadiusAnim: Settings.get("petalRadiusAnim", 150)
-    readonly property int  petalFlareAnim: Settings.get("petalFlareAnim", 160)
     readonly property int  layoutAnim: Settings.get("layoutAnim", 180)   // sliders de áudio
-    readonly property int  dotAnim: Settings.get("dotAnim", 120)
     readonly property int  clockAnim: Settings.get("clockAnim", 150)
     readonly property int  hoverCloseMs: Settings.get("hoverCloseMs", 130)
     readonly property int  selectMs: Settings.get("selectMs", 200)

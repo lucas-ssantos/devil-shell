@@ -3,8 +3,10 @@ import Quickshell.Services.SystemTray
 import "root:/services"   // AudioService, CaptureService
 import "root:/"           // Config (raiz)
 
-// Uma pétala do menu radial (visual). Lê o estado do controlador `ctx` e os
-// valores customizáveis de `Config`.
+// Uma pétala do menu radial (visual), em forma de CRISTAL/RUNA: silhueta com borda
+// escura, núcleo na cor da pétala e entalhes finos (nervura central + arcos que
+// acompanham o formato). Nas pétalas multi-seção os arcos viram as divisórias dos
+// botões. Lê o estado do controlador `ctx` e os valores customizáveis de `Config`.
 Item {
     id: petal
     property var ctx
@@ -17,6 +19,14 @@ Item {
     readonly property bool selected: ctx.selectedIndex === index
     readonly property bool vanished: ctx.selectedIndex !== -1 && !selected
 
+    // pétalas multi-seção (painéis): áudio/sistema = 3 botões, bandeja = 1 por app
+    readonly property bool isAudio: modelData.audio ?? false
+    readonly property bool isSettings: modelData.settings ?? false
+    readonly property bool isTray: modelData.tray ?? false
+    readonly property bool multi: isAudio || isSettings || isTray
+    readonly property int sections: (isAudio || isSettings) ? 3
+        : isTray ? SystemTray.items.values.length : 0
+
     width: ctx.petalW
     height: ctx.petalH
     transformOrigin: Item.Center
@@ -24,8 +34,8 @@ Item {
     z: 1
 
     property real dist: !ctx.open ? 0
-        : (hovered || selected)   ? ctx.petalDist
-        : (ctx.hoverIndex !== -1) ? ctx.petalTouch   // outra em hover -> recua até a bola
+        : (hovered || selected)   ? ctx.petalDistHover   // expande p/ FORA (base segue na bola)
+        : (ctx.hoverIndex !== -1) ? ctx.petalTouch       // outra em hover -> recua até a bola
         : ctx.petalDist
     x: ctx.ballCX + dist * Math.cos(angleRad) - width / 2
     y: ctx.ballCY - dist * Math.sin(angleRad) - height / 2
@@ -35,94 +45,154 @@ Item {
     Behavior on dist { NumberAnimation { duration: Config.petalDistAnim; easing.type: Easing.OutBack } }
     Behavior on opacity { NumberAnimation { duration: Config.petalOpacityAnim } }
 
-    // corpo da pétala (cresce no hover; base fica reta quando há hover ativo)
-    Rectangle {
+    // corpo da pétala (cresce no hover; a base pontuda estende ~5px rumo à bola)
+    Item {
+        id: body
         anchors.fill: parent
-        // em hover, estende a base ~5px em direção à bola (conecta melhor)
         anchors.bottomMargin: petal.hovered ? -Config.petalHoverExtend : 0
         Behavior on anchors.bottomMargin { NumberAnimation { duration: Config.petalScaleAnim } }
-        topLeftRadius: width / 2
-        topRightRadius: width / 2
-        bottomLeftRadius: (petal.ctx.hoverIndex !== -1) ? 0 : width / 2
-        bottomRightRadius: (petal.ctx.hoverIndex !== -1) ? 0 : width / 2
-        Behavior on bottomLeftRadius { NumberAnimation { duration: Config.petalRadiusAnim } }
-        Behavior on bottomRightRadius { NumberAnimation { duration: Config.petalRadiusAnim } }
         transformOrigin: Item.Center
         scale: (petal.hovered || petal.selected) ? Config.petalHoverScale
              : (petal.ctx.hoverIndex !== -1)     ? petal.ctx.petalShrink
              : 1.0
-        color: petal.hovered ? Config.petalHover : Config.petal
         Behavior on scale { NumberAnimation { duration: Config.petalScaleAnim; easing.type: Easing.OutQuad } }
 
-        // cantos góticos da base (emergem só na pétala em hover)
+        // o cristal inteiro: glow, borda, núcleo, destaque de seção e entalhes rúnicos.
+        // O canvas é maior que a pétala (margens negativas) p/ o glow não ser cortado;
+        // `pad` desloca o desenho de volta ao retângulo da pétala.
         Canvas {
-            id: pflare
-            width: parent.width + 2 * petal.ctx.petalFlare
-            height: petal.ctx.petalFlare + 2
-            x: -petal.ctx.petalFlare
-            y: parent.height - 1
-            property real amt: (petal.hovered && petal.ctx.open) ? 1 : 0
-            property color col: petal.hovered ? Config.petalHover : Config.petal
-            Behavior on amt { NumberAnimation { duration: Config.petalFlareAnim; easing.type: Easing.OutQuad } }
-            onAmtChanged: requestPaint()
-            onColChanged: requestPaint()
+            id: crystal
+            readonly property real pad: Config.petalGlowBlur + 4
+            anchors.fill: parent
+            anchors.margins: -pad
+            antialiasing: true
+
+            property color bodyColor: petal.hovered ? Config.petalHover : Config.petal
+            property color engraveColor: Config.petalEngrave
+            property color glowColor: Config.petalGlow
+            property real edgeDarken: Config.petalEdgeDarken
+            property real coreFactor: Config.petalCoreFactor
+            property real engraveOp: Config.petalEngraveOpacity
+            property real engraveW: Config.petalEngraveWidth
+            property real btnDarken: Config.audioBtnDarken
+            property real btnHoverDarken: Config.audioBtnHoverDarken
+            property int  nSections: petal.sections
+            property int  hlSection: (petal.hovered && petal.sections > 0) ? petal.ctx.petalSection : -1
+            // intensidade do glow (0–1): fraco em repouso, cheio no hover/seleção
+            property real glowAmt: (petal.hovered || petal.selected) ? 1.0 : Config.petalGlowRest
+            Behavior on glowAmt { NumberAnimation { duration: Config.petalScaleAnim } }
+
+            onBodyColorChanged: requestPaint()
+            onEngraveColorChanged: requestPaint()
+            onGlowColorChanged: requestPaint()
+            onGlowAmtChanged: requestPaint()
+            onEdgeDarkenChanged: requestPaint()
+            onCoreFactorChanged: requestPaint()
+            onEngraveOpChanged: requestPaint()
+            onEngraveWChanged: requestPaint()
+            onNSectionsChanged: requestPaint()
+            onHlSectionChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
             Component.onCompleted: requestPaint()
+
+            // silhueta do cristal, "lapidação esmeralda": base RETA (enfiada sob a bola),
+            // lados quase paralelos com leve bojo e ponta TRUNCADA (topo reto curto
+            // entre dois chanfros — as pontas quadradas do mockup).
+            // kw = fator da meia-largura; y0/y1 = ponta/base (coords já transladadas).
+            function crystalPath(g, kw, y0, y1) {
+                const cx = (width - 2 * pad) / 2
+                const hw = ((width - 2 * pad) / 2 - 1) * kw
+                const H = y1 - y0
+                g.beginPath()
+                g.moveTo(cx - 0.94 * hw, y1)                        // canto esquerdo da base
+                g.bezierCurveTo(cx - hw,        y0 + 0.60 * H,
+                                cx - hw,        y0 + 0.30 * H,
+                                cx - 0.85 * hw, y0 + 0.11 * H)      // lado quase reto (leve bojo)
+                g.lineTo(cx - 0.10 * hw, y0)                        // chanfro esquerdo
+                g.lineTo(cx + 0.10 * hw, y0)                        // topo RETO (ponta quadrada)
+                g.lineTo(cx + 0.85 * hw, y0 + 0.11 * H)             // chanfro direito
+                g.bezierCurveTo(cx + hw,        y0 + 0.30 * H,
+                                cx + hw,        y0 + 0.60 * H,
+                                cx + 0.94 * hw, y1)
+                g.closePath()                                       // base reta
+            }
+
             onPaint: {
                 const g = getContext("2d")
                 g.reset()
-                if (amt <= 0.01) return
-                const f = petal.ctx.petalFlare * amt
-                const W = parent.width
-                const xL = petal.ctx.petalFlare
-                const xR = petal.ctx.petalFlare + W
-                g.fillStyle = col
-                // canto direito (côncavo)
+                g.translate(pad, pad)
+                const w = width - 2 * pad, h = height - 2 * pad, cx = w / 2
+
+                // borda (silhueta externa) com GLOW: a sombra do próprio path faz o halo
+                crystalPath(g, 1.0, 0.5, h)
+                g.shadowColor = Qt.rgba(glowColor.r, glowColor.g, glowColor.b, 0.9 * glowAmt)
+                g.shadowBlur = Config.petalGlowBlur * glowAmt
+                g.fillStyle = Qt.darker(bodyColor, edgeDarken)
+                g.fill()
+                g.fill()   // 2ª passada reforça o halo
+                g.shadowColor = "transparent"
+                g.shadowBlur = 0
+
+                // núcleo (nos painéis multi-seção fica um tom mais escuro = clicável)
+                crystalPath(g, coreFactor, 0.06 * h, 0.97 * h)
+                g.fillStyle = petal.multi ? Qt.darker(bodyColor, btnDarken) : bodyColor
+                g.fill()
+
+                // daqui em diante tudo é recortado pela silhueta
+                g.save()
+                crystalPath(g, 1.0, 0.5, h)
+                g.clip()
+
+                // destaque da seção sob o cursor (seção 0 = junto à bola = embaixo)
+                if (hlSection >= 0 && nSections > 0) {
+                    const slot = h / nSections
+                    g.globalAlpha = 0.6
+                    g.fillStyle = Qt.darker(bodyColor, btnHoverDarken)
+                    g.fillRect(0, (nSections - 1 - hlSection) * slot, w, slot)
+                    g.globalAlpha = 1.0
+                }
+
+                // entalhes rúnicos: nervura central + arcos transversais (o clip
+                // recorta os arcos na silhueta, então eles acompanham o formato)
+                g.strokeStyle = engraveColor
+                g.lineWidth = engraveW
+                g.globalAlpha = engraveOp
                 g.beginPath()
-                g.moveTo(xR, f); g.lineTo(xR + f, f); g.lineTo(xR + f, 0)
-                g.arc(xR, 0, f, 0, Math.PI / 2, false)
-                g.closePath(); g.fill()
-                // canto esquerdo (espelhado)
+                g.moveTo(cx, 0.06 * h)
+                g.lineTo(cx, 0.97 * h)
+                g.stroke()
+                // arcos nas divisas das seções (painéis) ou decorativos (pétala comum)
+                let ts = []
+                if (nSections > 1)
+                    for (let k = 1; k < nSections; k++) ts.push(k / nSections)
+                else
+                    ts = [0.26, 0.45, 0.70]
+                for (const t of ts) {
+                    const y = t * h
+                    g.beginPath()
+                    g.moveTo(0, y)
+                    g.quadraticCurveTo(cx, y + 4, w, y)   // arqueia de leve rumo à base
+                    g.stroke()
+                }
+
+                // "mesa" da lapidação: linha dos chanfros sob o topo reto (o clip
+                // recorta nas bordas, marcando a faceta da ponta quadrada)
+                g.globalAlpha = 0.35
                 g.beginPath()
-                g.moveTo(xL, f); g.lineTo(xL - f, f); g.lineTo(xL - f, 0)
-                g.arc(xL, 0, f, Math.PI, Math.PI / 2, true)
-                g.closePath(); g.fill()
+                g.moveTo(0, 0.11 * h)
+                g.lineTo(w, 0.11 * h)
+                g.stroke()
+                g.restore()
             }
         }
 
-        // ── Painel de áudio: 3 botões + divisórias (só na pétala de áudio) ──
+        // ── Painel de áudio: 3 botões (só ícones; divisórias/destaque vêm do cristal) ──
         Item {
-            visible: petal.modelData.audio ?? false
+            visible: petal.isAudio
             anchors.fill: parent
             anchors.margins: Config.audioBtnMargin
 
-            // fundo do painel (um pouco mais escuro = clicável)
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: Qt.darker(Config.petal, Config.audioBtnDarken)
-            }
-            // destaque da seção sob o cursor
-            Rectangle {
-                visible: petal.hovered && petal.ctx.petalSection >= 0
-                width: parent.width
-                height: parent.height / 3
-                y: (2 - petal.ctx.petalSection) * (parent.height / 3)   // sec2=topo … sec0=baixo
-                radius: 6
-                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
-            }
-            // divisórias entre os botões
-            Repeater {
-                model: 2
-                delegate: Rectangle {
-                    required property int index
-                    width: parent.width * 0.7
-                    height: 1.5
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: (index + 1) * (parent.height / 3) - height / 2
-                    color: Config.petalIcon
-                    opacity: 0.3
-                }
-            }
             // ícones (i0=headphone topo, i1=mic, i2=config baixo)
             Repeater {
                 model: 3
@@ -146,37 +216,10 @@ Item {
 
         // ── Painel de sistema: 3 botões (configurações + gravação + toggle de lock) ──
         Item {
-            visible: petal.modelData.settings ?? false
+            visible: petal.isSettings
             anchors.fill: parent
             anchors.margins: Config.audioBtnMargin
 
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: Qt.darker(Config.petal, Config.audioBtnDarken)
-            }
-            // destaque da seção sob o cursor (sec2=topo=config, sec1=meio=gravar, sec0=baixo=lâmpada)
-            Rectangle {
-                visible: petal.hovered && petal.ctx.petalSection >= 0
-                width: parent.width
-                height: parent.height / 3
-                y: (2 - petal.ctx.petalSection) * (parent.height / 3)
-                radius: 6
-                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
-            }
-            // divisórias entre os botões
-            Repeater {
-                model: 2
-                delegate: Rectangle {
-                    required property int index
-                    width: parent.width * 0.7
-                    height: 1.5
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: (index + 1) * (parent.height / 3) - height / 2
-                    color: Config.petalIcon
-                    opacity: 0.3
-                }
-            }
             // ícones (i0=engrenagem topo=config, i1=gravar meio, i2=lâmpada baixo=toggle lock)
             Repeater {
                 model: 3
@@ -203,39 +246,12 @@ Item {
         // ── Painel da bandeja (system tray): 1 seção por app (só na pétala da bandeja) ──
         Item {
             id: trayPanel
-            visible: petal.modelData.tray ?? false
+            visible: petal.isTray
             anchors.fill: parent
             anchors.margins: Config.audioBtnMargin
             readonly property int count: SystemTray.items.values.length
             readonly property real slot: height / Math.max(1, count)
 
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: Qt.darker(Config.petal, Config.audioBtnDarken)
-            }
-            // destaque da seção (app) sob o cursor — seção 0 = junto à bola (baixo)
-            Rectangle {
-                visible: petal.hovered && petal.ctx.petalSection >= 0 && trayPanel.count > 0
-                width: parent.width
-                height: trayPanel.slot
-                y: (trayPanel.count - 1 - petal.ctx.petalSection) * trayPanel.slot
-                radius: 6
-                color: Qt.darker(Config.petal, Config.audioBtnHoverDarken)
-            }
-            // divisórias entre os apps
-            Repeater {
-                model: Math.max(0, trayPanel.count - 1)
-                delegate: Rectangle {
-                    required property int index
-                    width: parent.width * 0.7
-                    height: 1.5
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: (index + 1) * trayPanel.slot - height / 2
-                    color: Config.petalIcon
-                    opacity: 0.3
-                }
-            }
             // ícone genérico quando não há nenhum app na bandeja
             Text {
                 visible: trayPanel.count === 0
@@ -289,7 +305,7 @@ Item {
 
     // ── Pétala normal: ícone único ──
     Text {
-        visible: !(petal.modelData.audio ?? false) && !(petal.modelData.tray ?? false) && !(petal.modelData.settings ?? false)
+        visible: !petal.multi
         anchors.centerIn: parent
         rotation: -petal.rotation
         text: petal.modelData.icon ?? ""

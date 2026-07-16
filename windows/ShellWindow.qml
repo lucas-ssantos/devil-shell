@@ -39,10 +39,12 @@ PanelWindow {
     readonly property real petalW: Config.petalW
     readonly property real petalH: Config.petalH
     readonly property real petalDist: ballRadius + Config.petalGap + petalH / 2
+    // no hover a pétala escala em torno do centro; empurrá-la p/ fora na mesma medida
+    // mantém a BASE colada na bola e faz a expansão crescer só rumo à ponta
+    readonly property real petalDistHover: petalDist + petalH * (Config.petalHoverScale - 1) / 2
     readonly property real petalShrink: Config.petalShrink
     readonly property real petalTouch: ballRadius + petalH * petalShrink / 2
-    readonly property real petalFlare: Config.petalFlare
-    readonly property real hitOuterR: petalDist + petalH / 2 + Config.hitMargin
+    readonly property real hitOuterR: petalDistHover + petalH * Config.petalHoverScale / 2 + Config.hitMargin
     readonly property real menuHalf: hitOuterR + Config.menuMargin
     readonly property real dotRingR: ballRadius * Config.dotRingFactor
     readonly property real gothicR: Config.gothicR
@@ -116,11 +118,14 @@ PanelWindow {
     }
 
     // ── Pétalas multi-botão (áudio/sistema) ─────────────
-    // seção (0 = junto à bola … n-1 = na ponta) sob o cursor, dividindo a pétala em n
+    // seção (0 = junto à bola … n-1 = na ponta) sob o cursor, dividindo a pétala em n.
+    // Usa a geometria do HOVER (escalada e empurrada p/ fora), já que as seções só
+    // importam com o cursor na pétala — as faixas batem com os slots visuais.
     function petalSectionAt(mx, my, n) {
         const dx = mx - ballCX, dy = ballCY - my
         const r = Math.sqrt(dx * dx + dy * dy)
-        const r0 = petalDist - petalH / 2, r1 = petalDist + petalH / 2
+        const half = petalH * Config.petalHoverScale / 2
+        const r0 = petalDistHover - half, r1 = petalDistHover + half
         return Math.max(0, Math.min(n - 1, Math.floor((r - r0) / (r1 - r0) * n)))
     }
     // nº de seções da pétala i (áudio=3, sistema=3, bandeja=nº de apps, demais=0)
@@ -142,9 +147,14 @@ PanelWindow {
     }
 
     // ── Hit-test (tudo por posição do cursor) ───────────
-    // pétalas em anel: 1ª em 180°, +30° por pétala, circulando toda a bola (+ scroll).
+    // pétalas em LEQUE simétrico: o centro do leque fica em petalStartDeg (90=topo) e
+    // elas abrem para os lados a cada petalStepDeg; nº ímpar põe uma pétala no centro,
+    // nº par deixa um vão no centro (as duas do meio a ±passo/2). O scroll gira o leque.
     // (0°=direita, 90°=topo, 180°=esquerda; o ícone fica sempre na vertical pela contra-rotação)
-    function petalAngle(i) { return Config.petalStartDeg + Config.petalDir * i * Config.petalStepDeg + petalRotation }
+    function petalAngle(i) {
+        const k = i - (menuItems.length - 1) / 2   // deslocamento a partir do centro do leque
+        return Config.petalStartDeg + Config.petalDir * k * Config.petalStepDeg + petalRotation
+    }
     function petalAt(mx, my) {
         const dx = mx - ballCX, dy = ballCY - my
         const r = Math.sqrt(dx * dx + dy * dy)
@@ -158,15 +168,17 @@ PanelWindow {
         }
         return bestDiff <= Config.petalStepDeg / 2 ? best : -1   // tolerância = metade do passo
     }
+    // segmento do anel tracejado de workspaces sob o cursor (banda radial + setor
+    // angular; o arco i é centrado em -90° + i·slot, casando com o desenho no MenuBall)
     function dotAt(mx, my) {
         const n = tags.length
-        for (let i = 0; i < n; i++) {
-            const ang = (-90 + i * 360 / Math.max(1, n)) * Math.PI / 180
-            const dxp = ballCX + dotRingR * Math.cos(ang)
-            const dyp = ballCY + dotRingR * Math.sin(ang)
-            if (Math.hypot(mx - dxp, my - dyp) <= Config.dotHitR) return i
-        }
-        return -1
+        if (n === 0) return -1
+        const dx = mx - ballCX, dy = my - ballCY
+        if (Math.abs(Math.hypot(dx, dy) - dotRingR) > Config.dotHitR) return -1
+        const slot = 360 / n
+        const theta = Math.atan2(dy, dx) * 180 / Math.PI      // 0=direita, 90=baixo (tela)
+        const rel = (theta + 90 + slot / 2 + 720) % 360       // 0 = início do setor do 1º workspace
+        return Math.min(n - 1, Math.floor(rel / slot))
     }
     function overBallAt(mx, my) { return Math.hypot(mx - ballCX, my - ballCY) <= ballRadius }
     // fecha o menu (usado antes de capturas, p/ não roubar o arrasto da seleção)
