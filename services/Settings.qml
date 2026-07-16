@@ -12,6 +12,7 @@ import QtQuick
 //   • set(chave, valor)  -> grava o override (persiste + dispara export se for cor/tema)
 //   • unset(chave)       -> volta UMA chave ao padrão
 //   • reset()            -> volta TUDO ao padrão (apaga os overrides)
+//   • makeDefault()      -> torna os overrides atuais o novo padrão (com backup do anterior)
 //
 // Chaves de cor da PALETA crua usam prefixo "pal_" (ex.: pal_crust) e são lidas
 // pelo Theme.qml. Chaves "themeShell"/"themeCava" escolhem a paleta. As demais
