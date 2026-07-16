@@ -1,2 +1,4 @@
 # estado de runtime (gerado pelo shell; não é configuração)
 launcher-usage.json
+# backups criados pelo botão "Tornar padrão" das configurações
+settings.default.json.bak-*

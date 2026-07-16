@@ -21,7 +21,9 @@ Item {
 
     // valor efetivo atual (override OU padrão). Referencia Settings.data p/ reavaliar.
     readonly property var cur: { Settings.data; return field.current() }
-    readonly property bool overridden: { Settings.data; return Settings.has(key) }
+    // "fora do padrão de fábrica" (não apenas "tem override"): referencia data E
+    // defaults p/ reavaliar também quando o usuário torna a config atual o padrão.
+    readonly property bool overridden: { Settings.data; Settings.defaults; return Settings.isOverridden(key) }
 
     function current() {
         if (key.indexOf("pal_") === 0) return Theme[key.substr(4)]
@@ -41,7 +43,7 @@ Item {
         elide: Text.ElideRight
     }
 
-    // botão de reverter (só quando há override)
+    // botão de reverter ao padrão de fábrica (só quando difere dele)
     Text {
         id: revert
         visible: field.overridden
@@ -52,7 +54,7 @@ Item {
         MouseArea {
             anchors.fill: parent; anchors.margins: -4
             cursorShape: Qt.PointingHandCursor
-            onClicked: Settings.unset(field.key)
+            onClicked: Settings.revert(field.key)
         }
     }
 

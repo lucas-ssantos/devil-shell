@@ -1,4 +1,8 @@
 {
-  "themeShell": "CrimsonDevil",
-  "themeCava": "InfernalRose"
+  "wallpaperDir": "/home/luke/Pictures/wallpapers",
+  "wallpaperDefault": "/home/luke/Pictures/wallpapers/vigna/vigna.jpg",
+  "wallpaperAll": "/home/luke/Pictures/wallpapers/pixel/wall_vp6.jpg",
+  "wallpaperByOutput": {},
+  "cavaVisibility": "adaptativo",
+  "dotTravelMs": 1000
 }

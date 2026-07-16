@@ -441,10 +441,11 @@ PanelWindow {
                         width: content.width
                         spacing: 0
 
-                        // nº de opções e de overrides ativos (Settings.data p/ reavaliar)
+                        // nº de opções e de campos fora do padrão de fábrica
+                        // (Settings.data e .defaults p/ reavaliar, inclusive após "Tornar padrão")
                         readonly property int nOpts: modelData.subs.reduce((n, s) => n + s.fields.length, 0)
-                        readonly property int nOver: { Settings.data; return modelData.subs.reduce(
-                            (n, s) => n + s.fields.filter(f => Settings.has(f.key)).length, 0) }
+                        readonly property int nOver: { Settings.data; Settings.defaults; return modelData.subs.reduce(
+                            (n, s) => n + s.fields.filter(f => Settings.isOverridden(f.key)).length, 0) }
 
                         // cabeçalho da seção (clique abre/recolhe)
                         Rectangle {
@@ -604,6 +605,38 @@ PanelWindow {
                     border.color: Theme.surface2; border.width: 1
                     Text { id: restoreTxt; anchors.centerIn: parent; text: "Restaurar padrão"; color: Theme.text; font.pixelSize: 12 }
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Settings.reset() }
+                }
+                // Tornar a configuração atual o novo padrão (backup + substitui o default).
+                // 2 cliques: o 1º pede confirmação, o 2º executa; o Timer volta ao normal.
+                Rectangle {
+                    id: makeDefBtn
+                    property int stage: 0   // 0 = normal, 1 = confirmar, 2 = feito
+                    width: makeDefTxt.implicitWidth + 28; height: 32; radius: 8
+                    color: stage === 1 ? Config.accent : Theme.surface0
+                    border.color: Theme.surface2; border.width: 1
+                    Text {
+                        id: makeDefTxt
+                        anchors.centerIn: parent
+                        text: makeDefBtn.stage === 0 ? "Tornar padrão"
+                            : makeDefBtn.stage === 1 ? "Confirmar?" : "Padrão salvo ✓"
+                        color: makeDefBtn.stage === 1 ? Theme.crust : Theme.text
+                        font.pixelSize: 12
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (makeDefBtn.stage === 0) {
+                                makeDefBtn.stage = 1
+                                makeDefReset.restart()
+                            } else if (makeDefBtn.stage === 1) {
+                                Settings.makeDefault()
+                                makeDefBtn.stage = 2
+                                makeDefReset.restart()
+                            }
+                        }
+                    }
+                    Timer { id: makeDefReset; interval: 3000; onTriggered: makeDefBtn.stage = 0 }
                 }
                 // Regenerar temas externos
                 Rectangle {
