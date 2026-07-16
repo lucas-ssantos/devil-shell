@@ -19,7 +19,7 @@ import QtQuick
 Singleton {
     id: root
 
-    // Estado da janela de configurações (a 3ª pétala liga isto).
+    // Estado da janela de configurações (a 3º cristal liga isto).
     property bool open: false
 
     // Mapa de overrides (chave -> valor). Reatribuído inteiro a cada mudança para

@@ -3,23 +3,23 @@ import Quickshell.Services.SystemTray
 import "root:/services"   // AudioService, CaptureService
 import "root:/"           // Config (raiz)
 
-// Uma pétala do menu radial (visual), em forma de CRISTAL/RUNA: silhueta com borda
-// escura, núcleo na cor da pétala e entalhes finos (nervura central + arcos que
-// acompanham o formato). Nas pétalas multi-seção os arcos viram as divisórias dos
+// Um cristal/runa do menu radial (visual): silhueta com borda
+// escura, núcleo na cor do cristal e entalhes finos (nervura central + arcos que
+// acompanham o formato). Nos cristais multi-seção os arcos viram as divisórias dos
 // botões. Lê o estado do controlador `ctx` e os valores customizáveis de `Config`.
 Item {
-    id: petal
+    id: crystal
     property var ctx
     required property int index
     required property var modelData
 
-    readonly property real angleDeg: ctx.petalAngle(index)
+    readonly property real angleDeg: ctx.crystalAngle(index)
     readonly property real angleRad: angleDeg * Math.PI / 180
     readonly property bool hovered: ctx.hoverIndex === index
     readonly property bool selected: ctx.selectedIndex === index
     readonly property bool vanished: ctx.selectedIndex !== -1 && !selected
 
-    // pétalas multi-seção (painéis): áudio/sistema = 3 botões, bandeja = 1 por app
+    // cristais multi-seção (painéis): áudio/sistema = 3 botões, bandeja = 1 por app
     readonly property bool isAudio: modelData.audio ?? false
     readonly property bool isSettings: modelData.settings ?? false
     readonly property bool isTray: modelData.tray ?? false
@@ -27,60 +27,60 @@ Item {
     readonly property int sections: (isAudio || isSettings) ? 3
         : isTray ? SystemTray.items.values.length : 0
 
-    width: ctx.petalW
-    height: ctx.petalH
+    width: ctx.crystalW
+    height: ctx.crystalH
     transformOrigin: Item.Center
     rotation: 90 - angleDeg
     z: 1
 
     property real dist: !ctx.open ? 0
-        : (hovered || selected)   ? ctx.petalDistHover   // expande p/ FORA (base segue na bola)
-        : (ctx.hoverIndex !== -1) ? ctx.petalTouch       // outra em hover -> recua até a bola
-        : ctx.petalDist
+        : (hovered || selected)   ? ctx.crystalDistHover   // expande p/ FORA (base segue na bola)
+        : (ctx.hoverIndex !== -1) ? ctx.crystalTouch       // outra em hover -> recua até a bola
+        : ctx.crystalDist
     x: ctx.ballCX + dist * Math.cos(angleRad) - width / 2
     y: ctx.ballCY - dist * Math.sin(angleRad) - height / 2
 
     opacity: (ctx.open && !vanished && !ctx.audioMode) ? 1.0 : 0.0
 
-    Behavior on dist { NumberAnimation { duration: Config.petalDistAnim; easing.type: Easing.OutBack } }
-    Behavior on opacity { NumberAnimation { duration: Config.petalOpacityAnim } }
+    Behavior on dist { NumberAnimation { duration: Config.crystalDistAnim; easing.type: Easing.OutBack } }
+    Behavior on opacity { NumberAnimation { duration: Config.crystalOpacityAnim } }
 
-    // corpo da pétala (cresce no hover; a base pontuda estende ~5px rumo à bola)
+    // corpo do cristal (cresce no hover; crystalHoverExtend pode estender a base rumo à bola)
     Item {
         id: body
         anchors.fill: parent
-        anchors.bottomMargin: petal.hovered ? -Config.petalHoverExtend : 0
-        Behavior on anchors.bottomMargin { NumberAnimation { duration: Config.petalScaleAnim } }
+        anchors.bottomMargin: crystal.hovered ? -Config.crystalHoverExtend : 0
+        Behavior on anchors.bottomMargin { NumberAnimation { duration: Config.crystalScaleAnim } }
         transformOrigin: Item.Center
-        scale: (petal.hovered || petal.selected) ? Config.petalHoverScale
-             : (petal.ctx.hoverIndex !== -1)     ? petal.ctx.petalShrink
+        scale: (crystal.hovered || crystal.selected) ? Config.crystalHoverScale
+             : (crystal.ctx.hoverIndex !== -1)     ? crystal.ctx.crystalShrink
              : 1.0
-        Behavior on scale { NumberAnimation { duration: Config.petalScaleAnim; easing.type: Easing.OutQuad } }
+        Behavior on scale { NumberAnimation { duration: Config.crystalScaleAnim; easing.type: Easing.OutQuad } }
 
         // o cristal inteiro: glow, borda, núcleo, destaque de seção e entalhes rúnicos.
-        // O canvas é maior que a pétala (margens negativas) p/ o glow não ser cortado;
-        // `pad` desloca o desenho de volta ao retângulo da pétala.
+        // O canvas é maior que o cristal (margens negativas) p/ o glow não ser cortado;
+        // `pad` desloca o desenho de volta ao retângulo do cristal.
         Canvas {
-            id: crystal
-            readonly property real pad: Config.petalGlowBlur + 4
+            id: gem
+            readonly property real pad: Config.crystalGlowBlur + 4
             anchors.fill: parent
             anchors.margins: -pad
             antialiasing: true
 
-            property color bodyColor: petal.hovered ? Config.petalHover : Config.petal
-            property color engraveColor: Config.petalEngrave
-            property color glowColor: Config.petalGlow
-            property real edgeDarken: Config.petalEdgeDarken
-            property real coreFactor: Config.petalCoreFactor
-            property real engraveOp: Config.petalEngraveOpacity
-            property real engraveW: Config.petalEngraveWidth
+            property color bodyColor: crystal.hovered ? Config.crystalHover : Config.crystal
+            property color engraveColor: Config.crystalEngrave
+            property color glowColor: Config.crystalGlow
+            property real edgeDarken: Config.crystalEdgeDarken
+            property real coreFactor: Config.crystalCoreFactor
+            property real engraveOp: Config.crystalEngraveOpacity
+            property real engraveW: Config.crystalEngraveWidth
             property real btnDarken: Config.audioBtnDarken
             property real btnHoverDarken: Config.audioBtnHoverDarken
-            property int  nSections: petal.sections
-            property int  hlSection: (petal.hovered && petal.sections > 0) ? petal.ctx.petalSection : -1
+            property int  nSections: crystal.sections
+            property int  hlSection: (crystal.hovered && crystal.sections > 0) ? crystal.ctx.crystalSection : -1
             // intensidade do glow (0–1): fraco em repouso, cheio no hover/seleção
-            property real glowAmt: (petal.hovered || petal.selected) ? 1.0 : Config.petalGlowRest
-            Behavior on glowAmt { NumberAnimation { duration: Config.petalScaleAnim } }
+            property real glowAmt: (crystal.hovered || crystal.selected) ? 1.0 : Config.crystalGlowRest
+            Behavior on glowAmt { NumberAnimation { duration: Config.crystalScaleAnim } }
 
             onBodyColorChanged: requestPaint()
             onEngraveColorChanged: requestPaint()
@@ -127,7 +127,7 @@ Item {
                 // borda (silhueta externa) com GLOW: a sombra do próprio path faz o halo
                 crystalPath(g, 1.0, 0.5, h)
                 g.shadowColor = Qt.rgba(glowColor.r, glowColor.g, glowColor.b, 0.9 * glowAmt)
-                g.shadowBlur = Config.petalGlowBlur * glowAmt
+                g.shadowBlur = Config.crystalGlowBlur * glowAmt
                 g.fillStyle = Qt.darker(bodyColor, edgeDarken)
                 g.fill()
                 g.fill()   // 2ª passada reforça o halo
@@ -136,7 +136,7 @@ Item {
 
                 // núcleo (nos painéis multi-seção fica um tom mais escuro = clicável)
                 crystalPath(g, coreFactor, 0.06 * h, 0.97 * h)
-                g.fillStyle = petal.multi ? Qt.darker(bodyColor, btnDarken) : bodyColor
+                g.fillStyle = crystal.multi ? Qt.darker(bodyColor, btnDarken) : bodyColor
                 g.fill()
 
                 // daqui em diante tudo é recortado pela silhueta
@@ -162,7 +162,7 @@ Item {
                 g.moveTo(cx, 0.06 * h)
                 g.lineTo(cx, 0.97 * h)
                 g.stroke()
-                // arcos nas divisas das seções (painéis) ou decorativos (pétala comum)
+                // arcos nas divisas das seções (painéis) ou decorativos (cristal comum)
                 let ts = []
                 if (nSections > 1)
                     for (let k = 1; k < nSections; k++) ts.push(k / nSections)
@@ -189,7 +189,7 @@ Item {
 
         // ── Painel de áudio: 3 botões (só ícones; divisórias/destaque vêm do cristal) ──
         Item {
-            visible: petal.isAudio
+            visible: crystal.isAudio
             anchors.fill: parent
             anchors.margins: Config.audioBtnMargin
 
@@ -200,12 +200,12 @@ Item {
                     required property int index
                     readonly property bool muted: index === 0 ? AudioService.sinkMuted
                                                 : index === 1 ? AudioService.sourceMuted : false
-                    rotation: -petal.rotation
+                    rotation: -crystal.rotation
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
                     font.family: Config.iconFont
                     font.pixelSize: Config.audioIconSize
-                    color: Config.petalIcon
+                    color: Config.crystalIcon
                     opacity: muted ? 0.4 : 1.0
                     text: index === 0 ? (muted ? Config.iconOutputMuted : Config.iconOutput)
                         : index === 1 ? (muted ? Config.iconInputMuted : Config.iconInput)
@@ -216,7 +216,7 @@ Item {
 
         // ── Painel de sistema: 3 botões (configurações + gravação + toggle de lock) ──
         Item {
-            visible: petal.isSettings
+            visible: crystal.isSettings
             anchors.fill: parent
             anchors.margins: Config.audioBtnMargin
 
@@ -228,13 +228,13 @@ Item {
                     readonly property bool rec: index === 1 && CaptureService.recording
                     // lâmpada "acesa" (cor de acento) quando o lock/idle está inibido
                     readonly property bool lampOn: index === 2 && IdleService.inhibited
-                    rotation: -petal.rotation
+                    rotation: -crystal.rotation
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
                     font.family: Config.iconFont
                     font.pixelSize: Config.audioIconSize
                     color: rec ? Config.captureRecColor
-                         : lampOn ? Config.idleOnColor : Config.petalIcon
+                         : lampOn ? Config.idleOnColor : Config.crystalIcon
                     opacity: (index === 2 && !IdleService.inhibited) ? 0.55 : 1.0
                     text: index === 0 ? Config.iconConfig
                         : index === 1 ? (rec ? Config.iconRecording : Config.iconRecord)
@@ -243,10 +243,10 @@ Item {
             }
         }
 
-        // ── Painel da bandeja (system tray): 1 seção por app (só na pétala da bandeja) ──
+        // ── Painel da bandeja (system tray): 1 seção por app (só no cristal da bandeja) ──
         Item {
             id: trayPanel
-            visible: petal.isTray
+            visible: crystal.isTray
             anchors.fill: parent
             anchors.margins: Config.audioBtnMargin
             readonly property int count: SystemTray.items.values.length
@@ -256,11 +256,11 @@ Item {
             Text {
                 visible: trayPanel.count === 0
                 anchors.centerIn: parent
-                rotation: -petal.rotation
+                rotation: -crystal.rotation
                 text: Config.iconTray
                 font.family: Config.iconFont
                 font.pixelSize: Config.audioIconSize
-                color: Config.petalIcon
+                color: Config.crystalIcon
                 opacity: 0.5
             }
             // ícones dos apps (item k = seção k; seção 0 junto à bola = embaixo)
@@ -279,7 +279,7 @@ Item {
                         // de apps com SNI torto, ex. pasystray, que erram no IconName)
                         visible: status === Image.Ready
                         anchors.centerIn: parent
-                        rotation: -petal.rotation
+                        rotation: -crystal.rotation
                         source: trayCell.modelData.icon
                         sourceSize.width: Config.trayIconSize
                         sourceSize.height: Config.trayIconSize
@@ -292,25 +292,25 @@ Item {
                     Text {
                         visible: trayImg.status !== Image.Ready
                         anchors.centerIn: parent
-                        rotation: -petal.rotation
+                        rotation: -crystal.rotation
                         text: (trayCell.modelData.title || trayCell.modelData.id || "?").charAt(0).toUpperCase()
                         font.pixelSize: Config.trayIconSize - 2
                         font.bold: true
-                        color: Config.petalIcon
+                        color: Config.crystalIcon
                     }
                 }
             }
         }
     }
 
-    // ── Pétala normal: ícone único ──
+    // ── Cristal normal: ícone único ──
     Text {
-        visible: !petal.multi
+        visible: !crystal.multi
         anchors.centerIn: parent
-        rotation: -petal.rotation
-        text: petal.modelData.icon ?? ""
-        font.pixelSize: Config.petalIconSize
-        color: Config.petalIcon
+        rotation: -crystal.rotation
+        text: crystal.modelData.icon ?? ""
+        font.pixelSize: Config.crystalIconSize
+        color: Config.crystalIcon
     }
 
 }

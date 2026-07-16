@@ -3,12 +3,12 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.SystemTray
 import QtQuick
-import "root:/ui"         // MenuBall, Petal, GothicCorners, AudioMenu, AudioDevices, TrayMenu
+import "root:/ui"         // MenuBall, Crystal, GothicCorners, AudioMenu, AudioDevices, TrayMenu
 import "root:/cava"       // CavaRing
 import "root:/services"   // AudioService, CaptureService
 import "root:/"           // Config (raiz)
 
-// Janela do shell (camada de cima): bola/menu, pétalas, cava radial, barra e TODA a
+// Janela do shell (camada de cima): bola/menu, cristais, cava radial, barra e TODA a
 // lógica de interação (hover/clique/scroll).
 // Funciona como "controlador": os componentes visuais recebem `win` e leem o estado daqui.
 PanelWindow {
@@ -16,7 +16,7 @@ PanelWindow {
 
     // ── Entradas ──
     property var modelData          // a screen (monitor)
-    property var menuItems: []      // itens das pétalas
+    property var menuItems: []      // itens dos cristais
     property var niri               // serviço NiriService
     property var levels: []         // níveis do cava
 
@@ -36,20 +36,20 @@ PanelWindow {
     readonly property real ballCYOpen: height - ballRadius
     property real ballCY: open ? ballCYOpen : ballCYRest
     Behavior on ballCY { NumberAnimation { duration: Config.ballAnim; easing.type: Easing.OutCubic } }
-    readonly property real petalW: Config.petalW
-    readonly property real petalH: Config.petalH
-    readonly property real petalDist: ballRadius + Config.petalGap + petalH / 2
-    // no hover a pétala escala em torno do centro; empurrá-la p/ fora na mesma medida
+    readonly property real crystalW: Config.crystalW
+    readonly property real crystalH: Config.crystalH
+    readonly property real crystalDist: ballRadius + Config.crystalGap + crystalH / 2
+    // no hover o cristal escala em torno do centro; empurrá-lo p/ fora na mesma medida
     // mantém a BASE colada na bola e faz a expansão crescer só rumo à ponta
-    readonly property real petalDistHover: petalDist + petalH * (Config.petalHoverScale - 1) / 2
-    readonly property real petalShrink: Config.petalShrink
-    readonly property real petalTouch: ballRadius + petalH * petalShrink / 2
-    readonly property real hitOuterR: petalDistHover + petalH * Config.petalHoverScale / 2 + Config.hitMargin
+    readonly property real crystalDistHover: crystalDist + crystalH * (Config.crystalHoverScale - 1) / 2
+    readonly property real crystalShrink: Config.crystalShrink
+    readonly property real crystalTouch: ballRadius + crystalH * crystalShrink / 2
+    readonly property real hitOuterR: crystalDistHover + crystalH * Config.crystalHoverScale / 2 + Config.hitMargin
     readonly property real menuHalf: hitOuterR + Config.menuMargin
     readonly property real dotRingR: ballRadius * Config.dotRingFactor
     readonly property real gothicR: Config.gothicR
-    property real petalRotation: 0
-    Behavior on petalRotation { NumberAnimation { duration: Config.petalRotAnim; easing.type: Easing.OutCubic } }
+    property real crystalRotation: 0
+    Behavior on crystalRotation { NumberAnimation { duration: Config.crystalRotAnim; easing.type: Easing.OutCubic } }
 
     // ── Estado de abertura ──────────────────────────────
     property bool pinned: false
@@ -58,7 +58,7 @@ PanelWindow {
     property int  hoverIndex: -1
     property int  selectedIndex: -1
     property bool audioMode: false      // submenu de áudio (config) aberto
-    property int  petalSection: -1      // seção da pétala multi-botão sob o cursor
+    property int  crystalSection: -1      // seção do cristal multi-botão sob o cursor
     property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
     // a bola fica aberta tb enquanto um popup (tray/áudio) estiver visível (não recolher sozinha)
@@ -117,19 +117,19 @@ PanelWindow {
             "niri msg action focus-monitor '" + modelData.name + "'; niri msg action focus-workspace " + n])
     }
 
-    // ── Pétalas multi-botão (áudio/sistema) ─────────────
-    // seção (0 = junto à bola … n-1 = na ponta) sob o cursor, dividindo a pétala em n.
+    // ── Cristais multi-botão (áudio/sistema) ─────────────
+    // seção (0 = junto à bola … n-1 = na ponta) sob o cursor, dividindo o cristal em n.
     // Usa a geometria do HOVER (escalada e empurrada p/ fora), já que as seções só
-    // importam com o cursor na pétala — as faixas batem com os slots visuais.
-    function petalSectionAt(mx, my, n) {
+    // importam com o cursor no cristal — as faixas batem com os slots visuais.
+    function crystalSectionAt(mx, my, n) {
         const dx = mx - ballCX, dy = ballCY - my
         const r = Math.sqrt(dx * dx + dy * dy)
-        const half = petalH * Config.petalHoverScale / 2
-        const r0 = petalDistHover - half, r1 = petalDistHover + half
+        const half = crystalH * Config.crystalHoverScale / 2
+        const r0 = crystalDistHover - half, r1 = crystalDistHover + half
         return Math.max(0, Math.min(n - 1, Math.floor((r - r0) / (r1 - r0) * n)))
     }
-    // nº de seções da pétala i (áudio=3, sistema=3, bandeja=nº de apps, demais=0)
-    function petalSections(i) {
+    // nº de seções do cristal i (áudio=3, sistema=3, bandeja=nº de apps, demais=0)
+    function crystalSections(i) {
         if (i === audioIndex) return 3
         if (i === settingsIndex) return 3
         if (i === trayIndex) return SystemTray.items.values.length
@@ -147,15 +147,15 @@ PanelWindow {
     }
 
     // ── Hit-test (tudo por posição do cursor) ───────────
-    // pétalas em LEQUE simétrico: o centro do leque fica em petalStartDeg (90=topo) e
-    // elas abrem para os lados a cada petalStepDeg; nº ímpar põe uma pétala no centro,
+    // cristais em LEQUE simétrico: o centro do leque fica em crystalStartDeg (90=topo) e
+    // elas abrem para os lados a cada crystalStepDeg; nº ímpar põe um cristal no centro,
     // nº par deixa um vão no centro (as duas do meio a ±passo/2). O scroll gira o leque.
     // (0°=direita, 90°=topo, 180°=esquerda; o ícone fica sempre na vertical pela contra-rotação)
-    function petalAngle(i) {
+    function crystalAngle(i) {
         const k = i - (menuItems.length - 1) / 2   // deslocamento a partir do centro do leque
-        return Config.petalStartDeg + Config.petalDir * k * Config.petalStepDeg + petalRotation
+        return Config.crystalStartDeg + Config.crystalDir * k * Config.crystalStepDeg + crystalRotation
     }
-    function petalAt(mx, my) {
+    function crystalAt(mx, my) {
         const dx = mx - ballCX, dy = ballCY - my
         const r = Math.sqrt(dx * dx + dy * dy)
         const n = menuItems.length
@@ -163,10 +163,10 @@ PanelWindow {
         const theta = Math.atan2(dy, dx) * 180 / Math.PI
         let best = -1, bestDiff = 1e9
         for (let i = 0; i < n; i++) {
-            const d = Math.abs(((theta - petalAngle(i) + 540) % 360) - 180)
+            const d = Math.abs(((theta - crystalAngle(i) + 540) % 360) - 180)
             if (d < bestDiff) { bestDiff = d; best = i }
         }
-        return bestDiff <= Config.petalStepDeg / 2 ? best : -1   // tolerância = metade do passo
+        return bestDiff <= Config.crystalStepDeg / 2 ? best : -1   // tolerância = metade do passo
     }
     // segmento do anel tracejado de workspaces sob o cursor (banda radial + setor
     // angular; o arco i é centrado em -90° + i·slot, casando com o desenho no MenuBall)
@@ -195,16 +195,16 @@ PanelWindow {
     function refreshHover() {
         const mx = hoverMA.mouseX, my = hoverMA.mouseY
         if (!hoverMA.containsMouse) {
-            overBall = false; hoverIndex = -1; petalSection = -1; audioSliderHover = -1
+            overBall = false; hoverIndex = -1; crystalSection = -1; audioSliderHover = -1
         } else {
             overBall = overBallAt(mx, my)
             if (audioMode) {
-                hoverIndex = -1; petalSection = -1
+                hoverIndex = -1; crystalSection = -1
                 audioSliderHover = overBall ? -1 : audioSliderAt(mx, my)
             } else {
-                hoverIndex = overBall ? -1 : petalAt(mx, my)
-                const ns = petalSections(hoverIndex)
-                petalSection = ns > 0 ? petalSectionAt(mx, my, ns) : -1
+                hoverIndex = overBall ? -1 : crystalAt(mx, my)
+                const ns = crystalSections(hoverIndex)
+                crystalSection = ns > 0 ? crystalSectionAt(mx, my, ns) : -1
                 audioSliderHover = -1
             }
         }
@@ -212,7 +212,7 @@ PanelWindow {
         else hoverCloseTimer.restart()
     }
 
-    // processo p/ comandos one-shot (niri msg, ações das pétalas)
+    // processo p/ comandos one-shot (niri msg, ações dos cristais)
     Process { id: proc }
 
     // ── Foco da janela do app a partir do tray (esquerdo) ──────────────
@@ -261,7 +261,7 @@ PanelWindow {
     // menu estilizado do item da bandeja (system tray), aberto no clique direito
     TrayMenu { id: trayMenu; ctx: win }
 
-    // seletor de dispositivo de áudio (direito no headphone/mic da pétala de áudio)
+    // seletor de dispositivo de áudio (direito no headphone/mic do cristal de áudio)
     AudioDevices { id: audioDevices; ctx: win }
 
     // ESC fecha todos os menus (a janela só recebe o teclado quando há um menu aberto)
@@ -283,7 +283,7 @@ PanelWindow {
 
     // ── Componentes visuais ─────────────────────────────
     // CavaRing (círculo Cavasik): à frente das janelas do niri (a ShellWindow é camada
-    // Top) e atrás de TODO o shell (z 0 < pétala z1 < barra/gótico z2 < bola z3 …).
+    // Top) e atrás de TODO o shell (z 0 < cristal z1 < barra/gótico z2 < bola z3 …).
     CavaRing {
         z: 0
         levels: win.levels
@@ -293,9 +293,9 @@ PanelWindow {
         rMax: Config.cavaRadMax
     }
 
-    Repeater {                                              // pétalas
+    Repeater {                                              // cristais
         model: win.menuItems
-        delegate: Petal { ctx: win }
+        delegate: Crystal { ctx: win }
     }
 
     AudioMenu { ctx: win }                                  // submenu de áudio (sliders)
@@ -353,11 +353,11 @@ PanelWindow {
             // Botão direito: bandeja -> menu do app; áudio -> seletor de dispositivo
             if (mouse.button === Qt.RightButton) {
                 if (win.audioMode) return   // ignora durante o submenu de sliders
-                const rpi = win.petalAt(mouseX, mouseY)
+                const rpi = win.crystalAt(mouseX, mouseY)
                 if (rpi === win.trayIndex) {
                     if (trayMenu.visible) { trayMenu.visible = false; return }   // direito de novo fecha
                     const items = SystemTray.items.values
-                    const s = items.length > 0 ? win.petalSectionAt(mouseX, mouseY, items.length) : -1
+                    const s = items.length > 0 ? win.crystalSectionAt(mouseX, mouseY, items.length) : -1
                     const it = s >= 0 ? items[s] : null
                     if (it && it.menu) {
                         win.dismissed = false                                   // garante a bola junto do menu
@@ -365,13 +365,13 @@ PanelWindow {
                     }
                 } else if (rpi === win.audioIndex) {
                     if (audioDevices.visible) { audioDevices.visible = false; return }  // direito de novo fecha
-                    const s = win.petalSectionAt(mouseX, mouseY, 3)
+                    const s = win.crystalSectionAt(mouseX, mouseY, 3)
                     win.dismissed = false
                     if (s === 2)      audioDevices.openAt("sink",   Math.round(mouseX), Math.round(mouseY))  // headphone -> saídas
                     else if (s === 1) audioDevices.openAt("source", Math.round(mouseX), Math.round(mouseY))  // mic -> entradas
                 } else if (rpi === win.settingsIndex) {
-                    // pétala de Sistema: sobre a lâmpada (seção 0) o direito também faz o toggle
-                    if (win.petalSectionAt(mouseX, mouseY, 3) === 0) {
+                    // cristal de Sistema: sobre a lâmpada (seção 0) o direito também faz o toggle
+                    if (win.crystalSectionAt(mouseX, mouseY, 3) === 0) {
                         IdleService.toggle()
                     }
                 }
@@ -400,25 +400,25 @@ PanelWindow {
                 if (win.audioSliderAt(mouseX, mouseY) < 0) win.pinned = false
                 return
             }
-            // 4) pétala?
-            const pi = win.petalAt(mouseX, mouseY)
+            // 4) cristal?
+            const pi = win.crystalAt(mouseX, mouseY)
             if (pi >= 0) {
                 if (pi === win.audioIndex) {
-                    // pétala de áudio: seção define a ação
-                    const s = win.petalSectionAt(mouseX, mouseY, 3)
+                    // cristal de áudio: seção define a ação
+                    const s = win.crystalSectionAt(mouseX, mouseY, 3)
                     if (s === 2)      AudioService.toggleSinkMute()    // headphone (saída)
                     else if (s === 1) AudioService.toggleSourceMute()  // microfone (entrada)
                     else if (s === 0) win.audioMode = true             // config (abre sliders)
                 } else if (pi === win.trayIndex) {
-                    // pétala da bandeja: esquerdo = traz/foca a janela do app (via niri)
+                    // cristal da bandeja: esquerdo = traz/foca a janela do app (via niri)
                     const items = SystemTray.items.values
                     if (items.length > 0) {
-                        const it = items[win.petalSectionAt(mouseX, mouseY, items.length)]
+                        const it = items[win.crystalSectionAt(mouseX, mouseY, items.length)]
                         if (it) win.focusTrayApp(it)
                     }
                 } else if (pi === win.settingsIndex) {
-                    // pétala de sistema: topo=configurações, meio=gravar/parar, base=toggle de lock
-                    const s = win.petalSectionAt(mouseX, mouseY, 3)
+                    // cristal de sistema: topo=configurações, meio=gravar/parar, base=toggle de lock
+                    const s = win.crystalSectionAt(mouseX, mouseY, 3)
                     if (s === 2) {
                         Settings.open = true                       // engrenagem -> janela de configurações
                         win.pinned = false; win.dismissed = true
@@ -469,9 +469,9 @@ PanelWindow {
                     else if (win.audioSliderHover === 1) AudioService.addSourceVolume(-dir * Config.volStep)
                     return
                 }
-                // na região das pétalas (aberto, fora da bola) -> gira o anel
+                // na região dos cristais (aberto, fora da bola) -> gira o anel
                 if (win.open && !win.overBall) {
-                    win.petalRotation += dir * Config.petalStepDeg
+                    win.crystalRotation += dir * Config.crystalStepDeg
                     return
                 }
                 // sobre a bola (ou fechado) -> troca de workspace DESTE monitor

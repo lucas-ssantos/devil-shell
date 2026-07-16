@@ -10,7 +10,7 @@ import "root:/windows"    // ShellWindow, NotificationWindow
 import "root:/ui"         // TopCapsules
 
 // Ponto de entrada: só liga os serviços, os dados e as janelas por monitor.
-// A lógica/visual fica nos componentes (ShellWindow, MenuBall, Petal,
+// A lógica/visual fica nos componentes (ShellWindow, MenuBall, Crystal,
 // GothicCorners, CavaWindow, CavaBars, CavaRing, CavaService, NiriService).
 Scope {
     id: root
@@ -30,7 +30,7 @@ Scope {
     }
 
     // ── Dados (data-driven) ──
-    //  Pétalas do menu radial (a ordem define o anel).
+    //  Cristais do menu radial (a ordem define o leque).
     //  Item: { icon: "símbolo", label: "nome", command: [argv] }  (command [] = sem ação)
     //  `spawn: "cmd"` -> lança pelo compositor (niri spawn-sh) c/ ambiente Wayland correto (p/ apps gráficos).
     readonly property var menuItems: [
@@ -43,10 +43,10 @@ Scope {
     // ── Notificações: uma única janela no topo-centro do monitor focado ──
     NotificationWindow { niri: niriSvc }
 
-    // ── Configurações: overlay modal único no centro do monitor focado (pétala de Sistema) ──
+    // ── Configurações: overlay modal único no centro do monitor focado (cristal de Sistema) ──
     SettingsWindow { niri: niriSvc }
 
-    // ── Lançador próprio (pétala "Lançador" / `qs ipc call launcher toggle`) ──
+    // ── Lançador próprio (cristal "Lançador" / `qs ipc call launcher toggle`) ──
     LauncherWindow { niri: niriSvc }
 
     // ── Uma instância por monitor: janela do cava (camada de baixo) + shell (camada de cima) ──

@@ -5,7 +5,7 @@ import "root:/themes"     // Theme (paleta ativa); subpasta -> precisa de import
 import "root:/services"   // Settings (overrides do usuário, da janela de configurações)
 
 // Configuração central (singleton). Os valores literais abaixo são os PADRÕES; cada
-// um pode ser sobrescrito em runtime pela janela de configurações (3ª pétala), que
+// um pode ser sobrescrito em runtime pela janela de configurações (3º cristal), que
 // grava em ~/.config/quickshell/settings.json via Settings. A regra é sempre:
 //   readonly property <t> nome: Settings.get("nome", <padrão>)
 // Assim, sem override, vale o padrão; "Restaurar padrão" só apaga os overrides.
@@ -29,26 +29,26 @@ Singleton {
     readonly property real ballSigilFactor: Settings.get("ballSigilFactor", 0.52) // raio do sigilo gravado na bola (× ballRadius)
     readonly property real gothicR: Settings.get("gothicR", 32)                 // raio dos cantos góticos (bola ↔ barra)
 
-    // ── Pétalas (cristal/runa) ──────────────────────────
-    readonly property real petalW: Settings.get("petalW", 32)
-    readonly property real petalH: Settings.get("petalH", 96)
-    readonly property real petalGap: Settings.get("petalGap", -2)                  // folga bola → pétala (negativa = base enfiada sob a bola, pétala "anexada")
-    readonly property real petalCoreFactor: Settings.get("petalCoreFactor", 0.6)   // largura do núcleo do cristal (× petalW)
-    readonly property real petalEdgeDarken: Settings.get("petalEdgeDarken", 1.5)   // borda do cristal (× mais escura que o corpo)
-    readonly property real petalEngraveOpacity: Settings.get("petalEngraveOpacity", 0.55) // opacidade dos entalhes rúnicos
-    readonly property real petalEngraveWidth: Settings.get("petalEngraveWidth", 1) // espessura dos entalhes (px)
-    readonly property real petalGlowBlur: Settings.get("petalGlowBlur", 12)        // raio do glow do cristal (px; hover = cheio)
-    readonly property real petalGlowRest: Settings.get("petalGlowRest", 0.25)      // intensidade do glow em repouso (0–1)
-    readonly property real petalShrink: Settings.get("petalShrink", 0.8)           // escala das não-hover
-    readonly property real petalHoverScale: Settings.get("petalHoverScale", 1.2)
-    readonly property real petalHoverExtend: Settings.get("petalHoverExtend", 0)   // quanto a pétala em hover estende p/ a bola (px; c/ base já sob a bola, 0 evita afundar os botões)
-    readonly property real petalStartDeg: Settings.get("petalStartDeg", 90)        // CENTRO do leque (90=topo); as pétalas abrem simétricas a partir daqui
-    readonly property real petalStepDeg: Settings.get("petalStepDeg", 30)          // passo entre pétalas (e do scroll)
-    readonly property int  petalDir: Settings.get("petalDir", -1)                  // sentido do anel (+1 / -1)
+    // ── Cristais (runa) ─────────────────────────────────
+    readonly property real crystalW: Settings.get("crystalW", 32)
+    readonly property real crystalH: Settings.get("crystalH", 96)
+    readonly property real crystalGap: Settings.get("crystalGap", -2)                  // folga bola → cristal (negativa = base enfiada sob a bola, cristal "anexado")
+    readonly property real crystalCoreFactor: Settings.get("crystalCoreFactor", 0.6)   // largura do núcleo do cristal (× crystalW)
+    readonly property real crystalEdgeDarken: Settings.get("crystalEdgeDarken", 1.5)   // borda do cristal (× mais escura que o corpo)
+    readonly property real crystalEngraveOpacity: Settings.get("crystalEngraveOpacity", 0.55) // opacidade dos entalhes rúnicos
+    readonly property real crystalEngraveWidth: Settings.get("crystalEngraveWidth", 1) // espessura dos entalhes (px)
+    readonly property real crystalGlowBlur: Settings.get("crystalGlowBlur", 12)        // raio do glow do cristal (px; hover = cheio)
+    readonly property real crystalGlowRest: Settings.get("crystalGlowRest", 0.25)      // intensidade do glow em repouso (0–1)
+    readonly property real crystalShrink: Settings.get("crystalShrink", 0.8)           // escala dos não-hover
+    readonly property real crystalHoverScale: Settings.get("crystalHoverScale", 1.2)
+    readonly property real crystalHoverExtend: Settings.get("crystalHoverExtend", 0)   // quanto o cristal em hover estende p/ a bola (px; c/ base já sob a bola, 0 evita afundar os botões)
+    readonly property real crystalStartDeg: Settings.get("crystalStartDeg", 90)        // CENTRO do leque (90=topo); os cristais abrem simétricos a partir daqui
+    readonly property real crystalStepDeg: Settings.get("crystalStepDeg", 30)          // passo entre cristais (e do scroll)
+    readonly property int  crystalDir: Settings.get("crystalDir", -1)                  // sentido do leque (+1 / -1)
     readonly property real hitMargin: Settings.get("hitMargin", 8)                 // folga radial do hit-test
     readonly property real menuMargin: Settings.get("menuMargin", 16)              // folga lateral da máscara quando aberto
 
-    // ── Popup de energia (pétala de Sistema) ───────────
+    // ── Popup de energia (cristal de Sistema) ───────────
     readonly property real layoutMenuW: Settings.get("layoutMenuW", 200)   // largura do popup de energia
 
     // ── Cava ────────────────────────────────────────────
@@ -64,7 +64,7 @@ Singleton {
     readonly property color cavaColor3: Theme.cavaTip     // pontas (picos altos, ethereal)
     readonly property color cavaWave:   Theme.cavaMid     // área das ondas lineares (CavaBars)
 
-    // ── Áudio (pétala de áudio) ─────────────────────────
+    // ── Áudio (cristal de áudio) ─────────────────────────
     readonly property string iconFont: Settings.get("iconFont", "JetBrainsMono Nerd Font")   // fonte dos ícones (tem os glifos + logos de distro)
     readonly property string iconOutput: Settings.get("iconOutput", "")            // volume (headphone/saída)
     readonly property string iconOutputMuted: Settings.get("iconOutputMuted", "")  // volume mudo
@@ -88,14 +88,14 @@ Singleton {
     readonly property color  audioSliderFill: Settings.get("audioSliderFill", Theme.mauve)
     readonly property color  audioSliderText: Settings.get("audioSliderText", Theme.text)
 
-    // ── Gravação de tela (pétala de Sistema) ────────
+    // ── Gravação de tela (cristal de Sistema) ────────
     readonly property string iconRecord: Settings.get("iconRecord", "")           // filmadora (gravar)
     readonly property string iconRecording: Settings.get("iconRecording", "")     // parar (enquanto grava)
-    readonly property color  captureRecColor: Settings.get("captureRecColor", Theme.red)  // vermelho enquanto grava (pétala de Sistema)
+    readonly property color  captureRecColor: Settings.get("captureRecColor", Theme.red)  // vermelho enquanto grava (cristal de Sistema)
 
-    // ── Bandeja / system tray (pétala da bandeja) ───────
+    // ── Bandeja / system tray (cristal da bandeja) ───────
     readonly property string iconTray: Settings.get("iconTray", "󰀻")       // ícone genérico quando a bandeja está vazia
-    readonly property int    trayIconSize: Settings.get("trayIconSize", 16)     // tamanho dos ícones dos apps na pétala
+    readonly property int    trayIconSize: Settings.get("trayIconSize", 16)     // tamanho dos ícones dos apps no cristal
 
     // menu estilizado do clique direito (TrayMenu.qml)
     readonly property color  trayMenuBg: Settings.get("trayMenuBg", Theme.base)
@@ -111,7 +111,7 @@ Singleton {
     readonly property real   trayMenuSepH: Settings.get("trayMenuSepH", 9)      // altura da faixa do separador
     readonly property int    trayMenuTextSize: Settings.get("trayMenuTextSize", 13)
     readonly property int    trayMenuIconSize: Settings.get("trayMenuIconSize", 16) // ícone dentro do menu
-    readonly property real   trayMenuGap: Settings.get("trayMenuGap", 21)      // folga acima da pétala (o menu abre pra cima)
+    readonly property real   trayMenuGap: Settings.get("trayMenuGap", 21)      // folga acima do cristal (o menu abre pra cima)
     readonly property int    trayMenuAnim: Settings.get("trayMenuAnim", 140)    // duração da animação de entrada do menu (ms)
 
     // ── Lançador (janela própria; substitui o rofi) ─────
@@ -186,18 +186,18 @@ Singleton {
     readonly property real   clockSideGap: Settings.get("clockSideGap", 40)   // distância do centro da bola até a borda interna de cada texto
 
     // ── Fontes (px) ─────────────────────────────────────
-    readonly property int  petalIconSize: Settings.get("petalIconSize", 13)
+    readonly property int  crystalIconSize: Settings.get("crystalIconSize", 13)
     readonly property int  ballNumberSize: Settings.get("ballNumberSize", 18)
     readonly property int  layoutTextSize: Settings.get("layoutTextSize", 12)   // texto dos sliders de áudio
     readonly property int  clockSize: Settings.get("clockSize", 13)
 
     // ── Cores (semânticas → paleta em Theme.qml; override por nome do componente) ──
     readonly property color ball: Settings.get("ball", Theme.crust)
-    readonly property color petal: Settings.get("petal", Theme.maroon)
-    readonly property color petalHover: Settings.get("petalHover", Theme.red)
-    readonly property color petalIcon: Settings.get("petalIcon", Theme.rosewater)   // ícones claros ("branco" da paleta)
-    readonly property color petalEngrave: Settings.get("petalEngrave", Theme.mauve)  // entalhes rúnicos do cristal (nervura/arcos)
-    readonly property color petalGlow: Settings.get("petalGlow", Theme.red)          // glow do cristal (forte no hover)
+    readonly property color crystal: Settings.get("crystal", Theme.maroon)
+    readonly property color crystalHover: Settings.get("crystalHover", Theme.red)
+    readonly property color crystalIcon: Settings.get("crystalIcon", Theme.rosewater)   // ícones claros ("branco" da paleta)
+    readonly property color crystalEngrave: Settings.get("crystalEngrave", Theme.mauve)  // entalhes rúnicos do cristal (nervura/arcos)
+    readonly property color crystalGlow: Settings.get("crystalGlow", Theme.red)          // glow do cristal (forte no hover)
     readonly property color accent: Settings.get("accent", Theme.mauve)
     readonly property color ballText: Settings.get("ballText", Theme.red)          // nº do workspace
     readonly property color ballSigil: Settings.get("ballSigil", Theme.dimGreen)   // sigilo (pentáculo) gravado na bola
@@ -209,10 +209,10 @@ Singleton {
 
     // ── Tempos (ms) ─────────────────────────────────────
     readonly property int  ballAnim: Settings.get("ballAnim", 220)
-    readonly property int  petalRotAnim: Settings.get("petalRotAnim", 220)
-    readonly property int  petalDistAnim: Settings.get("petalDistAnim", 200)
-    readonly property int  petalOpacityAnim: Settings.get("petalOpacityAnim", 150)
-    readonly property int  petalScaleAnim: Settings.get("petalScaleAnim", 130)
+    readonly property int  crystalRotAnim: Settings.get("crystalRotAnim", 220)
+    readonly property int  crystalDistAnim: Settings.get("crystalDistAnim", 200)
+    readonly property int  crystalOpacityAnim: Settings.get("crystalOpacityAnim", 150)
+    readonly property int  crystalScaleAnim: Settings.get("crystalScaleAnim", 130)
     readonly property int  layoutAnim: Settings.get("layoutAnim", 180)   // sliders de áudio
     readonly property int  clockAnim: Settings.get("clockAnim", 150)
     readonly property int  hoverCloseMs: Settings.get("hoverCloseMs", 130)

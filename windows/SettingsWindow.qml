@@ -6,7 +6,7 @@ import "root:/themes"     // Theme
 import "root:/services"   // Settings, ThemeExport
 import "root:/"           // Config
 
-// Janela de configurações do shell (pétala de Sistema). Overlay modal no centro da
+// Janela de configurações do shell (cristal de Sistema). Overlay modal no centro da
 // tela focada: lista TODAS as opções do Config + a escolha de paletas (shell/cava) +
 // overrides de cor crua. Grava tudo via Settings (settings.json). Botões para
 // restaurar o padrão e regenerar os temas externos (kitty/rofi/vesktop…).
@@ -77,11 +77,11 @@ PanelWindow {
         ]},
         { title: "Cores dos componentes", fields: [
             { key: "ball", label: "Bola", ftype: "color" },
-            { key: "petal", label: "Pétala", ftype: "color" },
-            { key: "petalHover", label: "Pétala (hover)", ftype: "color" },
-            { key: "petalIcon", label: "Ícone da pétala", ftype: "color" },
-            { key: "petalEngrave", label: "Entalhes do cristal", ftype: "color" },
-            { key: "petalGlow", label: "Glow do cristal", ftype: "color" },
+            { key: "crystal", label: "Cristal", ftype: "color" },
+            { key: "crystalHover", label: "Cristal (hover)", ftype: "color" },
+            { key: "crystalIcon", label: "Ícone do cristal", ftype: "color" },
+            { key: "crystalEngrave", label: "Entalhes do cristal", ftype: "color" },
+            { key: "crystalGlow", label: "Glow do cristal", ftype: "color" },
             { key: "accent", label: "Acento", ftype: "color" },
             { key: "ballText", label: "Texto da bola", ftype: "color" },
             { key: "ballSigil", label: "Sigilo da bola", ftype: "color" },
@@ -105,26 +105,26 @@ PanelWindow {
             { key: "ballSigilFactor", label: "Raio do sigilo", ftype: "real" },
             { key: "gothicR", label: "Cantos góticos", ftype: "real" }
         ]},
-        { title: "Pétalas", fields: [
-            { key: "petalW", label: "Largura", ftype: "real" },
-            { key: "petalH", label: "Altura", ftype: "real" },
-            { key: "petalGap", label: "Folga bola→pétala", ftype: "real" },
-            { key: "petalShrink", label: "Escala não-hover", ftype: "real" },
-            { key: "petalHoverScale", label: "Escala hover", ftype: "real" },
-            { key: "petalHoverExtend", label: "Extensão hover", ftype: "real" },
-            { key: "petalCoreFactor", label: "Núcleo do cristal", ftype: "real" },
-            { key: "petalEdgeDarken", label: "Escurecer borda", ftype: "real" },
-            { key: "petalEngraveOpacity", label: "Opacidade entalhes", ftype: "real" },
-            { key: "petalEngraveWidth", label: "Espessura entalhes", ftype: "real" },
-            { key: "petalGlowBlur", label: "Raio do glow", ftype: "real" },
-            { key: "petalGlowRest", label: "Glow em repouso (0–1)", ftype: "real" },
-            { key: "petalStartDeg", label: "Centro do leque (°)", ftype: "real" },
-            { key: "petalStepDeg", label: "Passo angular", ftype: "real" },
-            { key: "petalDir", label: "Sentido (+1/-1)", ftype: "int" },
+        { title: "Cristais", fields: [
+            { key: "crystalW", label: "Largura", ftype: "real" },
+            { key: "crystalH", label: "Altura", ftype: "real" },
+            { key: "crystalGap", label: "Folga bola→cristal", ftype: "real" },
+            { key: "crystalShrink", label: "Escala não-hover", ftype: "real" },
+            { key: "crystalHoverScale", label: "Escala hover", ftype: "real" },
+            { key: "crystalHoverExtend", label: "Extensão hover", ftype: "real" },
+            { key: "crystalCoreFactor", label: "Núcleo do cristal", ftype: "real" },
+            { key: "crystalEdgeDarken", label: "Escurecer borda", ftype: "real" },
+            { key: "crystalEngraveOpacity", label: "Opacidade entalhes", ftype: "real" },
+            { key: "crystalEngraveWidth", label: "Espessura entalhes", ftype: "real" },
+            { key: "crystalGlowBlur", label: "Raio do glow", ftype: "real" },
+            { key: "crystalGlowRest", label: "Glow em repouso (0–1)", ftype: "real" },
+            { key: "crystalStartDeg", label: "Centro do leque (°)", ftype: "real" },
+            { key: "crystalStepDeg", label: "Passo angular", ftype: "real" },
+            { key: "crystalDir", label: "Sentido (+1/-1)", ftype: "int" },
             { key: "hitMargin", label: "Folga do hit-test", ftype: "real" },
             { key: "menuMargin", label: "Folga da máscara", ftype: "real" },
             { key: "layoutMenuW", label: "Largura menu energia", ftype: "real" },
-            { key: "petalIconSize", label: "Tamanho do ícone", ftype: "int" }
+            { key: "crystalIconSize", label: "Tamanho do ícone", ftype: "int" }
         ]},
         { title: "CAVA", fields: [
             { key: "cavaMaxH", label: "Altura barras", ftype: "real" },
@@ -183,7 +183,7 @@ PanelWindow {
             { key: "weatherLocation", label: "Local do clima", ftype: "string" }
         ]},
         { title: "Bandeja", fields: [
-            { key: "trayIconSize", label: "Ícone na pétala", ftype: "int" },
+            { key: "trayIconSize", label: "Ícone no cristal", ftype: "int" },
             { key: "trayMenuW", label: "Largura do menu", ftype: "real" },
             { key: "trayMenuRadius", label: "Raio do menu", ftype: "real" },
             { key: "trayMenuPad", label: "Recuo do menu", ftype: "real" },
@@ -244,10 +244,10 @@ PanelWindow {
         ]},
         { title: "Tempos (ms)", fields: [
             { key: "ballAnim", label: "Bola", ftype: "int" },
-            { key: "petalRotAnim", label: "Rotação pétalas", ftype: "int" },
-            { key: "petalDistAnim", label: "Distância pétalas", ftype: "int" },
-            { key: "petalOpacityAnim", label: "Opacidade pétalas", ftype: "int" },
-            { key: "petalScaleAnim", label: "Escala pétalas", ftype: "int" },
+            { key: "crystalRotAnim", label: "Rotação cristais", ftype: "int" },
+            { key: "crystalDistAnim", label: "Distâncio cristals", ftype: "int" },
+            { key: "crystalOpacityAnim", label: "Opacidade cristais", ftype: "int" },
+            { key: "crystalScaleAnim", label: "Escalo cristals", ftype: "int" },
             { key: "layoutAnim", label: "Sliders de áudio", ftype: "int" },
             { key: "clockAnim", label: "Relógio", ftype: "int" },
             { key: "hoverCloseMs", label: "Fechar hover", ftype: "int" },

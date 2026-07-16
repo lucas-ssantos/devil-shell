@@ -6,7 +6,7 @@ import "root:/services"   // Settings (escolha de paleta + overrides de cor crua
 // SELETOR DE TEMA. As paletas cruas (hex) ficam em arquivos próprios, cada uma com o
 // MESMO conjunto de nomes: CrimsonDevil.qml e InfernalRose.qml. Aqui se escolhe qual
 // paleta vai para cada parte do shell:
-//   • shell → tema do shell inteiro (bola, pétalas, menus, notificações, cápsulas…)
+//   • shell → tema do shell inteiro (bola, cristais, menus, notificações, cápsulas…)
 //   • cava  → tema do visualizador CAVA (barras/ondas e círculo); pode ser diferente.
 //
 // A escolha agora vem do Settings (janela de configurações): Settings.themeShell /

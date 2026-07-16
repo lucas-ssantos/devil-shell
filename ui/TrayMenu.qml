@@ -51,7 +51,7 @@ PopupWindow {
         showFallback.restart()
     }
 
-    // abre ACIMA do clique (não sobre a pétala): centrado no x do clique e com a
+    // abre ACIMA do clique (não sobre o cristal): centrado no x do clique e com a
     // base do menu logo acima do ponto clicado.
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2

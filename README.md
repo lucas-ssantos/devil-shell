@@ -4,7 +4,7 @@ Uma "barra" não-convencional para o compositor Wayland **[Niri](https://github.
 (tiling rolável), escrita em **QML** sobre o **[Quickshell](https://quickshell.org)**.
 
 Em vez de uma barra reta, é uma **bola** ancorada no centro-inferior de cada monitor. Em hover/clique
-ela sobe e abre um **menu radial de pétalas**; os **workspaces** aparecem como pontos dentro da bola;
+ela sobe e abre um **menu radial de cristais**; os **workspaces** aparecem como pontos dentro da bola;
 e há um **visualizador de áudio (CAVA)** ao fundo, no estilo do [Cavasik](https://github.com/TheWisker/Cavasik)
 (espectro suave preenchido na barra inferior + um círculo pulsante ao redor da bola).
 
@@ -16,7 +16,7 @@ e há um **visualizador de áudio (CAVA)** ao fundo, no estilo do [Cavasik](http
 
 - **Bola central** com o número do workspace atual e um **anel de pontos** dos workspaces
   (clique troca; scroll sobre a bola troca com wrap 1↔N — no monitor certo).
-- **Menu radial de pétalas** (data-driven, reorganiza sozinho). Configuração atual (1ª → 4ª):
+- **Menu radial de cristais** (data-driven, reorganiza sozinho). Configuração atual (1º → 4º):
   - **1ª — Sistema:** configurações gerais do shell (janela modal), gravação de tela
     (monitor inteiro) e toggle de inibição do lock/idle.
   - **2ª — Lançador:** lançador **próprio** (sem rofi), também acessível por `Mod+D`
@@ -32,7 +32,7 @@ e há um **visualizador de áudio (CAVA)** ao fundo, no estilo do [Cavasik](http
 
 ### 🚀 Lançador próprio
 
-Overlay central no monitor focado (`Mod+D`, pétala do menu, ou `qs ipc call launcher toggle`).
+Overlay central no monitor focado (`Mod+D`, cristal do menu, ou `qs ipc call launcher toggle`).
 O **modo** é derivado do que se digita:
 
 | Digitar | Modo |
@@ -56,7 +56,7 @@ Teclado: `↑↓` navega, `Enter` ativa, `Esc` fecha, `Tab` muda a ordenação n
 |------|----------|
 | **Quickshell** | runtime QML do shell (com suporte a Wayland, Pipewire, DBus). Comando `qs`. |
 | **Niri** | o compositor; o shell usa o IPC `niri msg` para workspaces, foco, screenshot e `spawn-sh`. |
-| **Symbols Nerd Font** | ícones das pétalas de áudio/captura/bandeja (`Config.iconFont`). |
+| **Symbols Nerd Font** | ícones dos cristais de áudio/captura/bandeja (`Config.iconFont`). |
 
 > Este shell é **específico do Niri** — depende do `niri msg` (event-stream/actions) e do
 > comportamento do compositor.
@@ -115,15 +115,15 @@ ao subir, o próprio `qs` sobe os daemons da sessão (wallpaper, bluetooth, idle
 
 Não há build nem testes — é QML interpretado. Quase tudo é ajustável sem mexer na lógica:
 
-- **`Config.qml`** — singleton com **todos** os valores: geometria (bola, pétalas, ângulos),
+- **`Config.qml`** — singleton com **todos** os valores: geometria (bola, cristais, ângulos),
   fontes, tempos de animação, áudio, captura, notificações, e os **nomes semânticos** de cor
-  (`ball`, `petal`, `accent`…).
+  (`ball`, `crystal`, `accent`…).
 - **`themes/`** — o seletor `Theme.qml` + as paletas (`CrimsonDevil`, `InfernalRose`), a única
   fonte dos hex. O `Config` mapeia semântico → paleta (ex.: `accent: Theme.mauve`).
-- **Janela de configurações** (pétala de Sistema) — sobrescreve qualquer valor em runtime
+- **Janela de configurações** (cristal de Sistema) — sobrescreve qualquer valor em runtime
   (persistido em `settings.json`) e regenera os temas dos apps externos.
 
-As pétalas são **data-driven** em `shell.qml` (`menuItems`): adicionar/remover itens reorganiza o
+Os cristais são **data-driven** em `shell.qml` (`menuItems`): adicionar/remover itens reorganiza o
 anel. Um item pode ter `command: [argv]` (exec direto) ou `spawn: "cmd"` (lançado pelo compositor
 via `niri msg action spawn-sh`, para apps gráficos), além de flags especiais (`audio`, `tray`,
 `settings`, `launcher`).
@@ -146,7 +146,7 @@ services/        NiriService, AudioService, CaptureService, MediaService, Weathe
 cava/            CavaService, CavaWindow, CavaBars, CavaRing + cava.conf
 windows/         ShellWindow (UI interativa), NotificationWindow (toasts), SettingsWindow,
                  LauncherWindow (lançador)
-ui/              MenuBall, Petal, GothicCorners, AudioMenu, AudioDevices, TrayMenu,
+ui/              MenuBall, Crystal, GothicCorners, AudioMenu, AudioDevices, TrayMenu,
                  SettingsField, Capsule, TopCapsules
 ```
 

@@ -30,7 +30,7 @@ Singleton {
     readonly property color pink:      "#d4a0b5"   // rosa claro
     readonly property color mauve:     "#c9456d"   // ACENTO (rosa principal)
     readonly property color red:       "#e05c7d"   // vermelho rosado vivo (urgente/erro/mute/rec)
-    readonly property color maroon:    "#7a2040"   // rosa escuro (pétala, ocupado)
+    readonly property color maroon:    "#7a2040"   // rosa escuro (cristal, ocupado)
     readonly property color peach:     "#e88ca8"   // rosa-vivo claro (urgente, p/ distinguir)
     readonly property color yellow:    "#d9b08f"
     readonly property color green:     "#c9456d"   // sem verde no tema → rosa (compat. de nome)
