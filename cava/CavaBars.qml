@@ -23,9 +23,13 @@ Item {
         onPaint: {
             const g = getContext("2d")
             g.reset()
-            const lv = bars.levels
-            const n = lv ? lv.length : 0
-            if (n < 2) return
+            const src = bars.levels
+            const m = src ? src.length : 0
+            if (m < 2) return
+            // Espelha o espectro: graves nas BORDAS do monitor, agudos no CENTRO
+            // (esquerda->centro sobe em frequência; centro->direita desce de volta).
+            const lv = src.concat(src.slice().reverse())
+            const n = lv.length
             const W = width, H = height
             const step = W / (n - 1)
             function px(i) { return i * step }
