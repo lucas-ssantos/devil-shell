@@ -102,6 +102,19 @@ PanelWindow {
             if (tags[i].is_active) return tags[i].index
         return 0
     }
+    // Anel com no mínimo Config.dotMinCount arcos: completa os workspaces reais com
+    // "fantasmas" (vazios, sem workspace do niri por trás). Eles são só visuais: o
+    // scroll troca apenas entre os reais, mas no wrap (último→1) o pontinho do anel
+    // viaja NA DIREÇÃO do scroll, varrendo os fantasmas até chegar no 1.
+    readonly property var allTags: {
+        const out = tags.slice()
+        for (let i = out.length; i < Config.dotMinCount; i++)
+            out.push({ index: i + 1, id: -1, is_active: false, is_urgent: false, client_count: 0, ghost: true })
+        return out
+    }
+    // direção da última troca por scroll (+1/-1); 0 = sem preferência (clique/teclado
+    // → caminho mais curto). Consumida pelo anel do MenuBall ao animar a viagem.
+    property int wsTravelDir: 0
 
     // Troca para o workspace `n` (idx do niri, 1-based) NESTE monitor. O
     // `focus-workspace` do niri age no monitor FOCADO, então, se este monitor não
@@ -171,7 +184,7 @@ PanelWindow {
     // segmento do anel tracejado de workspaces sob o cursor (banda radial + setor
     // angular; o arco i é centrado em -90° + i·slot, casando com o desenho no MenuBall)
     function dotAt(mx, my) {
-        const n = tags.length
+        const n = allTags.length
         if (n === 0) return -1
         const dx = mx - ballCX, dy = my - ballCY
         if (Math.abs(Math.hypot(dx, dy) - dotRingR) > Config.dotHitR) return -1
@@ -381,7 +394,8 @@ PanelWindow {
             // 1) ponto de workspace?
             const di = win.dotAt(mouseX, mouseY)
             if (di >= 0) {
-                win.viewTagHere(win.tags[di].index)   // troca no monitor DESTA bola
+                if (di < win.tags.length)                  // fantasma não tem workspace p/ focar
+                    win.viewTagHere(win.tags[di].index)    // troca no monitor DESTA bola
                 return
             }
             // 2) bola?
@@ -475,12 +489,15 @@ PanelWindow {
                     return
                 }
                 // sobre a bola (ou fechado) -> troca de workspace DESTE monitor
+                // (só entre os reais, com wrap 1↔N; a direção guia a animação do anel)
                 const total = win.tags.length
                 if (total === 0) return
                 const cur = win.activeTag > 0 ? win.activeTag : 1
                 const next = ((cur - 1 + dir + total) % total) + 1
-                if (next !== cur)
+                if (next !== cur) {
+                    win.wsTravelDir = dir
                     win.viewTagHere(next)
+                }
             }
         }
     }

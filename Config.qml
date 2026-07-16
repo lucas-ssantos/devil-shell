@@ -26,6 +26,11 @@ Singleton {
     readonly property real dotArcActiveW: Settings.get("dotArcActiveW", 5)      // espessura do arco do workspace ativo
     readonly property real dotArcGapDeg: Settings.get("dotArcGapDeg", 14)       // vão entre os arcos do anel (graus)
     readonly property real dotHitR: Settings.get("dotHitR", 9)                  // meia-banda radial de clique do anel
+    readonly property int  dotMinCount: Settings.get("dotMinCount", 6)          // mínimo de arcos no anel (completa com "fantasmas" vazios; o scroll passa por eles até dar a volta)
+    readonly property real dotArcGapClosedDeg: Settings.get("dotArcGapClosedDeg", 26) // vão entre arcos com a bola RECOLHIDA (maior = arcos menores)
+    readonly property real dotClosedScale: Settings.get("dotClosedScale", 0.6)  // escala da espessura dos arcos com a bola recolhida
+    readonly property real dotOpenScale: Settings.get("dotOpenScale", 1.15)     // escala da espessura com a bola aberta (o ativo cresce junto)
+    readonly property real dotOrbR: Settings.get("dotOrbR", 4)                  // raio do pontinho orbital do anel (estilo spinner)
     readonly property real ballSigilFactor: Settings.get("ballSigilFactor", 0.52) // raio do sigilo gravado na bola (× ballRadius)
     readonly property real gothicR: Settings.get("gothicR", 32)                 // raio dos cantos góticos (bola ↔ barra)
 
@@ -210,6 +215,7 @@ Singleton {
 
     // ── Tempos (ms) ─────────────────────────────────────
     readonly property int  ballAnim: Settings.get("ballAnim", 220)
+    readonly property int  dotTravelMs: Settings.get("dotTravelMs", 130)         // viagem do pontinho do anel POR SLOT (efeito "loading")
     readonly property int  crystalRotAnim: Settings.get("crystalRotAnim", 220)
     readonly property int  crystalDistAnim: Settings.get("crystalDistAnim", 200)
     readonly property int  crystalOpacityAnim: Settings.get("crystalOpacityAnim", 150)
