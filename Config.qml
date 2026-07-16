@@ -114,6 +114,7 @@ Singleton {
     readonly property real   launcherRadius: Settings.get("launcherRadius", 16)
     readonly property real   launcherYFactor: Settings.get("launcherYFactor", 0.16) // posição vertical (fração da tela)
     readonly property int    launcherAnim: Settings.get("launcherAnim", 170)        // animação de abrir/fechar (ms)
+    readonly property int    launcherResizeAnim: Settings.get("launcherResizeAnim", 150) // animação de crescer/encolher da lista (ms)
     readonly property int    launcherFontSize: Settings.get("launcherFontSize", 13)
     readonly property int    launcherInputSize: Settings.get("launcherInputSize", 16) // texto do campo de busca
     readonly property int    launcherIconSize: Settings.get("launcherIconSize", 24)  // ícone/miniatura das linhas

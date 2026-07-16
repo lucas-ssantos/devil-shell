@@ -556,6 +556,12 @@ PanelWindow {
                 width: col.width
                 // altura acompanha o conteúdo até o teto; vazio mantém espaço p/ o aviso
                 height: Math.min(Math.max(contentHeight, win.resultCount === 0 ? 64 : 0), Config.launcherListMaxH)
+                // anima o crescer/encolher conforme o filtro muda (o painel acompanha via col);
+                // desligado durante o abrir/fechar p/ não brigar com o reveal (reset do campo)
+                Behavior on height {
+                    enabled: win.reveal === 1
+                    NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
+                }
                 clip: true
                 model: win.results
                 boundsBehavior: Flickable.StopAtBounds

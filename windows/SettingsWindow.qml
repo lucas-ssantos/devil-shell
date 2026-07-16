@@ -149,6 +149,7 @@ PanelWindow {
             { key: "launcherRadius", label: "Raio", ftype: "real" },
             { key: "launcherYFactor", label: "Posição vertical (0–1)", ftype: "real" },
             { key: "launcherAnim", label: "Animação (ms)", ftype: "int" },
+            { key: "launcherResizeAnim", label: "Animação de tamanho (ms)", ftype: "int" },
             { key: "launcherFontSize", label: "Texto", ftype: "int" },
             { key: "launcherInputSize", label: "Texto da busca", ftype: "int" },
             { key: "launcherIconSize", label: "Ícone", ftype: "int" },
