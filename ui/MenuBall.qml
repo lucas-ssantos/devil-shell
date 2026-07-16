@@ -91,14 +91,17 @@ Rectangle {
             if (n === 0) return
             const cur = ((animPos % n) + n) % n
             const dir = ball.ctx.wsTravelDir
-            ball.ctx.wsTravelDir = 0                      // consome a dica de direção
             let d = (targetIdx - cur) % n
             if (dir > 0)      d = ((d % n) + n) % n       // sempre horário (p/ frente)
             else if (dir < 0) d = ((d % n) - n) % n       // sempre anti-horário
             else if (d > n / 2) d -= n                    // sem dica: caminho mais curto
             else if (d < -n / 2) d += n
-            if (d === 0) return
-            travelSign = d > 0 ? 1 : -1                   // ancora o encolher/crescer na borda certa
+            if (d === 0) return                           // sem viagem: NÃO consome a dica
+            // consome a dica só quando a viagem começa — o retarget roda 2x por troca
+            // (onTagsChanged e onTargetIdxChanged, em ordem indefinida) e a 1ª chamada
+            // pode chegar com o destino ainda velho; zerar antes perdia a direção do wrap
+            ball.ctx.wsTravelDir = 0
+            travelSign = d > 0 ? 1 : -1                   // escolhe a animação (horária/anti-horária)
             travelDur = Math.round(Config.dotTravelMs * Math.abs(d))  // velocidade constante por slot
             animPos = animPos + d
         }
