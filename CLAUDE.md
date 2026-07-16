@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Configuração [Quickshell](https://quickshell.org) (QML) para o compositor Wayland **Niri**
 (tiling rolável) no Debian Sid. Não é uma "barra" tradicional: é uma **bola** ancorada no centro
-inferior de cada monitor que, em hover/clique, abre um menu radial de **cristais** (sistema,
-gravação, áudio…), mostra os workspaces como pontos dentro da bola e tem um visualizador
+inferior de cada monitor com uma **escadaria de cristais** fincados no chão dos dois lados
+(sistema, gravação, áudio…) — hover/clique na bola faz todos "emergirem do chão"; hover num
+cristal ergue só ele —, mostra os workspaces como pontos dentro da bola e tem um visualizador
 de áudio **CAVA** ao fundo. Toda a configuração é hot-reloaded pelo Quickshell ao salvar.
 
 Não há build, lint ou testes — é QML interpretado. Os comentários do código são em **português**;
@@ -131,7 +132,7 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    [Settings.qml](services/Settings.qml) (overrides do usuário, persistidos), [ThemeExport.qml](services/ThemeExport.qml)
    (regenera os temas dos apps externos).
 2. **Dados data-driven:** `menuItems` (cristais; flags `audio`/`tray`/`settings`/`launcher`
-   marcam cristais especiais). Adicionar/remover itens reorganiza o leque automaticamente. (O cristal
+   marcam cristais especiais). Adicionar/remover itens reorganiza a escadaria automaticamente. (O cristal
    de Sistema (`settings`) tem 3 seções: configurações em cima, gravar/parar tela no meio,
    toggle de lock embaixo.)
 3. **Uma instância por monitor** via `Variants { model: Quickshell.screens }`: uma
@@ -167,18 +168,21 @@ Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de 
 Concentra **geometria, estado e TODA a lógica de interação**; os componentes visuais são burros e
 recebem o controlador na propriedade `ctx`. Pontos-chave:
 - **Um único `MouseArea` + um `WheelHandler`** no topo fazem **hit-testing geométrico** em vez de
-  MouseAreas por elemento (isso resolveu instabilidades de hover): `crystalAt` (angular), `dotAt`
-  (setor do anel tracejado de workspaces), `overBallAt`, `crystalSectionAt` (radial, paro cristals
-  multi-botão), `audioSliderAt`. Os cristais abrem em **leque simétrico** centrado em
-  `crystalStartDeg` (90=topo): nº ímpar põe uma no centro, nº par deixa um vão no meio.
+  MouseAreas por elemento (isso resolveu instabilidades de hover): `crystalAt` (coluna mais
+  próxima em X + altura conforme o estado), `dotAt` (setor do anel tracejado de workspaces),
+  `overBallAt`, `crystalSectionAt` (faixas verticais, p/ os cristais multi-botão),
+  `audioSliderAt`. Os cristais formam uma **escadaria** ao lado da bola: pares à direita,
+  ímpares à esquerda; rank 0 colado à bola com `crystalMaxH` (pouco menor que a bola) e
+  descendo `crystalStepH` por posição. Fechado, cada cristal mostra só `crystalPeek` fora do
+  chão (hoverável — hover ergue SÓ ele; abrir a bola ergue todos).
 - **Hover com debounce** (`hoverOpen` + `hoverCloseTimer`) para evitar o loop de feedback
   máscara↔abertura que colapsava o menu.
-- **Máscara de input** (`mask: Region`) muda com `open`: fechado só a bola é clicável; aberto a
+- **Máscara de input** (`mask: Region`) muda com `open`: fechado, a bola + a faixa dos cristais
+  no chão (o peek é hoverável; a faixa cresce enquanto um cristal está erguido); aberto, a
   região central inteira; o resto é click-through.
-- **Scroll por região:** sobre a bola troca workspace (com wrap 1↔N); na região dos cristais gira o
-  leque; sobre um slider de áudio ajusta o volume.
+- **Scroll por região:** troca workspace (com wrap 1↔N); sobre um slider de áudio ajusta o volume.
 - Estado central: `pinned`/`dismissed`/`hoverOpen` (→ `open`), `hoverIndex`, `selectedIndex`,
-  `audioMode`, `crystalSection`, `crystalRotation`.
+  `audioMode`, `crystalSection`.
 - `monData`/`tags`/`activeTag` derivam de `niri.monitorByName(modelData.name)` — `modelData.name`
   (a screen) **bate com o nome do output no niri** (ex.: `DP-2`, `HDMI-A-1`), o que também é usado
   para gravar um monitor específico (`gpu-screen-recorder -w <name>`).

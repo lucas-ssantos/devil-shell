@@ -34,10 +34,17 @@ Singleton {
     readonly property real ballSigilFactor: Settings.get("ballSigilFactor", 0.52) // raio do sigilo gravado na bola (× ballRadius)
     readonly property real gothicR: Settings.get("gothicR", 32)                 // raio dos cantos góticos (bola ↔ barra)
 
-    // ── Cristais (runa) ─────────────────────────────────
+    // ── Cristais (escadaria ao lado da bola) ────────────
+    // Ficam de pé no chão, dos dois lados da bola, em degraus: o mais alto colado
+    // à bola (um pouco menor que ela) e descendo rumo às pontas. Fechado, só um
+    // "peek" fica fora do chão; hover ergue um; abrir a bola ergue todos.
     readonly property real crystalW: Settings.get("crystalW", 32)
-    readonly property real crystalH: Settings.get("crystalH", 96)
-    readonly property real crystalGap: Settings.get("crystalGap", -2)                  // folga bola → cristal (negativa = base enfiada sob a bola, cristal "anexado")
+    readonly property real crystalMaxH: Settings.get("crystalMaxH", 82)                // altura do cristal colado à bola (um pouco menor que o diâmetro dela)
+    readonly property real crystalStepH: Settings.get("crystalStepH", 20)              // degrau de altura por posição afastando da bola
+    readonly property real crystalMinH: Settings.get("crystalMinH", 36)                // piso da escadaria
+    readonly property real crystalGap: Settings.get("crystalGap", 6)                   // folga bola → 1º cristal
+    readonly property real crystalSpacing: Settings.get("crystalSpacing", 7)           // folga entre cristais vizinhos
+    readonly property real crystalPeek: Settings.get("crystalPeek", 12)                // fatia visível com o menu fechado ("enterrado")
     readonly property real crystalCoreFactor: Settings.get("crystalCoreFactor", 0.6)   // largura do núcleo do cristal (× crystalW)
     readonly property real crystalEdgeDarken: Settings.get("crystalEdgeDarken", 1.5)   // borda do cristal (× mais escura que o corpo)
     readonly property real crystalEngraveOpacity: Settings.get("crystalEngraveOpacity", 0.55) // opacidade dos entalhes rúnicos
@@ -45,13 +52,8 @@ Singleton {
     readonly property real crystalGlowBlur: Settings.get("crystalGlowBlur", 12)        // raio do glow do cristal (px; hover = cheio)
     readonly property real crystalGlowRest: Settings.get("crystalGlowRest", 0.25)      // intensidade do glow em repouso (0–1)
     readonly property real crystalPulseMin: Settings.get("crystalPulseMin", 0.72)      // piso do pulso do glow no hover (0–1; 1 = sem pulso)
-    readonly property real crystalShrink: Settings.get("crystalShrink", 0.8)           // escala dos não-hover
-    readonly property real crystalHoverScale: Settings.get("crystalHoverScale", 1.2)
-    readonly property real crystalHoverExtend: Settings.get("crystalHoverExtend", 0)   // quanto o cristal em hover estende p/ a bola (px; c/ base já sob a bola, 0 evita afundar os botões)
-    readonly property real crystalStartDeg: Settings.get("crystalStartDeg", 90)        // CENTRO do leque (90=topo); os cristais abrem simétricos a partir daqui
-    readonly property real crystalStepDeg: Settings.get("crystalStepDeg", 30)          // passo entre cristais (e do scroll)
-    readonly property int  crystalDir: Settings.get("crystalDir", -1)                  // sentido do leque (+1 / -1)
-    readonly property real hitMargin: Settings.get("hitMargin", 8)                 // folga radial do hit-test
+    readonly property real crystalHoverScale: Settings.get("crystalHoverScale", 1.2)   // crescimento no hover (a partir da base)
+    readonly property real hitMargin: Settings.get("hitMargin", 8)                 // folga do hit-test em volta do cristal
     readonly property real menuMargin: Settings.get("menuMargin", 16)              // folga lateral da máscara quando aberto
 
     // ── Popup de energia (cristal de Sistema) ───────────
@@ -220,8 +222,7 @@ Singleton {
     // ── Tempos (ms) ─────────────────────────────────────
     readonly property int  ballAnim: Settings.get("ballAnim", 220)
     readonly property int  dotTravelMs: Settings.get("dotTravelMs", 130)         // viagem do pontinho do anel POR SLOT (efeito "loading")
-    readonly property int  crystalRotAnim: Settings.get("crystalRotAnim", 220)
-    readonly property int  crystalDistAnim: Settings.get("crystalDistAnim", 200)
+    readonly property int  crystalRiseAnim: Settings.get("crystalRiseAnim", 260)       // emersão do cristal a partir do chão
     readonly property int  crystalOpacityAnim: Settings.get("crystalOpacityAnim", 150)
     readonly property int  crystalScaleAnim: Settings.get("crystalScaleAnim", 130)
     readonly property int  crystalFillAnim: Settings.get("crystalFillAnim", 340)      // subida do brilho base→ponta no hover

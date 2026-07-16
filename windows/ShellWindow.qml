@@ -37,19 +37,31 @@ PanelWindow {
     property real ballCY: open ? ballCYOpen : ballCYRest
     Behavior on ballCY { NumberAnimation { duration: Config.ballAnim; easing.type: Easing.OutCubic } }
     readonly property real crystalW: Config.crystalW
-    readonly property real crystalH: Config.crystalH
-    readonly property real crystalDist: ballRadius + Config.crystalGap + crystalH / 2
-    // no hover o cristal escala em torno do centro; empurrá-lo p/ fora na mesma medida
-    // mantém a BASE colada na bola e faz a expansão crescer só rumo à ponta
-    readonly property real crystalDistHover: crystalDist + crystalH * (Config.crystalHoverScale - 1) / 2
-    readonly property real crystalShrink: Config.crystalShrink
-    readonly property real crystalTouch: ballRadius + crystalH * crystalShrink / 2
-    readonly property real hitOuterR: crystalDistHover + crystalH * Config.crystalHoverScale / 2 + Config.hitMargin
-    readonly property real menuHalf: hitOuterR + Config.menuMargin
+
+    // ── Fileira de cristais (escadaria ao lado da bola) ──
+    // pares à DIREITA, ímpares à ESQUERDA; rank = distância da bola (0 = colado a ela).
+    // A altura desce em degraus a partir de crystalMaxH (pouco menor que a bola).
+    function crystalSide(i) { return i % 2 === 0 ? 1 : -1 }
+    function crystalRank(i) { return Math.floor(i / 2) }
+    function crystalHeight(i) {
+        return Math.max(Config.crystalMinH, Config.crystalMaxH - crystalRank(i) * Config.crystalStepH)
+    }
+    function crystalCX(i) {
+        return ballCX + crystalSide(i) * (ballRadius + Config.crystalGap + crystalW / 2
+             + crystalRank(i) * (crystalW + Config.crystalSpacing))
+    }
+    // cristal "erguido": abrir a bola ergue todos; hover/seleção ergue só aquele
+    function crystalRaised(i) { return open || hoverIndex === i || selectedIndex === i }
+    readonly property int  ranksPerSide: Math.ceil(menuItems.length / 2)
+    readonly property real rowHalf: ballRadius + Config.crystalGap
+        + ranksPerSide * (crystalW + Config.crystalSpacing) + Config.hitMargin
+    readonly property real menuHalf: rowHalf + Config.menuMargin
+    // faixa de input dos cristais (máscara): só o peek em repouso; cresce enquanto
+    // um cristal estiver erguido por hover, p/ o cursor poder acompanhá-lo subindo
+    readonly property real rowMaskH: (hoverIndex !== -1
+        ? Config.crystalMaxH * Config.crystalHoverScale : Config.crystalPeek) + Config.hitMargin
     readonly property real dotRingR: ballRadius * Config.dotRingFactor
     readonly property real gothicR: Config.gothicR
-    property real crystalRotation: 0
-    Behavior on crystalRotation { NumberAnimation { duration: Config.crystalRotAnim; easing.type: Easing.OutCubic } }
 
     // ── Estado de abertura ──────────────────────────────
     property bool pinned: false
@@ -61,8 +73,10 @@ PanelWindow {
     property int  crystalSection: -1      // seção do cristal multi-botão sob o cursor
     property int  audioSliderHover: -1  // slider de áudio sob o cursor (0/1)
     property bool hoverOpen: false
-    // a bola fica aberta tb enquanto um popup (tray/áudio) estiver visível (não recolher sozinha)
-    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible)
+    // a bola fica aberta tb enquanto um popup (tray/áudio/sliders) estiver visível (não
+    // recolher sozinha) — os cristais agora são alcançáveis mesmo com a bola fechada,
+    // então o audioMode também precisa segurar a bola aberta
+    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || audioMode)
     // algum menu/popup aberto? (tray, dispositivos de áudio, ou sliders de áudio)
     readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || audioMode
     readonly property int audioIndex: {
@@ -131,15 +145,15 @@ PanelWindow {
     }
 
     // ── Cristais multi-botão (áudio/sistema) ─────────────
-    // seção (0 = junto à bola … n-1 = na ponta) sob o cursor, dividindo o cristal em n.
-    // Usa a geometria do HOVER (escalada e empurrada p/ fora), já que as seções só
-    // importam com o cursor no cristal — as faixas batem com os slots visuais.
+    // seção (0 = base/chão … n-1 = na ponta) sob o cursor, dividindo o cristal em n
+    // faixas verticais. Usa a geometria do HOVER (erguido e escalado a partir da
+    // base), já que as seções só importam com o cursor no cristal.
     function crystalSectionAt(mx, my, n) {
-        const dx = mx - ballCX, dy = ballCY - my
-        const r = Math.sqrt(dx * dx + dy * dy)
-        const half = crystalH * Config.crystalHoverScale / 2
-        const r0 = crystalDistHover - half, r1 = crystalDistHover + half
-        return Math.max(0, Math.min(n - 1, Math.floor((r - r0) / (r1 - r0) * n)))
+        let i = crystalAt(mx, my)
+        if (i < 0) i = hoverIndex
+        if (i < 0) return 0
+        const hVis = crystalHeight(i) * Config.crystalHoverScale
+        return Math.max(0, Math.min(n - 1, Math.floor((height - my) / hVis * n)))
     }
     // nº de seções do cristal i (áudio=3, sistema=3, bandeja=nº de apps, demais=0)
     function crystalSections(i) {
@@ -160,26 +174,22 @@ PanelWindow {
     }
 
     // ── Hit-test (tudo por posição do cursor) ───────────
-    // cristais em LEQUE simétrico: o centro do leque fica em crystalStartDeg (90=topo) e
-    // elas abrem para os lados a cada crystalStepDeg; nº ímpar põe um cristal no centro,
-    // nº par deixa um vão no centro (as duas do meio a ±passo/2). O scroll gira o leque.
-    // (0°=direita, 90°=topo, 180°=esquerda; o ícone fica sempre na vertical pela contra-rotação)
-    function crystalAngle(i) {
-        const k = i - (menuItems.length - 1) / 2   // deslocamento a partir do centro do leque
-        return Config.crystalStartDeg + Config.crystalDir * k * Config.crystalStepDeg + crystalRotation
-    }
+    // cristais em COLUNAS verticais ao lado da bola: acha a coluna mais próxima em X e
+    // testa a altura conforme o estado (erguido = altura cheia com a escala de hover;
+    // enterrado = só o peek). Testar a altura-alvo do próprio hoverIndex dá histerese:
+    // o cursor pode subir acompanhando o cristal que emerge sem o hover piscar.
     function crystalAt(mx, my) {
-        const dx = mx - ballCX, dy = ballCY - my
-        const r = Math.sqrt(dx * dx + dy * dy)
         const n = menuItems.length
-        if (n === 0 || r <= ballRadius || r > hitOuterR) return -1
-        const theta = Math.atan2(dy, dx) * 180 / Math.PI
-        let best = -1, bestDiff = 1e9
+        if (n === 0 || overBallAt(mx, my)) return -1
+        let best = -1, bestDx = 1e9
         for (let i = 0; i < n; i++) {
-            const d = Math.abs(((theta - crystalAngle(i) + 540) % 360) - 180)
-            if (d < bestDiff) { bestDiff = d; best = i }
+            const d = Math.abs(mx - crystalCX(i))
+            if (d < bestDx) { bestDx = d; best = i }
         }
-        return bestDiff <= Config.crystalStepDeg / 2 ? best : -1   // tolerância = metade do passo
+        if (bestDx > crystalW / 2 + Config.hitMargin) return -1
+        const hVis = crystalRaised(best) ? crystalHeight(best) * Config.crystalHoverScale
+                                         : Config.crystalPeek
+        return my >= height - hVis - Config.hitMargin ? best : -1
     }
     // segmento do anel tracejado de workspaces sob o cursor (banda radial + setor
     // angular; o arco i é centrado em -90° + i·slot, casando com o desenho no MenuBall)
@@ -221,7 +231,9 @@ PanelWindow {
                 audioSliderHover = -1
             }
         }
-        if (overBall || hoverIndex !== -1 || audioSliderHover !== -1) { hoverCloseTimer.stop(); hoverOpen = true }
+        // a bola abre por hover NELA (ou nos sliders); hover num cristal ergue só o
+        // cristal — mas mantém a bola aberta se ela já estava (bola → cristal não recolhe)
+        if (overBall || audioSliderHover !== -1 || (hoverOpen && hoverIndex !== -1)) { hoverCloseTimer.stop(); hoverOpen = true }
         else hoverCloseTimer.restart()
     }
 
@@ -285,13 +297,24 @@ PanelWindow {
     }
 
     // ── Máscara de input ────────────────────────────────
-    //  Fechado: só a bola é clicável. Aberto: só a região central (resto = click-through).
+    //  Fechado: a bola + a faixa dos cristais no chão (peek hoverável; a faixa cresce
+    //  enquanto um cristal estiver erguido). Aberto: a região central inteira.
+    //  O resto é sempre click-through.
     mask: Region {
         shape: win.open ? RegionShape.Rect : RegionShape.Ellipse
         x: win.open ? Math.round(win.ballCX - win.menuHalf) : Math.round(win.ballCX - win.ballRadius)
         y: win.open ? 0 : Math.round(win.ballCY - win.ballRadius)
         width: win.open ? Math.round(win.menuHalf * 2) : Math.round(win.ballRadius * 2)
         height: win.open ? win.height : Math.round(win.ballRadius * 2)
+        regions: [
+            Region {   // faixa dos cristais (união com a região acima)
+                shape: RegionShape.Rect
+                x: Math.round(win.ballCX - win.rowHalf)
+                y: Math.round(win.height - win.rowMaskH)
+                width: Math.round(win.rowHalf * 2)
+                height: Math.round(win.rowMaskH)
+            }
+        ]
     }
 
     // ── Componentes visuais ─────────────────────────────
@@ -483,12 +506,7 @@ PanelWindow {
                     else if (win.audioSliderHover === 1) AudioService.addSourceVolume(-dir * Config.volStep)
                     return
                 }
-                // na região dos cristais (aberto, fora da bola) -> gira o anel
-                if (win.open && !win.overBall) {
-                    win.crystalRotation += dir * Config.crystalStepDeg
-                    return
-                }
-                // sobre a bola (ou fechado) -> troca de workspace DESTE monitor
+                // em qualquer outro lugar -> troca de workspace DESTE monitor
                 // (só entre os reais, com wrap 1↔N; a direção guia a animação do anel)
                 const total = win.tags.length
                 if (total === 0) return

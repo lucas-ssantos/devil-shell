@@ -3,21 +3,23 @@ import Quickshell.Services.SystemTray
 import "root:/services"   // AudioService, CaptureService
 import "root:/"           // Config (raiz)
 
-// Um cristal/runa do menu radial (visual): silhueta com borda
+// Um cristal/runa do menu (visual): silhueta com borda
 // escura, núcleo na cor do cristal e entalhes finos (nervura central + arcos que
 // acompanham o formato). Nos cristais multi-seção os arcos viram as divisórias dos
-// botões. Lê o estado do controlador `ctx` e os valores customizáveis de `Config`.
+// botões. Fica DE PÉ no chão, ao lado da bola, numa escadaria de alturas (rank 0 =
+// colado à bola = mais alto); enterrado mostra só um peek, e "emerge do chão" quando
+// erguido (hover só nele, ou a bola aberta ergue todos).
+// Lê o estado do controlador `ctx` e os valores customizáveis de `Config`.
 Item {
     id: crystal
     property var ctx
     required property int index
     required property var modelData
 
-    readonly property real angleDeg: ctx.crystalAngle(index)
-    readonly property real angleRad: angleDeg * Math.PI / 180
     readonly property bool hovered: ctx.hoverIndex === index
     readonly property bool selected: ctx.selectedIndex === index
     readonly property bool vanished: ctx.selectedIndex !== -1 && !selected
+    readonly property bool raised: ctx.crystalRaised(index)
 
     // cristais multi-seção (painéis): áudio/sistema = 3 botões, bandeja = 1 por app
     readonly property bool isAudio: modelData.audio ?? false
@@ -28,34 +30,28 @@ Item {
         : isTray ? SystemTray.items.values.length : 0
 
     width: ctx.crystalW
-    height: ctx.crystalH
-    transformOrigin: Item.Center
-    rotation: 90 - angleDeg
+    height: ctx.crystalHeight(index)
+    x: ctx.crystalCX(index) - width / 2
     z: 1
 
-    property real dist: !ctx.open ? 0
-        : (hovered || selected)   ? ctx.crystalDistHover   // expande p/ FORA (base segue na bola)
-        : (ctx.hoverIndex !== -1) ? ctx.crystalTouch       // outra em hover -> recua até a bola
-        : ctx.crystalDist
-    x: ctx.ballCX + dist * Math.cos(angleRad) - width / 2
-    y: ctx.ballCY - dist * Math.sin(angleRad) - height / 2
+    // emersão: `rise` é a fatia visível acima do chão (peek enterrado, altura toda
+    // erguido); o resto do corpo fica abaixo da borda da janela (cortado pelo chão)
+    property real rise: raised ? height : Config.crystalPeek
+    y: ctx.height - rise
+    Behavior on rise { NumberAnimation { duration: Config.crystalRiseAnim; easing.type: Easing.OutBack } }
 
-    opacity: (ctx.open && !vanished && !ctx.audioMode) ? 1.0 : 0.0
+    // cresce no hover a partir da BASE (continua plantado no chão)
+    transformOrigin: Item.Bottom
+    scale: (hovered || selected) ? Config.crystalHoverScale : 1.0
+    Behavior on scale { NumberAnimation { duration: Config.crystalScaleAnim; easing.type: Easing.OutQuad } }
 
-    Behavior on dist { NumberAnimation { duration: Config.crystalDistAnim; easing.type: Easing.OutBack } }
+    opacity: (!vanished && !ctx.audioMode) ? 1.0 : 0.0
     Behavior on opacity { NumberAnimation { duration: Config.crystalOpacityAnim } }
 
-    // corpo do cristal (cresce no hover; crystalHoverExtend pode estender a base rumo à bola)
+    // corpo do cristal
     Item {
         id: body
         anchors.fill: parent
-        anchors.bottomMargin: crystal.hovered ? -Config.crystalHoverExtend : 0
-        Behavior on anchors.bottomMargin { NumberAnimation { duration: Config.crystalScaleAnim } }
-        transformOrigin: Item.Center
-        scale: (crystal.hovered || crystal.selected) ? Config.crystalHoverScale
-             : (crystal.ctx.hoverIndex !== -1)     ? crystal.ctx.crystalShrink
-             : 1.0
-        Behavior on scale { NumberAnimation { duration: Config.crystalScaleAnim; easing.type: Easing.OutQuad } }
 
         // o cristal inteiro: glow, borda, núcleo, destaque de seção e entalhes rúnicos.
         // O canvas é maior que o cristal (margens negativas) p/ o glow não ser cortado;
@@ -108,26 +104,23 @@ Item {
             onHeightChanged: requestPaint()
             Component.onCompleted: requestPaint()
 
-            // silhueta do cristal, "lapidação esmeralda": base RETA (enfiada sob a bola),
-            // lados quase paralelos com leve bojo e ponta TRUNCADA (topo reto curto
-            // entre dois chanfros — as pontas quadradas do mockup).
+            // silhueta do cristal: OBELISCO reto — base reta (fincada no chão),
+            // laterais VERTICAIS e paralelas (sem taper nem vértice no meio: qualquer
+            // quebra rasa na lateral lê como "bojo" sob o glow) e ponta TRUNCADA
+            // (topo reto curto entre dois chanfros). Nada de curvas.
             // kw = fator da meia-largura; y0/y1 = ponta/base (coords já transladadas).
             function crystalPath(g, kw, y0, y1) {
                 const cx = (width - 2 * pad) / 2
                 const hw = ((width - 2 * pad) / 2 - 1) * kw
                 const H = y1 - y0
                 g.beginPath()
-                g.moveTo(cx - 0.94 * hw, y1)                        // canto esquerdo da base
-                g.bezierCurveTo(cx - hw,        y0 + 0.60 * H,
-                                cx - hw,        y0 + 0.30 * H,
-                                cx - 0.85 * hw, y0 + 0.11 * H)      // lado quase reto (leve bojo)
-                g.lineTo(cx - 0.10 * hw, y0)                        // chanfro esquerdo
-                g.lineTo(cx + 0.10 * hw, y0)                        // topo RETO (ponta quadrada)
-                g.lineTo(cx + 0.85 * hw, y0 + 0.11 * H)             // chanfro direito
-                g.bezierCurveTo(cx + hw,        y0 + 0.30 * H,
-                                cx + hw,        y0 + 0.60 * H,
-                                cx + 0.94 * hw, y1)
-                g.closePath()                                       // base reta
+                g.moveTo(cx - hw, y1)                       // canto esquerdo da base
+                g.lineTo(cx - hw, y0 + 0.14 * H)            // lateral VERTICAL
+                g.lineTo(cx - 0.12 * hw, y0)                // chanfro esquerdo
+                g.lineTo(cx + 0.12 * hw, y0)                // topo RETO (ponta quadrada)
+                g.lineTo(cx + hw, y0 + 0.14 * H)            // chanfro direito
+                g.lineTo(cx + hw, y1)                       // lateral vertical
+                g.closePath()                               // base reta
             }
 
             // pinta o cristal completo numa cor/intensidade de glow (uma "passada")
@@ -180,7 +173,7 @@ Item {
                     const y = t * h
                     g.beginPath()
                     g.moveTo(0, y)
-                    g.quadraticCurveTo(cx, y + 4, w, y)   // arqueia de leve rumo à base
+                    g.lineTo(w, y)   // divisória RETA (visual facetado, sem curvas)
                     g.stroke()
                 }
 
@@ -188,8 +181,8 @@ Item {
                 // recorta nas bordas, marcando a faceta da ponta quadrada)
                 g.globalAlpha = 0.35
                 g.beginPath()
-                g.moveTo(0, 0.11 * h)
-                g.lineTo(w, 0.11 * h)
+                g.moveTo(0, 0.14 * h)   // na base dos chanfros (casa com o crystalPath)
+                g.lineTo(w, 0.14 * h)
                 g.stroke()
                 g.restore()
                 g.globalAlpha = 1.0
@@ -233,7 +226,6 @@ Item {
                     required property int index
                     readonly property bool muted: index === 0 ? AudioService.sinkMuted
                                                 : index === 1 ? AudioService.sourceMuted : false
-                    rotation: -crystal.rotation
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
                     font.family: Config.iconFont
@@ -261,7 +253,6 @@ Item {
                     readonly property bool rec: index === 1 && CaptureService.recording
                     // lâmpada "acesa" (cor de acento) quando o lock/idle está inibido
                     readonly property bool lampOn: index === 2 && IdleService.inhibited
-                    rotation: -crystal.rotation
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: index * (parent.height / 3) + (parent.height / 3 - height) / 2
                     font.family: Config.iconFont
@@ -289,7 +280,6 @@ Item {
             Text {
                 visible: trayPanel.count === 0
                 anchors.centerIn: parent
-                rotation: -crystal.rotation
                 text: Config.iconTray
                 font.family: Config.iconFont
                 font.pixelSize: Config.audioIconSize
@@ -312,7 +302,6 @@ Item {
                         // de apps com SNI torto, ex. pasystray, que erram no IconName)
                         visible: status === Image.Ready
                         anchors.centerIn: parent
-                        rotation: -crystal.rotation
                         source: trayCell.modelData.icon
                         sourceSize.width: Config.trayIconSize
                         sourceSize.height: Config.trayIconSize
@@ -325,7 +314,6 @@ Item {
                     Text {
                         visible: trayImg.status !== Image.Ready
                         anchors.centerIn: parent
-                        rotation: -crystal.rotation
                         text: (trayCell.modelData.title || trayCell.modelData.id || "?").charAt(0).toUpperCase()
                         font.pixelSize: Config.trayIconSize - 2
                         font.bold: true
@@ -340,7 +328,6 @@ Item {
     Text {
         visible: !crystal.multi
         anchors.centerIn: parent
-        rotation: -crystal.rotation
         text: crystal.modelData.icon ?? ""
         font.pixelSize: Config.crystalIconSize
         color: Config.crystalIcon

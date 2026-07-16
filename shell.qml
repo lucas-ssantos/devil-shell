@@ -30,7 +30,8 @@ Scope {
     }
 
     // ── Dados (data-driven) ──
-    //  Cristais do menu radial (a ordem define o leque).
+    //  Cristais do menu (a ordem define a posição na escadaria: pares à DIREITA da
+    //  bola, ímpares à ESQUERDA; os primeiros ficam colados à bola = mais altos).
     //  Item: { icon: "símbolo", label: "nome", command: [argv] }  (command [] = sem ação)
     //  `spawn: "cmd"` -> lança pelo compositor (niri spawn-sh) c/ ambiente Wayland correto (p/ apps gráficos).
     readonly property var menuItems: [
