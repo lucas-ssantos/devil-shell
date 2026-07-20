@@ -4,10 +4,11 @@ import QtQuick
 import "root:/services"   // MediaService
 import "root:/"           // Config (raiz); Capsule/ClockCapsule/CalendarPopup/TempPopup na mesma pasta (ui)
 
-// Janela do topo: duas cápsulas retráteis. Esquerda (10% da margem esq.) = mídia (MPRIS,
-// texto rolando quando não cabe); direita (10% da margem dir.) = hora + botões de
-// calendário e temperatura (cada um abre um popup-apêndice abaixo da cápsula). Camada
-// Top; só as duas zonas das cápsulas recebem mouse (o resto do topo fica click-through).
+// Janela do topo: duas cápsulas retráteis, MESMA largura (Config.capsuleW). Esquerda
+// (10% da margem esq.) = mídia (MPRIS, texto rolando quando não cabe); direita (10% da
+// margem dir.) = data/hora (botão do calendário) + indicador de CPU (botão que abre o
+// popup com CPU/GPU/local). Camada Top; só as duas zonas das cápsulas recebem mouse (o
+// resto do topo fica click-through).
 PanelWindow {
     id: bar
     property var modelData
@@ -38,13 +39,15 @@ PanelWindow {
         onClicked: MediaService.toggle()    // play/pause
     }
 
-    // ── direita: hora + calendário + temperatura (popups em apêndice, abrem p/ baixo) ──
+    // ── direita: data/hora (calendário) + CPU (popup de temperatura) ──
     ClockCapsule {
         x: bar.rightX; y: 0
         calendarOpen: calendarPopup.visible
         tempOpen: tempPopup.visible
+        calendarProgress: calendarPopup.progress
         onCalendarClicked: (px, py) => { tempPopup.close(); calendarPopup.toggle(px, py) }
         onTempClicked: (px, py) => { calendarPopup.close(); tempPopup.toggle(px, py) }
+        onCapsuleClicked: { calendarPopup.close(); tempPopup.close() }
     }
     CalendarPopup { id: calendarPopup; ctx: bar }
     TempPopup { id: tempPopup; ctx: bar }

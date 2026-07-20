@@ -303,8 +303,10 @@ PanelWindow {
                 { key: "capsuleEdge", label: "Margem (0–1)", ftype: "real" },
                 { key: "capsuleRadius", label: "Raio", ftype: "real" },
                 { key: "capsuleIconSize", label: "Ícone", ftype: "int" },
-                { key: "capsuleTextSize", label: "Texto", ftype: "int" },
-                { key: "capsuleBtnSize", label: "Botões (calendário/temp.)", ftype: "int" }
+                { key: "capsuleTextSize", label: "Texto", ftype: "int" }
+            ]},
+            { name: "Cápsula direita (data/hora)", fields: [
+                { key: "clockCapsuleFormat", label: "Formato data/hora", ftype: "string" }
             ]},
             { name: "Cores", fields: [
                 { key: "capsuleBg", label: "Fundo", ftype: "color" },
@@ -378,7 +380,9 @@ PanelWindow {
                 { key: "iconTray", label: "Bandeja", ftype: "string" },
                 { key: "iconMedia", label: "Mídia", ftype: "string" },
                 { key: "iconWeather", label: "Clima", ftype: "string" },
-                { key: "iconCalendar", label: "Calendário", ftype: "string" }
+                { key: "iconCalendar", label: "Calendário", ftype: "string" },
+                { key: "iconCpu", label: "CPU", ftype: "string" },
+                { key: "iconGpu", label: "GPU", ftype: "string" }
             ]}
         ]}
     ]

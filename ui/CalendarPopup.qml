@@ -2,31 +2,51 @@ import Quickshell
 import QtQuick
 import "root:/"   // Config (raiz)
 
-// Popup-apêndice do botão de calendário (ClockCapsule): mês atual em grade (semanas ×
-// dias), com navegação ‹ › entre meses. Abre ABAIXO do botão (a cápsula fica no topo
-// da tela). Mesmo estilo visual do TrayMenu/AudioDevices (cores/raio reaproveitados).
+// Popup do botão de calendário (ClockCapsule): mês atual em grade (semanas × dias),
+// com navegação ‹ › entre meses. Emerge ENCOSTADO e CENTRALIZADO com a cápsula (mesma
+// cor, sem borda, cantos GÓTICOS no topo — filete curvo, mesmo espírito visual do
+// GothicCorners que funde a bola na barra) e "desenrola" de cima pra baixo (altura, não
+// escala) — para parecer uma extensão da cápsula, não uma janela solta.
 PopupWindow {
     id: root
     property var ctx        // janela-âncora (TopCapsules -> bar)
-    property real px: 0
+    property real px: 0     // centro-X/base da cápsula (coord. de `ctx`)
     property real py: 0
     property var viewDate: new Date()   // dia 1 do mês mostrado
+    property bool revealed: false   // controla a animação de abrir/fechar (ver `card` abaixo)
+    // 0..1 animado (mesma duração/curva do resto), PÚBLICO: a ClockCapsule lê isso para
+    // encolher os cantos arredondados dela EM SINCRONIA, como se as duas formas fossem
+    // uma coisa só se conectando/desconectando junto com o popup.
+    property real progress: revealed ? 1 : 0
+    Behavior on progress { NumberAnimation { duration: Config.capsuleAnim; easing.type: Easing.OutCubic } }
 
     function openAt(x, y) {
+        hideTimer.stop()   // reabrir cancela um fechamento pendente (senão o timer some com o popup)
         px = x; py = y
         const n = new Date()
         viewDate = new Date(n.getFullYear(), n.getMonth(), 1)
         visible = true
+        revealed = true
     }
-    function close() { visible = false }
+    // fecha ANIMADO: encolhe primeiro, e só esconde a janela de verdade quando a
+    // animação termina (senão o popup some no frame seguinte sem tocar a animação —
+    // mesmo truque do Tooltip.qml de referência do Quickshell: Timer segura o `visible`)
+    function close() { revealed = false; hideTimer.restart() }
     function toggle(x, y) { if (visible) close(); else openAt(x, y) }
     function prevMonth() { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1) }
     function nextMonth() { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1) }
 
-    // abre ABAIXO do clique, centrado (a cápsula fica no topo da tela)
+    Timer { id: hideTimer; interval: Config.capsuleAnim; onTriggered: root.visible = false }
+
+    // se o popup foi escondido por FORA do nosso close() (grabFocus: clique fora do
+    // popup), intercepta: reabre a superfície na hora (imperceptível, mesmo frame) e
+    // deixa o close() de verdade tocar a animação de saída antes de esconder.
+    onVisibleChanged: if (!visible && revealed) { visible = true; close() }
+
+    // centralizado com a cápsula, encostado embaixo dela sem vão (parece brotar dali)
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2
-    anchor.rect.y: py + Config.trayMenuGap
+    anchor.rect.y: py
     anchor.rect.width: 1
     anchor.rect.height: 1
 
@@ -36,6 +56,7 @@ PopupWindow {
                     + 2 * Config.trayMenuPad + 8   // 8 = 2 espaçamentos da Column
     color: "transparent"
     visible: false
+    grabFocus: true   // clique fora do popup fecha sozinho (dispara onVisibleChanged acima)
 
     readonly property var monthNames: ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
                                         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
@@ -60,21 +81,69 @@ PopupWindow {
         return out
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: Config.trayMenuBg
-        radius: Config.trayMenuRadius
-        border.color: Config.trayMenuBorder
-        border.width: 1
-        // animação de entrada: cresce a partir do topo (o popup abre pra baixo)
-        opacity: root.visible ? 1 : 0
-        scale: root.visible ? 1 : 0.9
-        transformOrigin: Item.Top
-        Behavior on opacity { NumberAnimation { duration: Config.trayMenuAnim; easing.type: Easing.OutCubic } }
-        Behavior on scale { NumberAnimation { duration: Config.trayMenuAnim; easing.type: Easing.OutCubic } }
+    // "desenrola" a partir do topo: a altura visível cresce (0 -> cheia), revelando o
+    // conteúdo (que fica em posição fixa) por baixo de um clip — mesma linguagem visual
+    // da própria cápsula "descendo" no hover, não um fade/scale de janela solta.
+    Item {
+        id: revealClip
+        width: root.implicitWidth
+        // segue `progress` direto (já animado por ele mesmo) -- sem Behavior própria,
+        // senão a altura ficaria animando DUAS vezes (lag sobre lag)
+        height: root.progress * root.implicitHeight
+        clip: true
+
+        // corpo do popup: cantos GÓTICOS no topo (filete curvo) ligando a largura da
+        // cápsula (estreita) à largura do popup (mais larga) — em vez de um degrau reto,
+        // "derrete" uma na outra, como a bola funde na barra em GothicCorners.qml.
+        // Canvas de tamanho FIXO (a animação é só o clip do `revealClip` acima).
+        Canvas {
+            id: card
+            width: root.implicitWidth
+            height: root.implicitHeight
+            antialiasing: true
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            Component.onCompleted: requestPaint()
+
+            onPaint: {
+                const g = getContext("2d")
+                g.reset()
+                const w = width, h = height
+                // canto gótico = curva OGEE (S: primeiro arco convexo, depois côncavo — a
+                // mesma dupla curvatura de um arco/ogiva gótico), não um arredondamento
+                // simples. Profundidade D = metade da diferença de largura popup↔cápsula,
+                // dividida em dois arcos de raio D/2 cada (encaixam sem sobra: a curva
+                // SEMPRE cabe certinha, não importa o quanto o popup seja mais largo).
+                const D = Math.max(0, Math.min((w - Config.capsuleW) / 2, h / 2))
+                const r = D / 2
+                const rBot = Math.max(0, Math.min(Config.capsuleRadius, w / 2, h / 2))
+                const leftC = w / 2 - Config.capsuleW / 2
+                const rightC = w / 2 + Config.capsuleW / 2
+
+                g.fillStyle = Config.capsuleBg
+                g.beginPath()
+                g.moveTo(leftC, 0)
+                g.lineTo(rightC, 0)
+                // ogee à direita: "derrete" da largura da cápsula p/ a largura do popup
+                g.arcTo(rightC, D / 2, w, D / 2, r)
+                g.arcTo(w, D / 2, w, D, r)
+                g.lineTo(w, h - rBot)
+                g.arcTo(w, h, w - rBot, h, rBot)
+                g.lineTo(rBot, h)
+                g.arcTo(0, h, 0, h - rBot, rBot)
+                g.lineTo(0, D)
+                // ogee à esquerda (espelhado)
+                g.arcTo(0, D / 2, leftC, D / 2, r)
+                g.arcTo(leftC, D / 2, leftC, 0, r)
+                g.closePath()
+                g.fill()
+            }
+        }
 
         Column {
-            anchors.fill: parent
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
             anchors.margins: Config.trayMenuPad
             spacing: 4
 
@@ -92,7 +161,7 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "‹"
-                        color: Config.trayMenuText
+                        color: Config.capsuleText
                         font.pixelSize: Config.trayMenuTextSize + 4
                         font.bold: true
                     }
@@ -101,7 +170,7 @@ PopupWindow {
                 Text {
                     anchors.centerIn: parent
                     text: root.monthNames[root.viewDate.getMonth()] + " " + root.viewDate.getFullYear()
-                    color: Config.trayMenuText
+                    color: Config.capsuleText
                     font.pixelSize: Config.trayMenuTextSize
                     font.bold: true
                 }
@@ -114,7 +183,7 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "›"
-                        color: Config.trayMenuText
+                        color: Config.capsuleText
                         font.pixelSize: Config.trayMenuTextSize + 4
                         font.bold: true
                     }
@@ -159,8 +228,8 @@ PopupWindow {
                             Text {
                                 anchors.centerIn: parent
                                 text: modelData.day
-                                color: modelData.isToday ? Config.trayMenuBg
-                                       : (modelData.inMonth ? Config.trayMenuText : Config.trayMenuTextDisabled)
+                                color: modelData.isToday ? Config.capsuleBg
+                                       : (modelData.inMonth ? Config.capsuleText : Config.trayMenuTextDisabled)
                                 font.pixelSize: Config.trayMenuTextSize
                                 font.bold: modelData.isToday
                             }
