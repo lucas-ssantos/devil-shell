@@ -186,10 +186,21 @@ Singleton {
     readonly property color  capsuleText: Settings.get("capsuleText", Theme.text)
     readonly property string iconMedia: Settings.get("iconMedia", "")   // nota musical (nf-fa-music)
     readonly property string iconWeather: Settings.get("iconWeather", "") // termômetro (nf-weather-thermometer)
+    readonly property int    capsuleBtnSize: Settings.get("capsuleBtnSize", 20)  // botões (calendário/temperatura) da cápsula direita
+    readonly property string iconCalendar: Settings.get("iconCalendar", "")  // calendário (nf-fa-calendar)
 
-    // ── Clima (cápsula direita) ─────────────────────────
+    // ── Clima (cápsula direita → popup de temperatura) ──
     readonly property string weatherLocation: Settings.get("weatherLocation", "")   // local p/ wttr.in; VAZIO = auto por IP
     readonly property int    weatherInterval: Settings.get("weatherInterval", 1800000)  // atualiza a cada 30 min (ms)
+
+    // ── Sensores: CPU/GPU (cápsula direita → popup de temperatura) ──
+    readonly property int    sensorsInterval: Settings.get("sensorsInterval", 5000)  // intervalo de leitura do hwmon (ms)
+
+    // ── Popup de calendário (botão da cápsula direita) ──
+    readonly property real   calendarCellSize: Settings.get("calendarCellSize", 30)  // célula do dia (grade 7 colunas)
+
+    // ── Popup de temperatura (botão da cápsula direita) ──
+    readonly property real   tempPopupW: Settings.get("tempPopupW", 190)
 
     // ── Relógio (data à esquerda da bola, hora à direita) ──
     readonly property string dateFormat: Settings.get("dateFormat", "d/M")

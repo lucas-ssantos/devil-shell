@@ -1,12 +1,13 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
-import "root:/services"   // MediaService, WeatherService
-import "root:/"           // Config (raiz); Capsule está na mesma pasta (ui)
+import "root:/services"   // MediaService
+import "root:/"           // Config (raiz); Capsule/ClockCapsule/CalendarPopup/TempPopup na mesma pasta (ui)
 
-// Janela do topo: duas cápsulas retráteis. Esquerda (10% da margem esq.) = mídia (MPRIS);
-// direita (10% da margem dir.) = temperatura (wttr.in). Camada Top; só as duas zonas das
-// cápsulas recebem mouse (o resto do topo fica click-through).
+// Janela do topo: duas cápsulas retráteis. Esquerda (10% da margem esq.) = mídia (MPRIS,
+// texto rolando quando não cabe); direita (10% da margem dir.) = hora + botões de
+// calendário e temperatura (cada um abre um popup-apêndice abaixo da cápsula). Camada
+// Top; só as duas zonas das cápsulas recebem mouse (o resto do topo fica click-through).
 PanelWindow {
     id: bar
     property var modelData
@@ -27,20 +28,24 @@ PanelWindow {
         Region { x: bar.rightX; y: 0; width: Config.capsuleW; height: Config.capsuleH }
     }
 
-    // ── esquerda: mídia ──
+    // ── esquerda: mídia (texto rola quando não cabe) ──
     Capsule {
         x: bar.leftX; y: 0
         icon: Config.iconMedia
         label: MediaService.hasMedia ? MediaService.label : "Nada tocando"
         dim: !MediaService.playing
+        marquee: true
         onClicked: MediaService.toggle()    // play/pause
     }
 
-    // ── direita: temperatura ──
-    Capsule {
+    // ── direita: hora + calendário + temperatura (popups em apêndice, abrem p/ baixo) ──
+    ClockCapsule {
         x: bar.rightX; y: 0
-        icon: Config.iconWeather
-        label: WeatherService.temp
-        onClicked: WeatherService.refresh() // força atualizar
+        calendarOpen: calendarPopup.visible
+        tempOpen: tempPopup.visible
+        onCalendarClicked: (px, py) => { tempPopup.close(); calendarPopup.toggle(px, py) }
+        onTempClicked: (px, py) => { calendarPopup.close(); tempPopup.toggle(px, py) }
     }
+    CalendarPopup { id: calendarPopup; ctx: bar }
+    TempPopup { id: tempPopup; ctx: bar }
 }

@@ -303,7 +303,8 @@ PanelWindow {
                 { key: "capsuleEdge", label: "Margem (0–1)", ftype: "real" },
                 { key: "capsuleRadius", label: "Raio", ftype: "real" },
                 { key: "capsuleIconSize", label: "Ícone", ftype: "int" },
-                { key: "capsuleTextSize", label: "Texto", ftype: "int" }
+                { key: "capsuleTextSize", label: "Texto", ftype: "int" },
+                { key: "capsuleBtnSize", label: "Botões (calendário/temp.)", ftype: "int" }
             ]},
             { name: "Cores", fields: [
                 { key: "capsuleBg", label: "Fundo", ftype: "color" },
@@ -349,6 +350,21 @@ PanelWindow {
                 { key: "weatherLocation", label: "Local do clima", ftype: "string" }
             ]}
         ]},
+        { title: "Sensores (CPU/GPU)", subs: [
+            { name: "", fields: [
+                { key: "sensorsInterval", label: "Intervalo de leitura (ms)", ftype: "int" }
+            ]}
+        ]},
+        { title: "Calendário (popup)", subs: [
+            { name: "", fields: [
+                { key: "calendarCellSize", label: "Tamanho da célula", ftype: "real" }
+            ]}
+        ]},
+        { title: "Popup de temperatura", subs: [
+            { name: "", fields: [
+                { key: "tempPopupW", label: "Largura", ftype: "real" }
+            ]}
+        ]},
         { title: "Fonte e ícones (glifos)", subs: [
             { name: "", fields: [
                 { key: "iconFont", label: "Fonte dos ícones", ftype: "string" },
@@ -361,7 +377,8 @@ PanelWindow {
                 { key: "iconRecording", label: "Parar", ftype: "string" },
                 { key: "iconTray", label: "Bandeja", ftype: "string" },
                 { key: "iconMedia", label: "Mídia", ftype: "string" },
-                { key: "iconWeather", label: "Clima", ftype: "string" }
+                { key: "iconWeather", label: "Clima", ftype: "string" },
+                { key: "iconCalendar", label: "Calendário", ftype: "string" }
             ]}
         ]}
     ]
