@@ -94,11 +94,11 @@ settings.json         overrides do usuário (gerado/atualizado em runtime pela S
 settings.default.json "padrão de fábrica" lido pelo botão Restaurar padrão
 themes/               Theme (seletor) + paletas (CrimsonDevil, InfernalRose)
 services/             singletons/escopos não-visuais (niri, áudio, captura, mídia, clima,
-                      notificações, StartupService, IdleService, LauncherService,
+                      notificações, PolkitService, StartupService, IdleService, LauncherService,
                       WallpaperService (swaybg, modo /bg), Settings, ThemeExport) + session.sh
 cava/                 tudo do visualizador CAVA (serviço, janela, barras, anel) + cava.conf
-windows/              janelas interativas: ShellWindow, NotificationWindow, SettingsWindow,
-                      LauncherWindow (lançador próprio)
+windows/              janelas interativas: ShellWindow, NotificationWindow, PolkitWindow,
+                      SettingsWindow, LauncherWindow (lançador próprio)
 ui/                   componentes visuais "burros": MenuBall, Crystal, GothicCorners, AudioMenu,
                       AudioDevices, TrayMenu, SettingsField, Capsule, TopCapsules
 ```
@@ -126,6 +126,7 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    [CavaService.qml](cava/CavaService.qml) (níveis do cava), [MediaService.qml](services/MediaService.qml) (MPRIS),
    [WeatherService.qml](services/WeatherService.qml) (wttr.in),
    [NotificationService.qml](services/NotificationService.qml) (servidor freedesktop),
+   [PolkitService.qml](services/PolkitService.qml) (agente polkit — pedidos de autenticação),
    [StartupService.qml](services/StartupService.qml) (sobe os daemons da sessão),
    [IdleService.qml](services/IdleService.qml) (inibe/reativa lock/idle),
    [LauncherService.qml](services/LauncherService.qml) (lançador: apps/uso/arquivos/processos/calc),
@@ -143,6 +144,8 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    [ShellWindow.qml](windows/ShellWindow.qml) (camada **Top**, a UI interativa) e uma
    [TopCapsules.qml](ui/TopCapsules.qml) (cápsulas de mídia/temperatura no topo). As janelas únicas
    (monitor focado) são a [NotificationWindow.qml](windows/NotificationWindow.qml), a
+   [PolkitWindow.qml](windows/PolkitWindow.qml) (diálogo de autenticação, dispara sozinha —
+   ver [PolkitService.qml](services/PolkitService.qml)), a
    [SettingsWindow.qml](windows/SettingsWindow.qml) (overlay modal de configurações) e a
    [LauncherWindow.qml](windows/LauncherWindow.qml) (lançador próprio).
 
@@ -160,6 +163,12 @@ Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de 
 - O próprio `qs` é lançado pelo niri: `spawn-at-startup "qs"` no `~/.config/niri/config.kdl`.
   Certifique-se de que nenhum outro daemon de notificação (swaync/mako/dunst) suba antes do qs,
   senão o qs não registra o servidor de notificações.
+- Mesma lógica vale para o **agente polkit**: só pode haver UM registrado por sessão. Não suba
+  `polkit-gnome-authentication-agent-1`/`polkit-kde-authentication-agent-1`/`lxqt-policykit-agent`
+  junto — o [PolkitService.qml](services/PolkitService.qml) (`PolkitAgent` de
+  `Quickshell.Services.Polkit`) se registra sozinho ao ser referenciado (é lazy; a
+  [PolkitWindow.qml](windows/PolkitWindow.qml) já o referencia). Se outro agente já estiver rodando,
+  o registro falha silenciosamente (`PolkitService.isRegistered` fica `false`, sem erro fatal).
 - **Acoplamento aceito:** se o qs não carregar, o `StartupService` não roda → sem wallpaper/idle nessa
   sessão. (Trade-off escolhido em prol da centralização.) Um futuro caminho 100% QML seria
   `IdleMonitor` + `WlSessionLock` no lugar do swayidle/swaylock.

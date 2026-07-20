@@ -44,6 +44,9 @@ Scope {
     // ── Notificações: uma única janela no topo-centro do monitor focado ──
     NotificationWindow { niri: niriSvc }
 
+    // ── Autenticação polkit: diálogo modal automático (PolkitService/PolkitWindow) ──
+    PolkitWindow { niri: niriSvc }
+
     // ── Configurações: overlay modal único no centro do monitor focado (cristal de Sistema) ──
     SettingsWindow { niri: niriSvc }
 

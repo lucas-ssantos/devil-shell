@@ -295,6 +295,20 @@ PanelWindow {
                 { key: "notifAnim", label: "Entrada/saída (ms)", ftype: "int" }
             ]}
         ]},
+        { title: "Autenticação (polkit)", subs: [
+            { name: "Posicionamento", fields: [
+                { key: "polkitW", label: "Largura", ftype: "real" },
+                { key: "polkitRadius", label: "Raio", ftype: "real" },
+                { key: "polkitIconSize", label: "Ícone do cadeado", ftype: "int" }
+            ]},
+            { name: "Cores", fields: [
+                { key: "polkitBg", label: "Fundo", ftype: "color" },
+                { key: "polkitBorder", label: "Borda", ftype: "color" },
+                { key: "polkitText", label: "Texto (cor)", ftype: "color" },
+                { key: "polkitSub", label: "Texto secundário", ftype: "color" },
+                { key: "polkitError", label: "Erro", ftype: "color" }
+            ]}
+        ]},
         { title: "Cápsulas do topo", subs: [
             { name: "Posicionamento", fields: [
                 { key: "capsuleW", label: "Largura", ftype: "real" },
@@ -382,7 +396,8 @@ PanelWindow {
                 { key: "iconWeather", label: "Clima", ftype: "string" },
                 { key: "iconCalendar", label: "Calendário", ftype: "string" },
                 { key: "iconCpu", label: "CPU", ftype: "string" },
-                { key: "iconGpu", label: "GPU", ftype: "string" }
+                { key: "iconGpu", label: "GPU", ftype: "string" },
+                { key: "iconPolkitLock", label: "Cadeado (polkit)", ftype: "string" }
             ]}
         ]}
     ]

@@ -173,6 +173,17 @@ Singleton {
     readonly property color  notifNormal: Settings.get("notifNormal", Theme.mauve)      // normal (acento)
     readonly property color  notifCritical: Settings.get("notifCritical", Theme.red)      // crítica (vermelho)
 
+    // ── Autenticação polkit (diálogo modal automático; ver PolkitService/PolkitWindow) ──
+    readonly property string iconPolkitLock: Settings.get("iconPolkitLock", "󰌾")   // cadeado (nf-md-lock)
+    readonly property real   polkitW: Settings.get("polkitW", 380)               // largura do painel
+    readonly property real   polkitRadius: Settings.get("polkitRadius", 16)
+    readonly property int    polkitIconSize: Settings.get("polkitIconSize", 26)     // cadeado no topo do diálogo
+    readonly property color  polkitBg: Settings.get("polkitBg", Theme.base)
+    readonly property color  polkitBorder: Settings.get("polkitBorder", Theme.surface0)
+    readonly property color  polkitText: Settings.get("polkitText", Theme.text)
+    readonly property color  polkitSub: Settings.get("polkitSub", Theme.subtext0)     // mensagem suplementar / dica
+    readonly property color  polkitError: Settings.get("polkitError", Theme.red)      // falha de autenticação
+
     // ── Cápsulas do topo (mídia à esquerda, clima à direita) ──
     readonly property real   capsuleW: Settings.get("capsuleW", 200)         // largura da cápsula
     readonly property real   capsuleH: Settings.get("capsuleH", 32)          // altura (quando estendida)
