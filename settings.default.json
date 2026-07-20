@@ -1,8 +1,7 @@
 {
-  "wallpaperDir": "/home/luke/Pictures/wallpapers",
-  "wallpaperDefault": "/home/luke/Pictures/wallpapers/vigna/vigna.jpg",
-  "wallpaperAll": "/home/luke/Pictures/wallpapers/pixel/wall_vp6.jpg",
+  "wallpaperAll": "/home/luke/Pictures/wallpapers//vigna6.jpeg",
   "wallpaperByOutput": {},
-  "cavaVisibility": "adaptativo",
-  "dotTravelMs": 1000
+  "dotTravelMs": 1000,
+  "wallpaperDir": "/home/luke/Imagens/Wallpapers/",
+  "wallpaperDefault": "/home/luke/Imagens/Wallpapers/vigna.jpg"
 }

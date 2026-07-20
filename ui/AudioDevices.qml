@@ -42,6 +42,7 @@ PopupWindow {
     implicitHeight: (root.devices.length + 1) * Config.trayMenuRowH + 2 * Config.trayMenuPad
     color: "transparent"
     visible: false
+    grabFocus: true   // clique fora do popup fecha sozinho (mesmo padrão do TrayMenu)
 
     Rectangle {
         anchors.fill: parent

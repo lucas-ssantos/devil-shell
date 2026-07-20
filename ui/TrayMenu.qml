@@ -72,8 +72,10 @@ PopupWindow {
     implicitHeight: contentHeight + 2 * Config.trayMenuPad
     color: "transparent"
     visible: false
-    // sem grabFocus: o fechamento é explícito (clique na bola, ou direito no tray de novo),
-    // assim a bola não recolhe sozinha enquanto o menu está aberto.
+    // clique fora do popup fecha sozinho (grab do compositor); os fechamentos explícitos
+    // (clique na bola, ESC, direito no tray de novo) continuam funcionando igual, já que
+    // só setam `visible = false` também.
+    grabFocus: true
 
     QsMenuOpener {
         id: opener
