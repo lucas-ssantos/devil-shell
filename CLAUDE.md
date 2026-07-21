@@ -224,7 +224,7 @@ exposta por `Theme`, nomeada em `Config`, e os componentes usam `Config.<algo>` 
 init — `Settings` não toca `Theme`/`ThemeExport` na construção, só em timers/funções).
 
 ### Lançador próprio (cristal "Lançador" / Mod+D)
-Substitui o rofi. [LauncherService.qml](services/LauncherService.qml) tem a lógica (não-visual);
+[LauncherService.qml](services/LauncherService.qml) tem a lógica (não-visual);
 [LauncherWindow.qml](windows/LauncherWindow.qml) é a view (overlay no monitor focado, mesmo padrão
 da SettingsWindow). O **modo** deriva do texto digitado: apps (padrão; vazio = "mais usados" pela
 contagem em `launcher-usage.json`, que está no .gitignore), `=expr` calculadora, `/dir` navegador
@@ -254,12 +254,50 @@ O cristal de Sistema tem 2 seções: **engrenagem** (cima) abre a [SettingsWindo
   paleta efetiva (`Theme.*`), com **backup** (`<arquivo>.bak-<ts>`) e **reload ao vivo**. Disparado
   automaticamente quando muda `pal_*`/`theme*` (debounce no Settings) e pelo botão "Exportar temas".
   Alvos (escreve nos MESMOS arquivos que os apps já incluem → não mexe noutras linhas): **kitty**
-  (`themes/crimson-devil.conf`, `include` no kitty.conf), **rofi** (`themes/crimson-devil.rasi`, `@theme`),
+  (`themes/crimson-devil.conf`, `include` no kitty.conf),
   **niri** (`devil-shell/theme.kdl`, `include` no config.kdl — o niri faz merge de blocos `layout`
   duplicados; as cores de fábrica do focus-ring/border ficam COMENTADAS no config.kdl p/ não competirem
-  → reload via `niri msg action load-config-file`), **vesktop** (`themes/devil-shell.css`, habilitar 1x)
-  e **swaylock** (`config`).
-  kitty recarrega com `pkill -USR1 kitty`; rofi/vesktop/swaylock pegam no próximo uso. A escrita usa
+  → reload via `niri msg action load-config-file`), **vesktop** (`themes/devil-shell.css`, habilitar 1x),
+  **swaylock** (`config`) e **GTK3/GTK4** (`gtk-3.0/devil-shell.css` e `gtk-4.0/devil-shell.css` — nomes
+  `@define-color` clássicos do Adwaita e libadwaita; como o `gtk.css` do usuário não tem diretiva de
+  `include`, habilitar 1x adicionando `@import url("devil-shell.css");` no topo do `gtk.css` de cada
+  versão). Além disso MESCLA `gtk-application-prefer-dark-theme=1`/`gtk-theme-name=devil-shell` em
+  `gtk-3.0/settings.ini` e `gtk-application-prefer-dark-theme=1` em `gtk-4.0/settings.ini` (só essas
+  chaves — `sed` via helper `ini_set()`, não sobrescreve o arquivo, pois ele pode ter outras configs
+  do usuário) e seta via `gsettings` (systemwide, `org.gnome.desktop.interface`)
+  `color-scheme=prefer-dark` e `accent-color=<red|pink por paleta, ver accentEnum()>` (usado por
+  libadwaita/GTK4 em geral).
+
+  ⚠️ **Tema GTK3 NOMEADO** (`~/.local/share/themes/devil-shell/gtk-3.0/`), além do override simples
+  acima — diagnosticado ao vivo (GTK Inspector + `gresource extract` no `libgtk-3.so`) que o
+  Adwaita/Adwaita-dark **de fábrica** do GTK3 hardcoda a cor de seletoras centrais em vez de usar
+  `@theme_base_color`/`@view_bg_color` — ex.: `.view:backdrop, iconview:backdrop, textview
+  text:backdrop { background-color: #303030; }` em `gtk-contained-dark.css`. Isso é invisível pra
+  apps comuns (que respeitam nosso override em `~/.config/gtk-3.0/devil-shell.css` normalmente —
+  validado com `zenity`), mas o **`xdg-desktop-portal-gtk`** (o backend que desenha o diálogo NATIVO
+  de arquivo pra qualquer app que use o portal — Vesktop, VSCode, qualquer Electron no Wayland) usa
+  exatamente essas seletoras hardcoded pro fundo da lista/sidebar, e nenhum `@define-color` alcança
+  ali. A correção é trocar a BASE por uma que usa as variáveis de verdade: o tema **adw-gtk3-dark**
+  (github.com/lassekongo83/adw-gtk3 — o mesmo "adw-gtk-theme" do Arch) reimplementa o Adwaita com
+  `@view_bg_color`/`@sidebar_bg_color`/etc. de verdade. Por isso o `exportAll()`:
+  1. procura a extensão Flatpak `org.gtk.Gtk3theme.adw-gtk3-dark` já instalada (**PRÉ-REQUISITO
+     de instalação única**: `flatpak install --user flathub org.gtk.Gtk3theme.adw-gtk3-dark` — não dá
+     pra vendorizar/gerar isso aqui, são ~8000 linhas de CSS + assets binários);
+  2. copia o `gtk-3.0` dela (localizado via `find` em `~/.local/share/flatpak/runtime/…` e
+     `/var/lib/flatpak/runtime/…`, o commit hash muda a cada update) pra
+     `~/.local/share/themes/devil-shell/gtk-3.0/`;
+  3. anexa (`>>`, cascata CSS = última definição vence) `gtk4Content() + gtk3SidebarOverrides()` no
+     final de `gtk.css` E `gtk-dark.css` dessa cópia (os nomes libadwaita são os MESMOS que o
+     adw-gtk3 usa; `sidebar_bg_color`/`sidebar_fg_color`/`sidebar_backdrop_color` são exclusivos
+     desse tema nomeado — não existem no `gtk3Content()`/`gtk4Content()` normais);
+  4. só ENTÃO seta `gtk-theme-name=devil-shell` — se a extensão não estiver instalada, tudo isso é
+     pulado silenciosamente e o override "simples" de `~/.config/gtk-3.0` continua sendo o único
+     mecanismo (como antes, sem quebrar nada).
+
+  kitty recarrega com `pkill -USR1 kitty`; o export também reinicia o
+  `xdg-desktop-portal-gtk.service` (é ele quem desenha o diálogo nativo de arquivos de apps Electron
+  como o Vesktop — e só lê o tema na própria inicialização, precisa do restart pra pegar mudanças);
+  vesktop/swaylock/gtk comuns pegam no próximo uso. A escrita usa
   `Qt.btoa` (base64) num único `sh -c` p/ evitar escaping → mantenha os comentários gerados em ASCII.
   Export manual pela CLI: `qs ipc call theme exportAll` (IpcHandler no ThemeExport; o singleton é
   instanciado no boot por `ThemeExport.init()` no `shell.qml`, senão o alvo IPC não existe).

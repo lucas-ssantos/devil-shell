@@ -19,7 +19,7 @@ e há um **visualizador de áudio (CAVA)** ao fundo, no estilo do [Cavasik](http
 - **Menu radial de cristais** (data-driven, reorganiza sozinho). Configuração atual (1º → 4º):
   - **1ª — Sistema:** configurações gerais do shell (janela modal), gravação de tela
     (monitor inteiro) e toggle de inibição do lock/idle.
-  - **2ª — Lançador:** lançador **próprio** (sem rofi), também acessível por `Mod+D`
+  - **2ª — Lançador:** lançador **próprio**, também acessível por `Mod+D`
     (`qs ipc call launcher toggle`). Além de buscar apps, tem modos por prefixo (ver abaixo).
   - **3ª — Áudio:** mudo de saída/entrada + sliders de volume (scroll ajusta);
     **clique direito** abre o **seletor de dispositivo** (saída/entrada).

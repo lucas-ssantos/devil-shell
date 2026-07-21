@@ -4,7 +4,7 @@ import Quickshell.Io
 import QtQuick
 import "root:/"           // Config (launcherTerminal)
 
-// Lançador de aplicativos próprio (substitui o rofi) — a parte NÃO-visual.
+// Lançador de aplicativos próprio — a parte NÃO-visual.
 // A janela (windows/LauncherWindow.qml) é só view; aqui ficam:
 //   • a lista de apps instalados (DesktopEntries do Quickshell) + contagem de uso
 //     persistida em ~/.config/quickshell/launcher-usage.json ("mais usados");

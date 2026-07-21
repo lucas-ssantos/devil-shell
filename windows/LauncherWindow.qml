@@ -5,7 +5,7 @@ import "root:/services"   // LauncherService
 import "root:/themes"     // Theme
 import "root:/"           // Config
 
-// Janela do lançador próprio (substitui o rofi). Overlay no monitor focado, com um
+// Janela do lançador próprio. Overlay no monitor focado, com um
 // campo de busca e uma lista de resultados. O MODO é derivado do texto digitado:
 //   (vazio/texto)  aplicativos instalados — vazio lista os MAIS USADOS primeiro
 //   /dir           navegador de arquivos (dirs + imagens/vídeos) -> abre no VLC

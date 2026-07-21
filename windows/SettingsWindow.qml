@@ -12,7 +12,7 @@ import "root:/"           // Config
 // é recolhível (clique no cabeçalho) e agrupa os campos em subgrupos de
 // Posicionamento / Cores / Animações. Barra de rolagem arrastável à direita.
 // Grava tudo via Settings (settings.json). Botões para restaurar o padrão e
-// regenerar os temas externos (kitty/rofi/vesktop…).
+// regenerar os temas externos (kitty/vesktop…).
 PanelWindow {
     id: win
     property var niri   // NiriService, p/ achar o monitor focado
@@ -680,13 +680,30 @@ PanelWindow {
                     }
                     Timer { id: makeDefReset; interval: 3000; onTriggered: makeDefBtn.stage = 0 }
                 }
-                // Regenerar temas externos
+                // Regenerar temas externos (kitty/niri/vesktop/swaylock/gtk3/gtk4)
                 Rectangle {
+                    id: exportBtn
+                    property bool done: false
                     width: exportTxt.implicitWidth + 28; height: 32; radius: 8
                     color: Theme.surface0
                     border.color: Theme.surface2; border.width: 1
-                    Text { id: exportTxt; anchors.centerIn: parent; text: "Exportar temas"; color: Theme.text; font.pixelSize: 12 }
-                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: ThemeExport.exportAll() }
+                    Text {
+                        id: exportTxt
+                        anchors.centerIn: parent
+                        text: exportBtn.done ? "Exportado ✓" : "Exportar temas"
+                        color: Theme.text
+                        font.pixelSize: 12
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            ThemeExport.exportAll()
+                            exportBtn.done = true
+                            exportReset.restart()
+                        }
+                    }
+                    Timer { id: exportReset; interval: 3000; onTriggered: exportBtn.done = false }
                 }
             }
 

@@ -125,7 +125,7 @@ Singleton {
     readonly property real   trayMenuGap: Settings.get("trayMenuGap", 21)      // folga acima do cristal (o menu abre pra cima)
     readonly property int    trayMenuAnim: Settings.get("trayMenuAnim", 140)    // duração da animação de entrada do menu (ms)
 
-    // ── Lançador (janela própria; substitui o rofi) ─────
+    // ── Lançador (janela própria) ─────
     readonly property real   launcherW: Settings.get("launcherW", 640)              // largura do painel
     readonly property real   launcherListMaxH: Settings.get("launcherListMaxH", 420) // teto da lista (rola além disso)
     readonly property real   launcherRowH: Settings.get("launcherRowH", 44)         // altura de cada resultado
