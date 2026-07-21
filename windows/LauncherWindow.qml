@@ -84,6 +84,19 @@ PanelWindow {
         procSort = order[(order.indexOf(procSort) + 1) % order.length]
     }
 
+    // total de CPU em uso por TODOS os processos (independe do filtro de busca);
+    // RAM vem pronta de LauncherService.memUsedMB (soma de RSS por processo conta
+    // memória compartilhada várias vezes e passa do total físico da máquina)
+    readonly property real procTotalCpu: {
+        const list = LauncherService.procs
+        let s = 0
+        for (let i = 0; i < list.length; i++) s += list[i].cpu
+        return s
+    }
+    function fmtMem(mb) {
+        return mb >= 1024 ? (mb / 1024).toFixed(1) + " GB" : Math.round(mb) + " MB"
+    }
+
     // ── Alvo do /bg (todos os monitores ou um específico) ──
     property string bgTarget: "*"
     readonly property var bgTargets: {
@@ -332,7 +345,7 @@ PanelWindow {
         if (mode === "apps")  return "↑↓ navegar · Enter abrir · “/” comandos · “=” calculadora"
         if (mode === "cmds")  return "Enter escolhe o comando"
         if (mode === "files") return "Enter abre no VLC / entra na pasta · Backspace sobe · digite p/ filtrar"
-        if (mode === "proc")  return "Enter finaliza (TERM) · Shift+Enter mata (KILL) · Tab muda a ordem"
+        if (mode === "proc")  return "Digite p/ filtrar por nome/PID · Enter finaliza (TERM) · Shift+Enter mata (KILL) · Tab muda a ordem"
         if (mode === "bg")    return "Enter aplica em “" + bgTargetLabel + "” · Shift+Enter aplica sem fechar · Tab muda o alvo"
         if (mode === "calc")  return "Enter usa o resultado na próxima conta"
         return ""
@@ -550,6 +563,46 @@ PanelWindow {
             }
 
             Rectangle { width: col.width; height: 1; color: Config.launcherBorder }
+
+            // ── /proc: cabeçalho com o total de RAM/CPU em uso, no mesmo layout
+            //    das linhas de processo (nome à esquerda + colunas PID/CPU/RAM) ──
+            Item {
+                visible: win.mode === "proc"
+                width: col.width
+                height: Config.launcherRowH
+                Text {
+                    anchors { left: parent.left; leftMargin: 12; right: totalCols.left; rightMargin: 8
+                              verticalCenter: parent.verticalCenter }
+                    text: "Total em uso"
+                    color: Config.accent
+                    font.pixelSize: Config.launcherFontSize
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+                Row {
+                    id: totalCols
+                    anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                    spacing: 0
+                    Text { width: 64; horizontalAlignment: Text.AlignRight; text: "" }
+                    Text {
+                        width: 74; horizontalAlignment: Text.AlignRight
+                        text: win.procTotalCpu.toFixed(1) + "%"
+                        color: Config.accent
+                        font.pixelSize: Config.launcherFontSize - 1
+                        font.family: "monospace"
+                        font.bold: true
+                    }
+                    Text {
+                        width: 88; horizontalAlignment: Text.AlignRight
+                        text: win.fmtMem(LauncherService.memUsedMB)
+                        color: Config.accent
+                        font.pixelSize: Config.launcherFontSize - 1
+                        font.family: "monospace"
+                        font.bold: true
+                    }
+                }
+            }
+            Rectangle { visible: win.mode === "proc"; width: col.width; height: 1; color: Config.launcherBorder }
 
             // ── Lista de resultados ──
             ListView {

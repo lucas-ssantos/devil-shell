@@ -150,8 +150,16 @@ Singleton {
 
     // ═════════════════════════ /proc — processos ═════════════════════════
     property var procs: []             // [{ pid, cpu, mem, name }] (mem em MiB)
+    // RAM realmente em uso no sistema (MiB) — NÃO é a soma do RSS de cada processo
+    // (isso conta várias vezes a mesma lib compartilhada e passa fácil do total físico).
+    // Vem de /proc/meminfo: usado = MemTotal - MemAvailable (mesma conta do `free` moderno).
+    property real memUsedMB: 0
+    property real memTotalMB: 0
 
-    function refreshProcs() { psProc.exec(["ps", "axo", "pid=,pcpu=,pmem=,rss=,comm="]) }
+    function refreshProcs() {
+        psProc.exec(["ps", "axo", "pid=,pcpu=,pmem=,rss=,comm="])
+        memProc.exec(["cat", "/proc/meminfo"])
+    }
     Process {
         id: psProc
         stdout: StdioCollector {
@@ -170,6 +178,24 @@ Singleton {
                     })
                 }
                 svc.procs = out
+            }
+        }
+    }
+    Process {
+        id: memProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const info = {}
+                const lines = text.split("\n")
+                for (let i = 0; i < lines.length; i++) {
+                    const m = lines[i].match(/^(\w+):\s+(\d+)/)
+                    if (m) info[m[1]] = parseInt(m[2])
+                }
+                if (info.MemTotal) {
+                    const availKb = info.MemAvailable !== undefined ? info.MemAvailable : info.MemFree
+                    svc.memTotalMB = info.MemTotal / 1024
+                    svc.memUsedMB = (info.MemTotal - availKb) / 1024
+                }
             }
         }
     }
