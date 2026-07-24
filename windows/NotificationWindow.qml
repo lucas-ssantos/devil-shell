@@ -117,20 +117,39 @@ PanelWindow {
                     }
                 }
 
-                MouseArea { anchors.fill: parent; onClicked: card.modelData.dismiss() }
+                property bool appeared: false
+                property bool hovering: false
+                property bool closing: false
+                property bool closeByUser: false   // true = clique do usuário (dismiss); false = timeout (expire)
 
-                // auto-dismiss (crítica permanece até o usuário fechar)
-                Timer {
-                    running: card.modelData.urgency !== NotificationUrgency.Critical
-                    interval: Config.notifTimeout
-                    onTriggered: card.modelData.expire()
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onEntered: card.hovering = true
+                    onExited: card.hovering = false
+                    onClicked: { card.closeByUser = true; card.closing = true }
                 }
 
-                // animação de entrada
-                opacity: 0
-                scale: 0.96
+                // auto-dismiss (pausado com o mouse em cima; crítica só fecha por clique)
+                Timer {
+                    running: !card.hovering && !card.closing && card.modelData.urgency !== NotificationUrgency.Critical
+                    interval: Config.notifTimeout
+                    onTriggered: { card.closeByUser = false; card.closing = true }
+                }
+
+                // dispara a remoção de verdade só depois da animação de saída terminar
+                Timer {
+                    id: closeAnimTimer
+                    interval: Config.notifAnim
+                    onTriggered: card.closeByUser ? card.modelData.dismiss() : card.modelData.expire()
+                }
+                onClosingChanged: if (closing) closeAnimTimer.restart()
+
+                // animação de entrada/saída
+                opacity: appeared && !closing ? 1 : 0
+                scale: appeared && !closing ? 1 : 0.96
                 transformOrigin: Item.Top
-                Component.onCompleted: { opacity = 1; scale = 1 }
+                Component.onCompleted: appeared = true
                 Behavior on opacity { NumberAnimation { duration: Config.notifAnim; easing.type: Easing.OutCubic } }
                 Behavior on scale { NumberAnimation { duration: Config.notifAnim; easing.type: Easing.OutCubic } }
             }
