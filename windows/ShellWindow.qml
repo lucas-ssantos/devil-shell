@@ -349,6 +349,16 @@ PanelWindow {
         z: 10
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
+        // mãozinha só sobre algo clicável de fato (bola/anel de workspaces, cristal, ou
+        // slider do submenu de áudio) — não na faixa/máscara toda (que tem folga em volta)
+        cursorShape: {
+            if (!hoverMA.containsMouse) return Qt.ArrowCursor
+            const mx = hoverMA.mouseX, my = hoverMA.mouseY
+            if (win.audioMode)
+                return win.audioSliderAt(mx, my) >= 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+            if (win.overBallAt(mx, my) || win.crystalAt(mx, my) >= 0) return Qt.PointingHandCursor
+            return Qt.ArrowCursor
+        }
 
         onEntered: win.refreshHover()
         onPositionChanged: win.refreshHover()
