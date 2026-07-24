@@ -196,7 +196,7 @@ PanelWindow {
             const f = fs[i]
             if (ql !== "" && f.name.toLowerCase().indexOf(ql) < 0) continue
             out.push({ kind: f.isDir ? "dir" : "file", name: f.name, path: f.path,
-                       isVideo: f.isVideo, up: false })
+                       fileType: f.fileType, up: false })
         }
         return out
     }
@@ -659,7 +659,7 @@ PanelWindow {
                                 visible: ("" + source) !== ""
                                 source: row.modelData.kind === "app" ? (row.modelData.icon ?? "")
                                       : (row.modelData.kind === "bg"
-                                         || (row.modelData.kind === "file" && !row.modelData.isVideo))
+                                         || (row.modelData.kind === "file" && row.modelData.fileType === "image"))
                                         ? win.fileUrl(row.modelData.path) : ""
                                 sourceSize: Qt.size(Config.launcherIconSize * 2, Config.launcherIconSize * 2)
                                 width: Config.launcherIconSize
@@ -681,12 +681,14 @@ PanelWindow {
                                     font.bold: true
                                 }
                             }
-                            Text {   // glifo (comandos, pastas, vídeos)
+                            Text {   // glifo (comandos, pastas, vídeo/áudio/pdf)
                                 visible: row.modelData.kind === "cmd" || row.modelData.kind === "dir"
-                                      || (row.modelData.kind === "file" && row.modelData.isVideo)
+                                      || (row.modelData.kind === "file" && row.modelData.fileType !== "image")
                                 anchors.centerIn: parent
                                 text: row.modelData.kind === "cmd" ? (row.modelData.glyph ?? "❯")
                                     : row.modelData.kind === "dir" ? (row.modelData.up ? "↩" : "📁")
+                                    : row.modelData.fileType === "audio" ? "🎵"
+                                    : row.modelData.fileType === "pdf" ? "📄"
                                     : "🎬"
                                 font.pixelSize: Config.launcherIconSize * 0.8
                             }

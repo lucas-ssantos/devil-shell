@@ -9,7 +9,8 @@ import "root:/"           // Config (launcherTerminal)
 //   • a lista de apps instalados (DesktopEntries do Quickshell) + contagem de uso
 //     persistida em ~/.config/quickshell/launcher-usage.json ("mais usados");
 //   • o lançamento via `niri msg action spawn-sh` (env Wayland correto, ver CLAUDE.md);
-//   • a navegação de arquivos do modo /dir (find por diretório, só mídia) → VLC;
+//   • a navegação de arquivos do modo /dir (find por diretório, imagem/vídeo/áudio/pdf)
+//     → VLC (imagem/vídeo/áudio) ou Zen Browser (pdf, via flatpak --file-forwarding);
 //   • a lista de processos do modo /proc (ps) + finalizar (kill);
 //   • a calculadora do modo "=" (parser próprio — SEM eval, p/ não expor o escopo QML);
 //   • as ações /reload (Quickshell.reload) e /config (Settings.open);
@@ -86,11 +87,14 @@ Singleton {
 
     // ═════════════════════════ /dir — arquivos de mídia ═════════════════════════
     property string cwd: ""            // diretório atual do navegador
-    property var files: []             // [{ name, path, isDir, isVideo }] do cwd (só dirs + mídia)
+    property var files: []             // [{ name, path, isDir, fileType }] do cwd (só dirs + mídia/pdf)
     property int dirSeq: 0             // descarta respostas fora de ordem (navegação rápida)
 
+    // fileType: "image" | "video" | "audio" | "pdf"
     readonly property var imageExts: ["jpg","jpeg","png","gif","webp","bmp","svg","avif","jxl","tif","tiff","heic","heif","ico"]
     readonly property var videoExts: ["mp4","mkv","webm","avi","mov","m4v","wmv","flv","mpg","mpeg","m2ts","ts","ogv","3gp"]
+    readonly property var audioExts: ["mp3","wav","flac","ogg","oga","opus","m4a","aac","wma","aiff","alac"]
+    readonly property var pdfExts: ["pdf"]
 
     function extOf(name) {
         const d = name.lastIndexOf(".")
@@ -127,12 +131,15 @@ Singleton {
                     if (name === "" || name[0] === ".") continue          // oculta dotfiles
                     const base = svc.cwd === "/" ? "" : svc.cwd
                     if (type === "d") {
-                        dirs.push({ name: name, path: base + "/" + name, isDir: true, isVideo: false })
+                        dirs.push({ name: name, path: base + "/" + name, isDir: true })
                     } else {
                         const ext = svc.extOf(name)
-                        const isVid = svc.videoExts.indexOf(ext) >= 0
-                        if (isVid || svc.imageExts.indexOf(ext) >= 0)
-                            media.push({ name: name, path: base + "/" + name, isDir: false, isVideo: isVid })
+                        const fileType = svc.imageExts.indexOf(ext) >= 0 ? "image"
+                                        : svc.videoExts.indexOf(ext) >= 0 ? "video"
+                                        : svc.audioExts.indexOf(ext) >= 0 ? "audio"
+                                        : svc.pdfExts.indexOf(ext) >= 0 ? "pdf" : ""
+                        if (fileType !== "")
+                            media.push({ name: name, path: base + "/" + name, isDir: false, fileType: fileType })
                     }
                 }
                 const cmp = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true })
@@ -142,9 +149,15 @@ Singleton {
         }
     }
 
-    // abre imagem/vídeo no VLC (app gráfico -> pelo compositor)
+    // abre imagem/vídeo/áudio no VLC; PDF no Zen Browser (flatpak — --file-forwarding
+    // usa o portal de documentos, então funciona mesmo fora do filesystem liberado ao
+    // sandbox, ex.: xdg-download). Sempre pelo compositor (app gráfico, ver CLAUDE.md).
     function openFile(path) {
-        spawn("exec vlc " + shq(path))
+        const ext = extOf(path.substring(path.lastIndexOf("/") + 1))
+        if (pdfExts.indexOf(ext) >= 0)
+            spawn("exec flatpak run --file-forwarding app.zen_browser.zen @@u file://" + shq(path) + " @@")
+        else
+            spawn("exec vlc " + shq(path))
         hide()
     }
 
