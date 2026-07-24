@@ -97,11 +97,6 @@ PanelWindow {
     Timer { id: hoverCloseTimer; interval: Config.hoverCloseMs; onTriggered: win.hoverOpen = false }
     Timer { id: selectTimer; interval: Config.selectMs; onTriggered: { win.dismissed = true; win.pinned = false; win.selectedIndex = -1 } }
 
-    // relógio (tick por minuto) p/ o texto sobre a bola escondida
-    SystemClock { id: sysClock; precision: SystemClock.Minutes }
-    readonly property string dateText: Qt.formatDateTime(sysClock.date, Config.dateFormat)
-    readonly property string timeText: Qt.formatDateTime(sysClock.date, Config.timeFormat)
-
     // ── Estado do Niri p/ ESTE monitor/workspace ─────────
     readonly property var monData: {
         if (!niri || !modelData) return null
@@ -346,32 +341,6 @@ PanelWindow {
 
     GothicCorners { ctx: win }                              // filetes bola ↔ barra
     MenuBall { ctx: win }                                   // a bola
-
-    // data/hora ao lado da bola (só quando escondida): data à esquerda, hora à direita
-    Text {
-        z: 4
-        text: win.dateText
-        color: Config.clock
-        font.pixelSize: Config.clockSize
-        font.bold: true
-        x: win.ballCX - Config.clockSideGap - width   // borda direita encosta na bola pela esquerda
-        y: win.height - win.ballPeek / 2 - height / 2  // centralizado na fatia visível da bola
-        opacity: win.open ? 0 : 1
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: Config.clockAnim } }
-    }
-    Text {
-        z: 4
-        text: win.timeText
-        color: Config.clock
-        font.pixelSize: Config.clockSize
-        font.bold: true
-        x: win.ballCX + Config.clockSideGap          // borda esquerda começa após a bola
-        y: win.height - win.ballPeek / 2 - height / 2
-        opacity: win.open ? 0 : 1
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: Config.clockAnim } }
-    }
 
     // ── Entrada: hover + TODOS os cliques (por hit-test) ──
     MouseArea {

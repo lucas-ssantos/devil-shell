@@ -1,12 +1,12 @@
 import Quickshell
 import QtQuick
-import "root:/services"   // SensorsService, WeatherService
+import "root:/services"   // SensorsService
 import "root:/"           // Config (raiz)
 
-// Popup do botão de temperatura (ClockCapsule, indicador de CPU): CPU, GPU e a
-// temperatura do local (clima). Emerge CENTRALIZADO com a cápsula (mesma cor, sem
+// Popup do botão de RAM (ClockCapsule, indicador de RAM): uso de RAM, Processamento
+// (CPU) e VRAM da placa de vídeo. Emerge CENTRALIZADO com a cápsula (mesma cor, sem
 // borda, cantos de cima retos) e "desenrola" de cima pra baixo (altura, não escala) —
-// mesma linguagem visual do CalendarPopup, para parecer uma extensão da cápsula.
+// mesma linguagem visual do TempPopup/CalendarPopup, para parecer uma extensão da cápsula.
 PopupWindow {
     id: root
     property var ctx        // janela-âncora (TopCapsules -> bar)
@@ -42,9 +42,9 @@ PopupWindow {
     anchor.rect.height: 1
 
     readonly property var rows: [
-        { label: "Processador", value: SensorsService.cpuTemp },
-        { label: "Placa de vídeo", value: SensorsService.gpuTemp },
-        { label: "Local", value: WeatherService.temp }
+        { label: "RAM", value: SensorsService.ramUsage },
+        { label: "Processamento", value: SensorsService.cpuUsage },
+        { label: "VRAM", value: SensorsService.vramUsage }
     ]
 
     implicitWidth: Config.tempPopupW

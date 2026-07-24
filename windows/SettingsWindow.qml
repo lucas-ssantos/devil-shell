@@ -330,22 +330,6 @@ PanelWindow {
                 { key: "capsuleAnim", label: "Retrair/estender (ms)", ftype: "int" }
             ]}
         ]},
-        { title: "Relógio", subs: [
-            { name: "Formato", fields: [
-                { key: "dateFormat", label: "Formato da data", ftype: "string" },
-                { key: "timeFormat", label: "Formato da hora", ftype: "string" }
-            ]},
-            { name: "Posicionamento", fields: [
-                { key: "clockSideGap", label: "Folga do relógio", ftype: "real" },
-                { key: "clockSize", label: "Tamanho relógio", ftype: "int" }
-            ]},
-            { name: "Cores", fields: [
-                { key: "clock", label: "Relógio", ftype: "color" }
-            ]},
-            { name: "Animações", fields: [
-                { key: "clockAnim", label: "Relógio (ms)", ftype: "int" }
-            ]}
-        ]},
         { title: "Gravação", subs: [
             { name: "Cores", fields: [
                 { key: "captureRecColor", label: "Cor gravando", ftype: "color" }
@@ -395,8 +379,8 @@ PanelWindow {
                 { key: "iconMedia", label: "Mídia", ftype: "string" },
                 { key: "iconWeather", label: "Clima", ftype: "string" },
                 { key: "iconCalendar", label: "Calendário", ftype: "string" },
-                { key: "iconCpu", label: "CPU", ftype: "string" },
                 { key: "iconGpu", label: "GPU", ftype: "string" },
+                { key: "iconRam", label: "RAM", ftype: "string" },
                 { key: "iconPolkitLock", label: "Cadeado (polkit)", ftype: "string" }
             ]}
         ]}

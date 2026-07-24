@@ -79,6 +79,7 @@ Item {
         id: ma
         anchors.fill: parent
         hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
         onClicked: cap.clicked()
     }
 }

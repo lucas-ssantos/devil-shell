@@ -185,7 +185,7 @@ Singleton {
     readonly property color  polkitError: Settings.get("polkitError", Theme.red)      // falha de autenticação
 
     // ── Cápsulas do topo (mídia à esquerda, clima à direita) ──
-    readonly property real   capsuleW: Settings.get("capsuleW", 200)         // largura da cápsula
+    readonly property real   capsuleW: Settings.get("capsuleW", 230)         // largura da cápsula (a direita cabe 3 botões: RAM/calendário/CPU)
     readonly property real   capsuleH: Settings.get("capsuleH", 32)          // altura (quando estendida)
     readonly property real   capsulePeek: Settings.get("capsulePeek", 6)        // fatia visível quando retraída
     readonly property real   capsuleEdge: Settings.get("capsuleEdge", 0.10)     // distância das margens (10%)
@@ -198,36 +198,30 @@ Singleton {
     readonly property string iconMedia: Settings.get("iconMedia", "")   // nota musical (nf-fa-music)
     readonly property string iconWeather: Settings.get("iconWeather", "") // termômetro (nf-weather-thermometer)
     readonly property string iconCalendar: Settings.get("iconCalendar", "")  // calendário (nf-fa-calendar)
-    readonly property string iconCpu: Settings.get("iconCpu", "")  // microchip (nf-fa-microchip)
     readonly property string iconGpu: Settings.get("iconGpu", "󰝰")  // placa de video (nf-md-expansion_card_variant)
+    readonly property string iconRam: Settings.get("iconRam", "󰍛")  // pente de memória (nf-md-memory)
 
-    // ── Cápsula direita: data/hora (botão calendário) + CPU (botão popup temperatura) ──
+    // ── Cápsula direita: RAM (botão popup RAM/CPU/VRAM) + data/hora (botão calendário) + CPU (botão popup temperatura) ──
     // mesma largura da cápsula de mídia (Config.capsuleW)
-    readonly property string clockCapsuleFormat: Settings.get("clockCapsuleFormat", "dd/MM/yy HH:mm:ss")
+    readonly property string clockCapsuleFormat: Settings.get("clockCapsuleFormat", "dd/MM HH:mm")
 
     // ── Clima (cápsula direita → popup de temperatura, linha "Local") ──
     readonly property string weatherLocation: Settings.get("weatherLocation", "")   // local p/ wttr.in; VAZIO = auto por IP
     readonly property int    weatherInterval: Settings.get("weatherInterval", 1800000)  // atualiza a cada 30 min (ms)
 
-    // ── Sensores: CPU/GPU (cápsula direita → botão CPU + popup de temperatura) ──
-    readonly property int    sensorsInterval: Settings.get("sensorsInterval", 5000)  // intervalo de leitura do hwmon (ms)
+    // ── Sensores: CPU/GPU/RAM/VRAM (cápsula direita → botões RAM/CPU + popups) ──
+    readonly property int    sensorsInterval: Settings.get("sensorsInterval", 5000)  // intervalo de leitura (ms)
 
     // ── Popup de calendário (botão data/hora da cápsula direita) ──
-    readonly property real   calendarCellSize: Settings.get("calendarCellSize", 30)  // célula do dia (grade 7 colunas)
+    readonly property real   calendarCellSize: Settings.get("calendarCellSize", 34)  // célula do dia (grade 7 colunas); popup precisa ficar MAIS LARGO que capsuleW p/ o canto gótico (ver CalendarPopup) ter D > 0
 
-    // ── Popup de temperatura (botão CPU da cápsula direita) ──
+    // ── Popups de temperatura e RAM (botões CPU/RAM da cápsula direita) ──
     readonly property real   tempPopupW: Settings.get("tempPopupW", 190)
-
-    // ── Relógio (data à esquerda da bola, hora à direita) ──
-    readonly property string dateFormat: Settings.get("dateFormat", "d/M")
-    readonly property string timeFormat: Settings.get("timeFormat", "HH:mm")
-    readonly property real   clockSideGap: Settings.get("clockSideGap", 40)   // distância do centro da bola até a borda interna de cada texto
 
     // ── Fontes (px) ─────────────────────────────────────
     readonly property int  crystalIconSize: Settings.get("crystalIconSize", 13)
     readonly property int  ballNumberSize: Settings.get("ballNumberSize", 18)
     readonly property int  layoutTextSize: Settings.get("layoutTextSize", 12)   // texto dos sliders de áudio
-    readonly property int  clockSize: Settings.get("clockSize", 13)
 
     // ── Cores (semânticas → paleta em Theme.qml; override por nome do componente) ──
     readonly property color ball: Settings.get("ball", Theme.crust)
@@ -239,7 +233,6 @@ Singleton {
     readonly property color accent: Settings.get("accent", Theme.mauve)
     readonly property color ballText: Settings.get("ballText", Theme.red)          // nº do workspace
     readonly property color ballSigil: Settings.get("ballSigil", Theme.dimGreen)   // sigilo (pentáculo) gravado na bola
-    readonly property color clock: Settings.get("clock", Theme.text)
     readonly property color dotActive: Settings.get("dotActive", Theme.red)         // arco do workspace atual
     readonly property color dotUrgent: Settings.get("dotUrgent", Theme.peach)        // urgente
     readonly property color dotOccupied: Settings.get("dotOccupied", Theme.maroon)    // ocupado
@@ -254,7 +247,6 @@ Singleton {
     readonly property int  crystalFillAnim: Settings.get("crystalFillAnim", 340)      // subida do brilho base→ponta no hover
     readonly property int  crystalPulseTime: Settings.get("crystalPulseTime", 620)    // meio-período do pulso do glow no hover
     readonly property int  layoutAnim: Settings.get("layoutAnim", 180)   // sliders de áudio
-    readonly property int  clockAnim: Settings.get("clockAnim", 150)
     readonly property int  hoverCloseMs: Settings.get("hoverCloseMs", 130)
     readonly property int  selectMs: Settings.get("selectMs", 200)
 }
