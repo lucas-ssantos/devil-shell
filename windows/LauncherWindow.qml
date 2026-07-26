@@ -12,6 +12,7 @@ import "root:/"           // Config
 //   /proc          processos (ordenável por nome/PID/RAM/CPU; Enter finaliza)
 //   /bg            escolhedor de wallpaper (swaybg; Tab muda o alvo: todos/por monitor)
 //   /reload        recarrega o Quickshell        /config  abre as configurações
+//   /reboot        reinicia o computador          /poweroff  desliga o computador
 //   =expressão     calculadora (=5+5 -> 10)
 // Teclado: ↑/↓ navega, Enter ativa, Esc fecha, Tab ordena (/proc),
 //          Backspace com filtro vazio sobe um diretório (/dir).
@@ -68,7 +69,9 @@ PanelWindow {
         { cmd: "/proc",   glyph: "⚡", name: "Processos",        desc: "listar e finalizar processos",          complete: true },
         { cmd: "/bg",     glyph: "🌄", name: "Papel de parede",  desc: "escolher o wallpaper (todos ou por monitor)", complete: true },
         { cmd: "/config", glyph: "⚙", name: "Configurações",    desc: "abrir as configurações do shell",       complete: false },
-        { cmd: "/reload", glyph: "↻", name: "Recarregar",       desc: "recarregar o Quickshell",               complete: false }
+        { cmd: "/reload", glyph: "↻", name: "Recarregar",       desc: "recarregar o Quickshell",               complete: false },
+        { cmd: "/reboot",   glyph: "⟳", name: "Reiniciar", desc: "reiniciar o computador",  complete: false },
+        { cmd: "/poweroff", glyph: "⏻", name: "Desligar",   desc: "desligar o computador",   complete: false }
     ]
 
     // ── Ordenação do /proc ──────────────────────────────
@@ -260,6 +263,8 @@ PanelWindow {
             if (it.complete) setQuery(it.cmd + " ")             // entra no modo
             else if (it.cmd === "/reload") LauncherService.reloadShell()
             else if (it.cmd === "/config") LauncherService.openConfig()
+            else if (it.cmd === "/reboot") LauncherService.reboot()
+            else if (it.cmd === "/poweroff") LauncherService.poweroff()
         } else if (it.kind === "dir") {
             if (it.up) LauncherService.dirUp()
             else LauncherService.listDir(it.path)

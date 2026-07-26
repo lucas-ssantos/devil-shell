@@ -13,7 +13,8 @@ import "root:/"           // Config (launcherTerminal)
 //     → VLC (imagem/vídeo/áudio) ou Zen Browser (pdf, via flatpak --file-forwarding);
 //   • a lista de processos do modo /proc (ps) + finalizar (kill);
 //   • a calculadora do modo "=" (parser próprio — SEM eval, p/ não expor o escopo QML);
-//   • as ações /reload (Quickshell.reload) e /config (Settings.open);
+//   • as ações /reload (Quickshell.reload), /config (Settings.open) e /reboot,
+//     /poweroff (rodam reboot/poweroff no terminal configurado);
 //   • o IpcHandler "launcher" p/ keybind do niri: `qs ipc call launcher toggle`.
 Singleton {
     id: svc
@@ -224,6 +225,17 @@ Singleton {
     // ═════════════════════════ Ações /reload e /config ═════════════════════════
     function reloadShell() { hide(); Quickshell.reload(false) }   // false = soft (reusa janelas)
     function openConfig()  { hide(); Settings.open = true }       // mesma pasta: sem import
+
+    // ═════════════════════════ Ações /reboot e /poweroff ═════════════════════════
+    // Roda o comando de mesmo nome dentro do terminal configurado (Config.launcherTerminal -e
+    // <cmd>) — mesmo padrão do Terminal=true dos .desktop em launchApp(). Assim, se pedir senha
+    // (polkit/PAM) ou falhar, o terminal fica aberto mostrando a saída em vez de falhar em silêncio.
+    function runInLauncherTerminal(cmd) {
+        hide()
+        spawn("exec " + shq(Config.launcherTerminal) + " -e " + cmd)
+    }
+    function reboot()   { runInLauncherTerminal("reboot") }
+    function poweroff() { runInLauncherTerminal("poweroff") }
 
     // ═════════════════════════ "=" — calculadora ═════════════════════════
     // Parser recursivo próprio (nada de eval: eval veria o escopo QML — Settings etc.).
