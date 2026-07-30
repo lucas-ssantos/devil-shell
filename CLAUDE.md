@@ -62,7 +62,7 @@ pkill quickshell; qs   # reinicia
 - Workspaces do niri são **dinâmicos por monitor** (sempre há um vazio no fim); o anel tracejado
   da bola reflete isso (o nº de arcos varia).
 
-### Lançar ferramentas Wayland (swaybg/blueman/swayidle/gpu-screen-recorder): use `niri msg action spawn-sh`
+### Lançar ferramentas Wayland (awww-daemon/blueman/swayidle/gpu-screen-recorder): use `niri msg action spawn-sh`
 Apps gráficos Wayland lançados como filhos do `Process` do Quickshell podem não receber um
 ambiente Wayland utilizável. A solução do projeto é fazer o **próprio compositor** lançar o
 comando via `niri msg action spawn-sh` (igual a um keybind) — aí o ambiente está correto. O
@@ -95,7 +95,7 @@ settings.default.json "padrão de fábrica" lido pelo botão Restaurar padrão
 themes/               Theme (seletor) + paletas (CrimsonDevil, InfernalRose)
 services/             singletons/escopos não-visuais (niri, áudio, captura, mídia, clima,
                       notificações, PolkitService, StartupService, IdleService, LauncherService,
-                      WallpaperService (swaybg, modo /bg), Settings, ThemeExport) + session.sh
+                      WallpaperService (awww, modo /bg), Settings, ThemeExport) + session.sh
 cava/                 tudo do visualizador CAVA (serviço, janela, barras, anel) + cava.conf
 windows/              janelas interativas: ShellWindow, NotificationWindow, PolkitWindow,
                       SettingsWindow, LauncherWindow (lançador próprio)
@@ -155,11 +155,17 @@ Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de 
   (`Component.onCompleted: StartupService.start()`). Ele pede ao compositor (via `niri msg action
   spawn-sh`) para rodar [session.sh](services/session.sh), que sobe `blueman-applet` e
   `swayidle` (com guardas `pgrep` para não duplicar a cada reload, e `setsid` para sobreviverem).
-- O **swaybg** sobe pelo [WallpaperService.qml](services/WallpaperService.qml)
-  (`WallpaperService.init()` no `shell.qml`, no boot e a cada reload): compara o argv do swaybg em
-  execução (`pgrep -xa`) com a seleção persistida do modo `/bg` do lançador e (re)aplica só se
-  divergir (todos os monitores ou um wallpaper por monitor; carrossel opcional).
-  Trocar wallpaper relança o swaybg (sobe o novo, depois mata o velho — sem frame preto).
+- O **awww-daemon** sobe pelo [WallpaperService.qml](services/WallpaperService.qml)
+  (`WallpaperService.init()` no `shell.qml`, no boot e a cada reload; guarda `pgrep` via
+  `niri msg action spawn-sh`, igual ao session.sh, pois é um app gráfico Wayland/layer-shell).
+  Diferente do swaybg (que era relançado a cada troca), o awww-daemon é um daemon PERSISTENTE:
+  trocar wallpaper só manda um comando `awww img` pro socket dele (sem matar/relançar processo,
+  sem frame preto). `init()` confere (`awww query --json`) se a imagem exibida em cada output bate
+  com a seleção persistida do modo `/bg` do lançador e só reaplica se divergir (evita reacender a
+  transição do awww a cada reload em dev). Todos os monitores = `awww img` sem `-o`; por monitor =
+  `-o <output>` (aplicado DEPOIS da base, senão a base sobrescreveria o override). O cliente
+  `awww img`/`awww query` não precisa de `spawn-sh` (não é um cliente Wayland gráfico, só fala com
+  o socket do daemon) — roda direto via `Process.exec` normal.
 - O próprio `qs` é lançado pelo niri: `spawn-at-startup "qs"` no `~/.config/niri/config.kdl`.
   Certifique-se de que nenhum outro daemon de notificação (swaync/mako/dunst) suba antes do qs,
   senão o qs não registra o servidor de notificações.
@@ -331,8 +337,9 @@ niri msg version
 niri msg action spawn-sh -- 'echo $PATH > /tmp/p'   # inspecionar o ambiente do spawn
 ```
 
-Scripts: daemons da sessão em [services/session.sh](services/session.sh) (swaybg/blueman/swayidle,
-disparado pelo StartupService). Gravação de tela usa `gpu-screen-recorder` (cristal de Sistema;
+Scripts: daemons da sessão em [services/session.sh](services/session.sh) (blueman/swayidle,
+disparado pelo StartupService; o awww-daemon do wallpaper sobe à parte, pelo WallpaperService).
+Gravação de tela usa `gpu-screen-recorder` (cristal de Sistema;
 setup único: `sudo setcap cap_sys_admin+ep /usr/bin/gsr-kms-server` — sem isso, e sem pkexec,
 a captura KMS falha; e `pgrep`/`pkill -x` usam o comm truncado `gpu-screen-reco`). Bootstrap da sessão: `spawn-at-startup` no `~/.config/niri/config.kdl`
 (lança o qs; garanta que nenhum swaync/mako suba junto).

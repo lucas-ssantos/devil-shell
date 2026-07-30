@@ -70,15 +70,18 @@ Teclado: `↑↓` navega, `Enter` ativa, `Esc` fecha, `Tab` muda a ordenação n
 | **Gravação de tela** | **gpu-screen-recorder** e **procps** (`pgrep`, para detectar gravação ativa) |
 | **Bandeja** | apps que exponham **StatusNotifierItem** (Discord/Vesktop, Steam…) |
 | **Notificações** | Quickshell como **único** servidor de notificações (ver aviso abaixo) |
-| **Sessão** (via `session.sh`) | **swaybg**, **blueman-applet**, **swayidle**, **swaylock-effects** |
+| **Papel de parede** (via `WallpaperService.qml`) | **awww** + **awww-daemon** |
+| **Sessão** (via `session.sh`) | **blueman-applet**, **swayidle**, **swaylock-effects** |
 
 Instalação no Debian (exemplo; nomes podem variar):
 
 ```sh
 sudo apt install niri cava vlc gpu-screen-recorder pipewire wireplumber procps \
-                 swaybg swayidle blueman
+                 swayidle blueman
 # gpu-screen-recorder: setup único (o gsr-kms-server precisa de CAP_SYS_ADMIN p/ capturar via KMS):
 sudo setcap cap_sys_admin+ep /usr/bin/gsr-kms-server
+# awww/awww-daemon (https://codeberg.org/LGFae/awww): NÃO estão no apt, compile com
+# `cargo build --release` e instale os dois binários (target/release/{awww,awww-daemon}) no PATH.
 # Quickshell normalmente é compilado / vem de repositório próprio (não do apt).
 # Symbols Nerd Font: baixe de https://www.nerdfonts.com/ e instale em ~/.local/share/fonts
 ```

@@ -4,24 +4,39 @@ import Quickshell.Io
 import QtQuick
 import "root:/"           // Config (wallpaperDir, wallpaperMode, carrossel…)
 
-// Papel de parede via swaybg (singleton). Lógica NÃO-visual do modo /bg do lançador:
+// Papel de parede via awww/awww-daemon (singleton). Lógica NÃO-visual do modo /bg do lançador:
 //   • lista as imagens da pasta Config.wallpaperDir (recursivo);
-//   • aplica com swaybg — em TODOS os monitores ('*') ou um wallpaper por monitor
-//     (-o <output>), sempre relançando pelo compositor (niri spawn-sh, ver CLAUDE.md);
+//   • aplica com `awww img` — em TODOS os monitores (sem -o) ou um wallpaper por monitor
+//     (-o <output>), sempre reconciliando com o awww-daemon (que sobe pelo compositor,
+//     ver CLAUDE.md — daemon é layer-shell, precisa de ambiente Wayland; já o cliente
+//     `awww img`/`awww query` só fala com o socket do daemon e roda direto por Process);
 //   • persiste a escolha no Settings ("wallpaperAll" / "wallpaperByOutput");
-//   • carrossel opcional: troca aleatória periódica (Config.wallpaperCarousel/…Min).
-// O swaybg da sessão sobe daqui (init() no shell.qml) — saiu do session.sh.
+//   • carrossel opcional: troca aleatória periódica em TODOS os monitores (Config.wallpaperCarousel/…Min).
+// O awww-daemon da sessão sobe daqui (init() no shell.qml) — um único daemon persistente
+// (diferente do swaybg: aqui NÃO se relança processo a cada troca, só se manda um comando).
 Singleton {
     id: svc
 
     // imagens encontradas na pasta (name = caminho relativo à pasta, path = absoluto)
     property var wallpapers: []
 
-    // formatos que o swaybg desenha (raster; sem svg/ico)
+    // formatos que o awww desenha (raster + svg/gif estáticos; ver `man awww-img`)
     readonly property var exts: ["jpg","jpeg","png","gif","webp","bmp","tif","tiff","avif","jxl"]
 
     // escapa UMA string p/ dentro de aspas simples de shell (igual ao LauncherService)
     function shq(s) { return "'" + ("" + s).replace(/'/g, "'\\''") + "'" }
+
+    // mapeia o modo semântico persistido (herdado do swaybg -m) pro --resize do awww.
+    // awww não tem "tile" (nem um equivalente) — cai em "no" (sem redimensionar/centralizado).
+    function resizeMode(m) {
+        switch (m) {
+            case "fill": return "crop"
+            case "fit": return "fit"
+            case "stretch": return "stretch"
+            case "center": return "no"
+            default: return "crop"
+        }
+    }
 
     // ═════════════════════════ Seleção persistida ═════════════════════════
     // "wallpaperAll" = imagem de todos os monitores; "wallpaperByOutput" = overrides
@@ -46,51 +61,68 @@ Singleton {
             by[target] = path
             Settings.set("wallpaperByOutput", by)
         }
-        apply(false)
+        apply()
     }
 
-    // ═════════════════════════ swaybg ═════════════════════════
-    // argv completo: -i sem -o vale p/ todos; depois um -o por monitor com override
-    function swaybgArgv() {
-        const m = Config.wallpaperMode
-        const argv = ["swaybg", "-i", Settings.get("wallpaperAll", Config.wallpaperDefault), "-m", m]
+    // ═════════════════════════ awww ═════════════════════════
+    function imgCmd(path, output) {
+        const mode = resizeMode(Config.wallpaperMode)
+        const out = output ? ("-o " + shq(output) + " ") : ""
+        return "awww img " + out + "--resize " + mode + " --transition-type none -- " + shq(path)
+    }
+
+    // um comando por override + um pra base (SEM -o = todos os outputs) aplicado ANTES,
+    // senão sobrescreveria os overrides já postos
+    function awwwScript() {
+        const all = Settings.get("wallpaperAll", Config.wallpaperDefault)
         const by = Settings.get("wallpaperByOutput", ({}))
-        for (const out in by)
-            argv.push("-o", out, "-i", by[out], "-m", m)
-        return argv
+        const lines = [imgCmd(all, null)]
+        for (const out in by) lines.push(imgCmd(by[out], out))
+        return lines.join(" && ")
     }
-    function swaybgLine() { return swaybgArgv().map(shq).join(" ") }
 
-    // relança o swaybg pelo compositor. guarded=true (boot/reload): só sobe se não
-    // houver um rodando; guarded=false (troca): sobe o novo e SÓ DEPOIS mata o velho
-    // (sem frame preto entre um e outro).
-    function apply(guarded) { runSwaybg(swaybgLine(), guarded) }
-    function runSwaybg(line, guarded) {
-        const script = guarded
-            ? "pgrep -x swaybg >/dev/null || { setsid " + line + " >/dev/null 2>&1 & }"
-            : "OLD=$(pgrep -x swaybg); setsid " + line + " >/dev/null 2>&1 & sleep 0.3; [ -n \"$OLD\" ] && kill $OLD 2>/dev/null"
-        spawnProc.exec(["niri", "msg", "action", "spawn-sh", "--", script])
+    function apply() { runAwww(awwwScript()) }
+    function runAwww(script) {
+        spawnProc.exec(["sh", "-c", script])
     }
     Process { id: spawnProc }
 
+    // garante que o awww-daemon da sessão está de pé. É um app gráfico Wayland
+    // (layer-shell) então sobe pelo COMPOSITOR (niri spawn-sh, ver CLAUDE.md); a guarda
+    // `pgrep` evita duplicar a cada (re)carga do quickshell.
+    function ensureDaemon() {
+        daemonProc.exec(["niri", "msg", "action", "spawn-sh", "--",
+            "pgrep -x awww-daemon >/dev/null || { setsid awww-daemon >/dev/null 2>&1 & }"])
+    }
+    Process { id: daemonProc }
+
     // chamado pelo shell.qml (Component.onCompleted — roda no boot E a cada reload):
-    // confere se o swaybg em execução bate com a seleção persistida; se não houver
-    // swaybg ou a linha divergir, aplica. Se já estiver certo, não mexe (sem piscar).
+    // sobe o daemon se preciso e confere se o que o awww-daemon está exibindo em cada
+    // output bate com a seleção persistida; só reaplica (awwwScript) se algo divergir
+    // (evita reacender a transição do awww toda vez que um .qml é salvo em dev).
     // Com carrossel ligado a checagem é dispensada: o 1º tique já aplica uma imagem.
     function init() {
+        ensureDaemon()
         refresh()
         if (!carouselOn) verify()
     }
     function verify() {
-        checkProc.exec(["sh", "-c", "pgrep -xa swaybg | head -n1 | cut -d' ' -f2-; true"])
+        // espera o socket do daemon ficar pronto (recém-spawnado) antes de consultar
+        checkProc.exec(["sh", "-c",
+            "for i in $(seq 1 50); do R=$(awww query --json 2>/dev/null) && [ -n \"$R\" ] && { printf '%s' \"$R\"; exit 0; }; sleep 0.1; done"])
     }
     Process {
         id: checkProc
         stdout: StdioCollector {
             onStreamFinished: {
-                const cur = text.trim()                       // argv do swaybg rodando ("" = nenhum)
-                if (cur === svc.swaybgArgv().join(" ")) return   // já é a seleção atual
-                svc.apply(cur === "")                            // vazio: só sobe; divergiu: relança
+                if (text.trim() === "") return   // daemon nunca respondeu (ainda subindo / não instalado)
+                let outs
+                try { outs = JSON.parse(text)[""] } catch (e) { return }
+                if (!outs) return
+                for (const o of outs) {
+                    const wanted = svc.currentFor(o.name)
+                    if (!o.displaying || o.displaying.image !== wanted) { svc.apply(); return }
+                }
             }
         }
     }
@@ -134,7 +166,7 @@ Singleton {
             else carouselTick()
         } else {
             carouselCurrent = ""
-            apply(false)                             // restaura a seleção manual persistida
+            apply()                                  // restaura a seleção manual persistida
         }
     }
     Timer {
@@ -149,6 +181,6 @@ Singleton {
         let i = Math.floor(Math.random() * n)
         if (n > 1 && wallpapers[i].path === carouselCurrent) i = (i + 1) % n   // evita repetir
         carouselCurrent = wallpapers[i].path
-        runSwaybg("swaybg -i " + shq(carouselCurrent) + " -m " + shq(Config.wallpaperMode), false)
+        runAwww(imgCmd(carouselCurrent, null))
     }
 }

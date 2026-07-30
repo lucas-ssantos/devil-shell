@@ -10,7 +10,7 @@ import "root:/"           // Config
 //   (vazio/texto)  aplicativos instalados — vazio lista os MAIS USADOS primeiro
 //   /dir           navegador de arquivos (dirs + imagens/vídeos) -> abre no VLC
 //   /proc          processos (ordenável por nome/PID/RAM/CPU; Enter finaliza)
-//   /bg            escolhedor de wallpaper (swaybg; Tab muda o alvo: todos/por monitor)
+//   /bg            escolhedor de wallpaper (awww; Tab muda o alvo: todos/por monitor)
 //   /reload        recarrega o Quickshell        /config  abre as configurações
 //   /reboot        reinicia o computador          /poweroff  desliga o computador
 //   =expressão     calculadora (=5+5 -> 10)

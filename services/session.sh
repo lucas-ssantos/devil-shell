@@ -7,7 +7,7 @@
 # Garante ferramentas instaladas em ~/.local/bin / ~/.cargo/bin no PATH.
 #export PATH="$HOME/.local/bin:$HOME/bin:$HOME/.cargo/bin:$PATH"
 
-# Wallpaper (swaybg): agora sobe pelo WallpaperService.qml (init() no shell.qml),
+# Wallpaper (awww-daemon): agora sobe pelo WallpaperService.qml (init() no shell.qml),
 # que aplica a última escolha do modo /bg do lançador. Nada a fazer aqui.
 
 # Applet do Bluetooth (aparece na bandeja do shell).
