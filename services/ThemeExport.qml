@@ -328,7 +328,26 @@ Singleton {
         let css = "window.dialog, window.messagedialog,\n"
             + ".dialog.background, .messagedialog.background,\n"
             + "messagedialog.csd.background {\n"
-            + "  border-radius: 12px;\n"
+            + "  border-radius: 0px;\n"
+            + "}\n"
+            // A faixa do header bar (CSD, sem título visível — só a "alça" de arrastar) é
+            // um elemento SEPARADO do .background, com raio de canto PRÓPRIO no adw-gtk3
+            // (15px, hardcoded). Sem casar aqui, sobra um degrau/aba no encontro dos dois
+            // cantos superiores — por isso repetimos os mesmos 12px nela também.
+            + "messagedialog .titlebar, messagedialog .titlebar:backdrop {\n"
+            + "  border-top-left-radius: 0px;\n"
+            + "  border-top-right-radius: 0px;\n"
+            + "}\n"
+            // Regra GENÉRICA do tema (`headerbar { box-shadow: 0 1px ...; }`, baixa
+            // especificidade) desenha uma linha de sombra sob QUALQUER headerbar. Como a
+            // faixa de topo do alerta fica vazia (sem título/botões de janela — só a alça
+            // de arrastar do CSD), essa sombra sobra como uma linha solta flutuando no
+            // meio do diálogo. Zera especificamente aqui, sem afetar headerbars de verdade
+            // (com título) noutros apps.
+            + "messagedialog headerbar, messagedialog .titlebar,\n"
+            + "messagedialog headerbar:backdrop, messagedialog .titlebar:backdrop {\n"
+            + "  box-shadow: none;\n"
+            + "  border-bottom: none;\n"
             + "}\n"
         for (let i = 0; i < states.length; i++) {
             const s = states[i]
