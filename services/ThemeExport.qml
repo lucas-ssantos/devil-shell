@@ -302,27 +302,47 @@ Singleton {
     // nativo) — cantos arredondados e botões com acento sólido. Selecionadas por classe
     // (".dialog"/".messagedialog", não ".background" genérico) pra NÃO arredondar/colorir
     // a janela principal de apps GTK comuns (Nautilus, editores…), só popups de diálogo.
-    // Sintaxe/seletores válidos tanto em GTK3 quanto GTK4 (função reaproveitada nos dois
-    // + no tema GTK3 nomeado, via gtk4Content() dentro de exportAll()). Hex cru (não
-    // @define-color) pra funcionar igual nos dois motores de CSS sem depender de quais
-    // nomes de cor cada um already define. Botões de diálogo em cinza quase idêntico ao
-    // fundo eram o motivo de sumirem no Dragon Blanc (tema claro, baixo contraste).
+    // ⚠️ NADA de `!important` aqui: testado ao vivo (Gtk.CssProvider.load_from_path numa
+    // declaração isolada) que o GTK 3.24.52 deste sistema REJEITA a sintaxe com erro de
+    // parse ("Junk at end of value") — a declaração inteira é descartada, não só perde
+    // prioridade. Isso inclusive já valia (sem ninguém notar) pro botão "Selecionar" do
+    // seletor de arquivo logo abaixo. A saída é vencer só por ESPECIFICIDADE: o botão do
+    // diálogo "alerta" do adw-gtk3 usa o seletor `messagedialog.csd.background button`
+    // (+ estados :hover/:checked/:active/:backdrop*/:disabled, cada um com sua PRÓPRIA
+    // regra — copiar TODOS, senão o estado não coberto continua com o texto branco de
+    // fábrica sobre fundo quase transparente, ilegível em tema claro); casamos a mesma
+    // especificidade e, como nosso bloco vem DEPOIS no arquivo (mesma origem "theme"),
+    // vence no empate. Cobre também o `.dialog-action-area` (GtkDialog sem header bar,
+    // ex.: zenity) e as classes genéricas ".dialog"/".messagedialog" (fallback de menor
+    // especificidade, útil no `gtk-3.0/devil-shell.css` "solto", que é origem USER e por
+    // isso já vence o tema mesmo com especificidade menor).
     function dialogOverrides() {
         const t = Theme
-        return "window.dialog, window.messagedialog,\n"
-            + ".dialog.background, .messagedialog.background {\n"
+        const bg = hx(t.mauve)
+        const bgHover = hx(t.red)
+        const fg = hx(t.rosewater)
+        const states = ["", ":hover", ":checked", ":active", ":backdrop",
+            ":backdrop:hover", ":backdrop:checked", ":backdrop:active",
+            ":backdrop:checked:hover", ":backdrop:checked:active",
+            ":disabled", ":backdrop:disabled"]
+        let css = "window.dialog, window.messagedialog,\n"
+            + ".dialog.background, .messagedialog.background,\n"
+            + "messagedialog.csd.background {\n"
             + "  border-radius: 12px;\n"
             + "}\n"
-            + "window.dialog button, window.messagedialog button,\n"
-            + ".dialog button, .messagedialog button {\n"
-            + "  background-image: none;\n"
-            + "  background-color: " + hx(t.mauve) + " !important;\n"
-            + "  color: " + hx(t.rosewater) + " !important;\n"
-            + "}\n"
-            + "window.dialog button:hover, window.messagedialog button:hover,\n"
-            + ".dialog button:hover, .messagedialog button:hover {\n"
-            + "  background-color: " + hx(t.red) + " !important;\n"
-            + "}\n"
+        for (let i = 0; i < states.length; i++) {
+            const s = states[i]
+            const isHover = s.indexOf(":hover") >= 0
+            css += "messagedialog.csd.background button" + s + ",\n"
+                + "window.dialog button" + s + ", window.messagedialog button" + s + ",\n"
+                + ".dialog button" + s + ", .messagedialog button" + s + ",\n"
+                + ".dialog-action-area button" + s + " {\n"
+                + "  background-image: none;\n"
+                + "  background-color: " + (isHover ? bgHover : bg) + ";\n"
+                + "  color: " + fg + ";\n"
+                + "}\n"
+        }
+        return css
     }
 
     // ── GTK3 nomeado (~/.local/share/themes/devil-shell/gtk-3.0/) — cores extras que só
@@ -332,8 +352,13 @@ Singleton {
     // sidebar_bg_color/backdrop_color usam a MESMA cor (mantle — o mesmo vermelho escuro do
     // fundo/view_bg_color, não o maroon vívido) pra não trocar de tom ao perder o foco.
     // O botão "Selecionar" (suggested-action) tem uma regra :backdrop no adw-gtk3 que
-    // ESMAECE a cor via mix()/alpha() quando a janela perde foco (por design do tema) — o
-    // !important força ele a ficar sólido sempre, senão lê como cinza mesmo sendo vermelho.
+    // ESMAECE a cor via mix()/alpha() quando a janela perde foco (por design do tema).
+    // ⚠️ Isso aqui usava `!important` pra forçar sólido sempre — só que o GTK 3.24.52
+    // deste sistema rejeita essa sintaxe (erro de parse "Junk at end of value", testado
+    // ao vivo com Gtk.CssProvider), então a declaração inteira era descartada e isso
+    // NUNCA funcionou de fato. Removido; a especificidade do seletor (headerbar/titlebar
+    // + classe + :backdrop) já é suficiente pra vencer por ordem/especificidade normal,
+    // igual ao resto do arquivo (ver dialogOverrides() logo acima, mesmo diagnóstico).
     function gtk3SidebarOverrides() {
         const t = Theme
         return "@define-color sidebar_bg_color " + hx(t.mantle) + ";\n"
@@ -342,8 +367,8 @@ Singleton {
             + "button.suggested-action, button.suggested-action:backdrop,\n"
             + "headerbar button.suggested-action, headerbar button.suggested-action:backdrop,\n"
             + ".titlebar button.suggested-action, .titlebar button.suggested-action:backdrop {\n"
-            + "  background-color: " + hx(t.mauve) + " !important;\n"
-            + "  color: " + hx(t.rosewater) + " !important;\n"
+            + "  background-color: " + hx(t.mauve) + ";\n"
+            + "  color: " + hx(t.rosewater) + ";\n"
             + "}\n"
     }
 
