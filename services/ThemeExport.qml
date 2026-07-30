@@ -215,6 +215,7 @@ Singleton {
             + "@define-color warning_color                                 " + hx(t.yellow) + ";\n"
             + "@define-color error_color                                    " + hx(t.red) + ";\n"
             + "@define-color success_color                                   " + hx(t.green) + ";\n"
+            + dialogOverrides()
     }
 
     // ── GTK4 (gtk-4.0/devil-shell.css) — nomes libadwaita ──
@@ -274,6 +275,7 @@ Singleton {
             + "@define-color secondary_sidebar_border_color                                  " + hx(t.surface1) + ";\n"
             + "@define-color secondary_sidebar_shade_color                                    rgba(0, 0, 0, 0.25);\n"
             + gtk4SidebarOverrides()
+            + dialogOverrides()
     }
 
     // ── GTK4 "puro" (sem libadwaita) — o tema "Default" de FÁBRICA do próprio GTK4
@@ -294,6 +296,33 @@ Singleton {
             + ".navigation-sidebar > row:selected { background-color: " + hx(t.surface1) + "; color: " + hx(t.text) + "; }\n"
             + ".navigation-sidebar > row:selected:hover { background-color: " + hx(t.overlay0) + "; }\n"
             + "stacksidebar row:selected { background-color: " + hx(t.surface1) + "; color: " + hx(t.text) + "; }\n"
+    }
+
+    // ── Diálogos (GtkMessageDialog/GtkDialog — ex.: prompts do VSCode/Electron via GTK
+    // nativo) — cantos arredondados e botões com acento sólido. Selecionadas por classe
+    // (".dialog"/".messagedialog", não ".background" genérico) pra NÃO arredondar/colorir
+    // a janela principal de apps GTK comuns (Nautilus, editores…), só popups de diálogo.
+    // Sintaxe/seletores válidos tanto em GTK3 quanto GTK4 (função reaproveitada nos dois
+    // + no tema GTK3 nomeado, via gtk4Content() dentro de exportAll()). Hex cru (não
+    // @define-color) pra funcionar igual nos dois motores de CSS sem depender de quais
+    // nomes de cor cada um already define. Botões de diálogo em cinza quase idêntico ao
+    // fundo eram o motivo de sumirem no Dragon Blanc (tema claro, baixo contraste).
+    function dialogOverrides() {
+        const t = Theme
+        return "window.dialog, window.messagedialog,\n"
+            + ".dialog.background, .messagedialog.background {\n"
+            + "  border-radius: 12px;\n"
+            + "}\n"
+            + "window.dialog button, window.messagedialog button,\n"
+            + ".dialog button, .messagedialog button {\n"
+            + "  background-image: none;\n"
+            + "  background-color: " + hx(t.mauve) + " !important;\n"
+            + "  color: " + hx(t.rosewater) + " !important;\n"
+            + "}\n"
+            + "window.dialog button:hover, window.messagedialog button:hover,\n"
+            + ".dialog button:hover, .messagedialog button:hover {\n"
+            + "  background-color: " + hx(t.red) + " !important;\n"
+            + "}\n"
     }
 
     // ── GTK3 nomeado (~/.local/share/themes/devil-shell/gtk-3.0/) — cores extras que só
