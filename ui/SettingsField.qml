@@ -1,13 +1,13 @@
 import QtQuick
 import "root:/"           // Config
 import "root:/themes"     // Theme
-import "root:/services"   // Settings
+import "root:/services"   // Settings, PortalService
 
 // Uma linha editável da janela de configurações. Burra: recebe a descrição do campo
 // (key/label/ftype/options) e lê/grava o valor efetivo via Settings. A reatividade
 // vem de referenciar Settings.data nos bindings (qualquer set() reatribui o mapa).
 //
-// ftype: "color" | "int" | "real" | "string" | "select" | "bool"
+// ftype: "color" | "int" | "real" | "string" | "select" | "bool" | "dir" | "image"
 Item {
     id: field
 
@@ -15,6 +15,13 @@ Item {
     required property string label
     property string ftype: "string"
     property var options: []        // para "select"
+
+    // pasta pra pré-abrir o picker: a própria pasta ("dir") ou a pasta-mãe do arquivo ("image")
+    function dirOf(p) {
+        const s = "" + p
+        const i = s.lastIndexOf("/")
+        return i > 0 ? s.substring(0, i) : s
+    }
 
     // "select" com muitas opções quebra linha (Flow); a altura acompanha (ver `editor`).
     implicitHeight: Math.max(30, editor.height + 6)
@@ -156,6 +163,36 @@ Item {
                 clip: true
                 text: "" + field.cur
                 onEditingFinished: if (text !== ("" + field.cur)) Settings.set(field.key, text)   // só grava se mudou
+            }
+        }
+
+        // ── DIRETÓRIO / IMAGEM: mostra o caminho; clique abre o picker do portal (não editável à mão) ──
+        Rectangle {
+            visible: field.ftype === "dir" || field.ftype === "image"
+            anchors.fill: parent
+            radius: 5
+            color: Theme.surface0
+            border.color: pathArea.containsMouse ? Config.accent : Theme.surface2
+            border.width: 1
+            Text {
+                anchors.fill: parent
+                anchors.leftMargin: 8; anchors.rightMargin: 8
+                verticalAlignment: Text.AlignVCenter
+                color: Theme.text
+                font.pixelSize: 12
+                elide: Text.ElideMiddle
+                text: ("" + field.cur)
+            }
+            MouseArea {
+                id: pathArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    const p = ("" + field.cur)
+                    if (field.ftype === "dir") PortalService.pickFolder(field.key, p)
+                    else PortalService.pickImage(field.key, field.dirOf(p))
+                }
             }
         }
 
