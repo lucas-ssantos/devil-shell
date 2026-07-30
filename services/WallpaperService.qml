@@ -46,7 +46,7 @@ Singleton {
             const by = Settings.get("wallpaperByOutput", ({}))
             if (by[target] !== undefined) return by[target]
         }
-        return Settings.get("wallpaperAll", Config.wallpaperDefault)
+        return Settings.get("wallpaperAll", "")
     }
 
     // aplica e persiste: target "*" (todos — limpa os por-monitor) ou o nome do output
@@ -64,6 +64,18 @@ Singleton {
         apply()
     }
 
+    // sem "wallpaperAll" salvo ainda (1ª execução, ver refresh()/listProc): sorteia um
+    // wallpaper da pasta; se a pasta não tiver nenhuma imagem, avisa por notificação.
+    function ensureDefault() {
+        if (svc.wallpapers.length === 0) {
+            notifyProc.exec(["notify-send", "-a", "Quickshell", "Nenhum wallpaper encontrado"])
+            return
+        }
+        const pick = svc.wallpapers[Math.floor(Math.random() * svc.wallpapers.length)]
+        svc.setFor("*", pick.path)
+    }
+    Process { id: notifyProc }
+
     // ═════════════════════════ awww ═════════════════════════
     // "grow"/"outer" são radiais (círculo crescendo/encolhendo a partir de um ponto,
     // --transition-pos). Ancora esse ponto no centro-inferior da tela — onde a bola
@@ -78,16 +90,21 @@ Singleton {
     }
 
     // um comando por override + um pra base (SEM -o = todos os outputs) aplicado ANTES,
-    // senão sobrescreveria os overrides já postos
+    // senão sobrescreveria os overrides já postos. "" se ainda não há wallpaper padrão
+    // resolvido (bootstrap de ensureDefault() ainda não rodou) — apply() não faz nada nesse caso.
     function awwwScript() {
-        const all = Settings.get("wallpaperAll", Config.wallpaperDefault)
+        const all = Settings.get("wallpaperAll", "")
+        if (!all) return ""
         const by = Settings.get("wallpaperByOutput", ({}))
         const lines = [imgCmd(all, null)]
         for (const out in by) lines.push(imgCmd(by[out], out))
         return lines.join(" && ")
     }
 
-    function apply() { runAwww(awwwScript()) }
+    function apply() {
+        const script = awwwScript()
+        if (script) runAwww(script)
+    }
     function runAwww(script) {
         spawnProc.exec(["sh", "-c", script])
     }
@@ -154,8 +171,13 @@ Singleton {
                     out.push({ name: rel, path: svc.dir + "/" + rel })
                 }
                 svc.wallpapers = out
-                // carrossel ligado e ainda sem imagem sorteada -> troca já
-                if (svc.carouselOn && svc.carouselCurrent === "") svc.carouselTick()
+                if (svc.carouselOn) {
+                    // carrossel ligado e ainda sem imagem sorteada -> troca já
+                    if (svc.carouselCurrent === "") svc.carouselTick()
+                } else if (!Settings.get("wallpaperAll", "")) {
+                    // sem wallpaper padrão salvo ainda (1ª execução) -> sorteia um da pasta
+                    svc.ensureDefault()
+                }
             }
         }
     }

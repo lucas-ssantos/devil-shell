@@ -146,7 +146,6 @@ Singleton {
 
     // ── Papel de parede (modo /bg do lançador; awww) ──
     readonly property string wallpaperDir: Settings.get("wallpaperDir", Quickshell.env("HOME") + "/Pictures/Wallpapers")  // pasta varrida pelo /bg
-    readonly property string wallpaperDefault: Settings.get("wallpaperDefault", Quickshell.env("HOME") + "/Pictures/Wallpapers/vigna/vigna.jpg")  // sem escolha salva
     readonly property string wallpaperMode: Settings.get("wallpaperMode", "fill")   // ajuste (--resize do awww, ver WallpaperService.resizeMode): fill|fit|stretch|center
     readonly property string wallpaperTransition: Settings.get("wallpaperTransition", "none")   // --transition-type do awww (efeito ao trocar)
     readonly property bool   wallpaperCarousel: Settings.get("wallpaperCarousel", false)   // troca automática periódica

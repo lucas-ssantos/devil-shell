@@ -3,7 +3,6 @@
   "wallpaperByOutput": {},
   "dotTravelMs": 1000,
   "wallpaperDir": "/home/luke/Imagens/Wallpapers/",
-  "wallpaperDefault": "/home/luke/Imagens/Wallpapers/vigna.jpg",
   "notifTimeout": 3000,
   "notifAnim": 1000,
   "wallpaperTransition": "grow"
