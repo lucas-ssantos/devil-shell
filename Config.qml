@@ -151,6 +151,14 @@ Singleton {
     readonly property bool   wallpaperCarousel: Settings.get("wallpaperCarousel", false)   // troca automática periódica
     readonly property int    wallpaperCarouselMin: Settings.get("wallpaperCarouselMin", 10)  // intervalo do carrossel (minutos)
 
+    // ── Grade do /bg (o lançador fica maior/retangular nesse modo p/ mostrar as miniaturas) ──
+    readonly property real   launcherBgW: Settings.get("launcherBgW", 900)              // largura do painel no modo /bg
+    readonly property real   launcherBgListMaxH: Settings.get("launcherBgListMaxH", 460) // teto da grade (rola além disso)
+    readonly property real   launcherBgThumbW: Settings.get("launcherBgThumbW", 160)     // largura da miniatura
+    readonly property real   launcherBgThumbH: Settings.get("launcherBgThumbH", 100)     // altura da miniatura
+    readonly property real   launcherBgCellGap: Settings.get("launcherBgCellGap", 12)    // espaço entre células
+    readonly property int    launcherBgNameSize: Settings.get("launcherBgNameSize", 11)  // nome do arquivo (embaixo, menor)
+
     // ── Notificações (topo-centro da tela) ──────────────
     readonly property real   notifWidth: Settings.get("notifWidth", 360)       // largura do toast
     readonly property real   notifTopMargin: Settings.get("notifTopMargin", 12)    // folga do topo da tela

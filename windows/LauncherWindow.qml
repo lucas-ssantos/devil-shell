@@ -230,6 +230,13 @@ PanelWindow {
         return list.map(p => ({ kind: "proc", name: p.name, pid: p.pid, cpu: p.cpu, mem: p.mem }))
     }
 
+    // ── Grade do /bg (colunas dependem da largura atual do painel) ──
+    readonly property int bgCols: {
+        if (mode !== "bg") return 1
+        const cw = Config.launcherBgThumbW + Config.launcherBgCellGap
+        return Math.max(1, Math.floor(col.width / cw))
+    }
+
     // ── Seleção (pula headers) ──────────────────────────
     property int selIndex: 0
     function selectableIndex(from, dir) {
@@ -246,11 +253,13 @@ PanelWindow {
         const i = selectableIndex(selIndex + dir, dir >= 0 ? 1 : -1)
         if (i < 0) return
         selIndex = i
-        list.positionViewAtIndex(selIndex, ListView.Contain)
+        if (mode === "bg") bgGrid.positionViewAtIndex(selIndex, GridView.Contain)
+        else list.positionViewAtIndex(selIndex, ListView.Contain)
     }
     onResultsChanged: {
         selIndex = selectableIndex(0, 1)
-        list.positionViewAtBeginning()
+        if (mode === "bg") bgGrid.positionViewAtBeginning()
+        else list.positionViewAtBeginning()
     }
 
     // ── Ativação (Enter/clique) ─────────────────────────
@@ -351,7 +360,7 @@ PanelWindow {
         if (mode === "cmds")  return "Enter escolhe o comando"
         if (mode === "files") return "Enter abre no VLC / entra na pasta · Backspace sobe · digite p/ filtrar"
         if (mode === "proc")  return "Digite p/ filtrar por nome/PID · Enter finaliza (TERM) · Shift+Enter mata (KILL) · Tab muda a ordem"
-        if (mode === "bg")    return "Enter aplica em “" + bgTargetLabel + "” · Shift+Enter aplica sem fechar · Tab muda o alvo"
+        if (mode === "bg")    return "↑↓←→ navegar · Enter aplica em “" + bgTargetLabel + "” · Shift+Enter sem fechar · Tab muda o alvo"
         if (mode === "calc")  return "Enter usa o resultado na próxima conta"
         return ""
     }
@@ -373,7 +382,11 @@ PanelWindow {
         opacity: win.reveal
         scale: 0.96 + 0.04 * win.reveal
         transformOrigin: Item.Top
-        width: Math.min(parent.width - 80, Config.launcherW)
+        width: Math.min(parent.width - 80, win.mode === "bg" ? Config.launcherBgW : Config.launcherW)
+        Behavior on width {
+            enabled: win.reveal === 1
+            NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
+        }
         height: col.height + 24
         radius: Config.launcherRadius
         color: Config.launcherBg
@@ -413,8 +426,10 @@ PanelWindow {
                     focus: true
                     // teclado do lançador (setas/Enter/Esc/Tab/Backspace especial)
                     Keys.onPressed: (ev) => {
-                        if (ev.key === Qt.Key_Down) { win.moveSel(1); ev.accepted = true }
-                        else if (ev.key === Qt.Key_Up) { win.moveSel(-1); ev.accepted = true }
+                        if (ev.key === Qt.Key_Down) { win.moveSel(win.mode === "bg" ? win.bgCols : 1); ev.accepted = true }
+                        else if (ev.key === Qt.Key_Up) { win.moveSel(win.mode === "bg" ? -win.bgCols : -1); ev.accepted = true }
+                        else if (win.mode === "bg" && ev.key === Qt.Key_Right) { win.moveSel(1); ev.accepted = true }
+                        else if (win.mode === "bg" && ev.key === Qt.Key_Left) { win.moveSel(-1); ev.accepted = true }
                         else if (ev.key === Qt.Key_PageDown) { win.moveSel(8); ev.accepted = true }
                         else if (ev.key === Qt.Key_PageUp) { win.moveSel(-8); ev.accepted = true }
                         else if (ev.key === Qt.Key_Return || ev.key === Qt.Key_Enter) {
@@ -609,9 +624,10 @@ PanelWindow {
             }
             Rectangle { visible: win.mode === "proc"; width: col.width; height: 1; color: Config.launcherBorder }
 
-            // ── Lista de resultados ──
+            // ── Lista de resultados (todos os modos exceto /bg, que usa a grade abaixo) ──
             ListView {
                 id: list
+                visible: win.mode !== "bg"
                 width: col.width
                 // altura acompanha o conteúdo até o teto; vazio mantém espaço p/ o aviso
                 height: Math.min(Math.max(contentHeight, win.resultCount === 0 ? 64 : 0), Config.launcherListMaxH)
@@ -622,7 +638,7 @@ PanelWindow {
                     NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
                 }
                 clip: true
-                model: win.results
+                model: win.mode === "bg" ? [] : win.results
                 boundsBehavior: Flickable.StopAtBounds
                 keyNavigationEnabled: false
 
@@ -663,8 +679,7 @@ PanelWindow {
                                 anchors.centerIn: parent
                                 visible: ("" + source) !== ""
                                 source: row.modelData.kind === "app" ? (row.modelData.icon ?? "")
-                                      : (row.modelData.kind === "bg"
-                                         || (row.modelData.kind === "file" && row.modelData.fileType === "image"))
+                                      : (row.modelData.kind === "file" && row.modelData.fileType === "image")
                                         ? win.fileUrl(row.modelData.path) : ""
                                 sourceSize: Qt.size(Config.launcherIconSize * 2, Config.launcherIconSize * 2)
                                 width: Config.launcherIconSize
@@ -802,9 +817,106 @@ PanelWindow {
                 Text {
                     visible: win.resultCount === 0
                     anchors.centerIn: parent
-                    text: win.mode === "files" ? "Nenhuma pasta ou mídia aqui"
-                        : win.mode === "bg" ? "Nenhuma imagem em " + win.bgDirPretty
-                        : "Nada encontrado"
+                    text: win.mode === "files" ? "Nenhuma pasta ou mídia aqui" : "Nada encontrado"
+                    color: Config.launcherSub
+                    font.pixelSize: Config.launcherFontSize
+                }
+            }
+
+            // ── Grade do /bg: cada wallpaper como imagem grande + nome embaixo (menor) ──
+            GridView {
+                id: bgGrid
+                visible: win.mode === "bg"
+                width: col.width
+                cellWidth: Config.launcherBgThumbW + Config.launcherBgCellGap
+                cellHeight: Config.launcherBgThumbH + Config.launcherBgNameSize + 22 + Config.launcherBgCellGap
+                // altura acompanha o conteúdo até o teto; vazio mantém espaço p/ o aviso
+                height: Math.min(Math.max(contentHeight, win.resultCount === 0 ? 64 : 0), Config.launcherBgListMaxH)
+                Behavior on height {
+                    enabled: win.reveal === 1
+                    NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
+                }
+                clip: true
+                model: win.mode === "bg" ? win.results : []
+                boundsBehavior: Flickable.StopAtBounds
+                keyNavigationEnabled: false
+
+                delegate: Item {
+                    id: cell
+                    required property var modelData
+                    required property int index
+                    readonly property bool selected: index === win.selIndex
+                    readonly property bool current: modelData.sub === "atual"
+                    width: bgGrid.cellWidth - Config.launcherBgCellGap
+                    height: bgGrid.cellHeight - Config.launcherBgCellGap
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 10
+                        color: cell.selected ? Config.launcherSel : "transparent"
+
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: 6
+                            spacing: 4
+
+                            Item {
+                                width: parent.width
+                                height: Config.launcherBgThumbH
+                                Image {
+                                    anchors.fill: parent
+                                    source: win.fileUrl(cell.modelData.path)
+                                    sourceSize: Qt.size(Config.launcherBgThumbW * 2, Config.launcherBgThumbH * 2)
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                }
+                                Rectangle {   // realce do wallpaper aplicado no momento
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    radius: 6
+                                    border.width: cell.current ? 2 : 0
+                                    border.color: Config.accent
+                                }
+                            }
+                            Text {
+                                width: parent.width
+                                text: cell.modelData.name ?? ""
+                                color: cell.current ? Config.accent : Config.launcherText
+                                font.pixelSize: Config.launcherBgNameSize
+                                font.bold: cell.current
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideMiddle
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: cellMA
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onPositionChanged: (mouse) => win.hoverSelect(cellMA, mouse.x, mouse.y, cell.index)
+                        onClicked: (mouse) => win.activate(cell.modelData, mouse.modifiers)
+                    }
+                }
+
+                // barra de rolagem fina (mesmo estilo da lista)
+                Rectangle {
+                    visible: bgGrid.contentHeight > bgGrid.height
+                    anchors { right: parent.right; rightMargin: 1 }
+                    width: 4; radius: 2
+                    color: Theme.surface2
+                    height: bgGrid.contentHeight > 0 ? bgGrid.height * (bgGrid.height / bgGrid.contentHeight) : 0
+                    y: (bgGrid.contentHeight > bgGrid.height)
+                       ? (bgGrid.contentY / (bgGrid.contentHeight - bgGrid.height)) * (bgGrid.height - height)
+                       : 0
+                }
+
+                // vazio: nenhuma imagem na pasta configurada
+                Text {
+                    visible: win.resultCount === 0
+                    anchors.centerIn: parent
+                    text: "Nenhuma imagem em " + win.bgDirPretty
                     color: Config.launcherSub
                     font.pixelSize: Config.launcherFontSize
                 }
