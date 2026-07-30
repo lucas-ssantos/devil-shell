@@ -30,7 +30,7 @@ def main():
     if mode == "image":
         opts["filters"] = GLib.Variant("a(sa(us))", [("Imagens", [(0, p) for p in IMAGE_PATTERNS])])
     if start_dir and os.path.isdir(start_dir):
-        opts["current_folder"] = GLib.Variant.new_bytestring(start_dir)
+        opts["current_folder"] = GLib.Variant.new_bytestring(start_dir.encode("utf-8"))
 
     try:
         reply = bus.call_sync(
