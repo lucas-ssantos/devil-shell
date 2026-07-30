@@ -71,13 +71,14 @@ Teclado: `↑↓` navega, `Enter` ativa, `Esc` fecha, `Tab` muda a ordenação n
 | **Bandeja** | apps que exponham **StatusNotifierItem** (Discord/Vesktop, Steam…) |
 | **Notificações** | Quickshell como **único** servidor de notificações (ver aviso abaixo) |
 | **Papel de parede** (via `WallpaperService.qml`) | **awww** + **awww-daemon** |
-| **Sessão** (via `session.sh`) | **blueman-applet**, **swayidle**, **swaylock-effects** |
+| **Fundo do lock** (blur do wallpaper atual) | **ffmpeg** (filtro `gblur`) |
+| **Sessão** (via `session.sh`) | **blueman-applet**, **swayidle**, **gtklock** |
 
 Instalação no Debian (exemplo; nomes podem variar):
 
 ```sh
 sudo apt install niri cava vlc gpu-screen-recorder pipewire wireplumber procps \
-                 swayidle blueman
+                 swayidle blueman gtklock ffmpeg
 # gpu-screen-recorder: setup único (o gsr-kms-server precisa de CAP_SYS_ADMIN p/ capturar via KMS):
 sudo setcap cap_sys_admin+ep /usr/bin/gsr-kms-server
 # awww/awww-daemon (https://codeberg.org/LGFae/awww): NÃO estão no apt, compile com

@@ -150,6 +150,11 @@ Singleton {
     readonly property string wallpaperTransition: Settings.get("wallpaperTransition", "none")   // --transition-type do awww (efeito ao trocar)
     readonly property bool   wallpaperCarousel: Settings.get("wallpaperCarousel", false)   // troca automática periódica
     readonly property int    wallpaperCarouselMin: Settings.get("wallpaperCarouselMin", 10)  // intervalo do carrossel (minutos)
+    readonly property int    wallpaperLockBlur: Settings.get("wallpaperLockBlur", 18)  // sigma do blur (ffmpeg gblur) no fundo do gtklock
+
+    // caminho fixo (não é um override do usuário): imagem gerada por WallpaperService a
+    // partir do wallpaper atual borrado, lida pelo gtklock (config.ini -> background=)
+    readonly property string lockBackgroundPath: Quickshell.env("HOME") + "/.cache/quickshell/gtklock-background.png"
 
     // ── Grade do /bg (o lançador fica maior/retangular nesse modo p/ mostrar as miniaturas) ──
     readonly property real   launcherBgW: Settings.get("launcherBgW", 900)              // largura do painel no modo /bg

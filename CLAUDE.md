@@ -165,7 +165,11 @@ Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de 
   transição do awww a cada reload em dev). Todos os monitores = `awww img` sem `-o`; por monitor =
   `-o <output>` (aplicado DEPOIS da base, senão a base sobrescreveria o override). O cliente
   `awww img`/`awww query` não precisa de `spawn-sh` (não é um cliente Wayland gráfico, só fala com
-  o socket do daemon) — roda direto via `Process.exec` normal.
+  o socket do daemon) — roda direto via `Process.exec` normal. A cada troca (`apply()`/
+  `carouselTick()`), o `WallpaperService` também gera (via `ffmpeg -vf gblur`) uma cópia borrada do
+  wallpaper atual em `Config.lockBackgroundPath` (`~/.cache/quickshell/gtklock-background.png`) —
+  é o fundo que o `gtklock` mostra (`background=` no `config.ini`, escrito por
+  `ThemeExport.gtklockContent()`); tampouco precisa de `spawn-sh` (ffmpeg não é cliente Wayland).
 - O próprio `qs` é lançado pelo niri: `spawn-at-startup "qs"` no `~/.config/niri/config.kdl`.
   Certifique-se de que nenhum outro daemon de notificação (swaync/mako/dunst) suba antes do qs,
   senão o qs não registra o servidor de notificações.
@@ -177,7 +181,7 @@ Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de 
   o registro falha silenciosamente (`PolkitService.isRegistered` fica `false`, sem erro fatal).
 - **Acoplamento aceito:** se o qs não carregar, o `StartupService` não roda → sem wallpaper/idle nessa
   sessão. (Trade-off escolhido em prol da centralização.) Um futuro caminho 100% QML seria
-  `IdleMonitor` + `WlSessionLock` no lugar do swayidle/swaylock.
+  `IdleMonitor` + `WlSessionLock` no lugar do swayidle/gtklock.
 
 ### ShellWindow é o "controlador"
 Concentra **geometria, estado e TODA a lógica de interação**; os componentes visuais são burros e
@@ -264,7 +268,9 @@ O cristal de Sistema tem 2 seções: **engrenagem** (cima) abre a [SettingsWindo
   **niri** (`devil-shell/theme.kdl`, `include` no config.kdl — o niri faz merge de blocos `layout`
   duplicados; as cores de fábrica do focus-ring/border ficam COMENTADAS no config.kdl p/ não competirem
   → reload via `niri msg action load-config-file`), **vesktop** (`themes/devil-shell.css`, habilitar 1x),
-  **swaylock** (`config`) e **GTK3/GTK4** (`gtk-3.0/devil-shell.css` e `gtk-4.0/devil-shell.css` — nomes
+  **gtklock** (`config.ini`, só o `background=` — o wallpaper atual borrado, ver `WallpaperService`
+  acima; cores vêm de graça do tema GTK3 nomeado abaixo, já que o gtklock é GTK3 puro) e
+  **GTK3/GTK4** (`gtk-3.0/devil-shell.css` e `gtk-4.0/devil-shell.css` — nomes
   `@define-color` clássicos do Adwaita e libadwaita; como o `gtk.css` do usuário não tem diretiva de
   `include`, habilitar 1x adicionando `@import url("devil-shell.css");` no topo do `gtk.css` de cada
   versão). Além disso MESCLA `gtk-application-prefer-dark-theme=1`/`gtk-theme-name=devil-shell` em
@@ -303,7 +309,8 @@ O cristal de Sistema tem 2 seções: **engrenagem** (cima) abre a [SettingsWindo
   kitty recarrega com `pkill -USR1 kitty`; o export também reinicia o
   `xdg-desktop-portal-gtk.service` (é ele quem desenha o diálogo nativo de arquivos de apps Electron
   como o Vesktop — e só lê o tema na própria inicialização, precisa do restart pra pegar mudanças);
-  vesktop/swaylock/gtk comuns pegam no próximo uso. A escrita usa
+  vesktop/gtklock/gtk comuns pegam no próximo uso (o gtklock nem é daemon: lê o config.ini fresco
+  a cada lock). A escrita usa
   `Qt.btoa` (base64) num único `sh -c` p/ evitar escaping → mantenha os comentários gerados em ASCII.
   Export manual pela CLI: `qs ipc call theme exportAll` (IpcHandler no ThemeExport; o singleton é
   instanciado no boot por `ThemeExport.init()` no `shell.qml`, senão o alvo IPC não existe).

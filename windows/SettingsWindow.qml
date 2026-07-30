@@ -341,7 +341,8 @@ PanelWindow {
                 { key: "wallpaperMode", label: "Ajuste (awww)", ftype: "select", options: ["fill","fit","stretch","center"] },
                 { key: "wallpaperTransition", label: "Transição (awww)", ftype: "select", options: ["none","simple","fade","left","right","top","bottom","wipe","wave","grow","center","any","outer","random"] },
                 { key: "wallpaperCarousel", label: "Carrossel automático", ftype: "bool" },
-                { key: "wallpaperCarouselMin", label: "Intervalo do carrossel (min)", ftype: "int" }
+                { key: "wallpaperCarouselMin", label: "Intervalo do carrossel (min)", ftype: "int" },
+                { key: "wallpaperLockBlur", label: "Blur da tela de bloqueio (gtklock)", ftype: "int" }
             ]}
         ]},
         { title: "Clima", subs: [
@@ -664,7 +665,7 @@ PanelWindow {
                     }
                     Timer { id: makeDefReset; interval: 3000; onTriggered: makeDefBtn.stage = 0 }
                 }
-                // Regenerar temas externos (kitty/niri/vesktop/swaylock/gtk3/gtk4)
+                // Regenerar temas externos (kitty/niri/vesktop/gtklock/gtk3/gtk4)
                 Rectangle {
                     id: exportBtn
                     property bool done: false

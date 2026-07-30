@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 
 // Serviço de INIBIÇÃO de idle/lock (singleton). Liga/desliga o swayidle — que dispara o
-// swaylock (bloqueio) e o dpms (desligar as telas por ociosidade). Serve ao toggle da
+// gtklock (bloqueio) e o dpms (desligar as telas por ociosidade). Serve ao toggle da
 // cristal de Sistema ("lâmpada").
 //
 // Estado inicial: `inhibited=false` → swayidle RODANDO → lockscreen/hibernação ATIVOS

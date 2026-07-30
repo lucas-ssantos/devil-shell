@@ -11,7 +11,9 @@ import "root:/"           // Config (wallpaperDir, wallpaperMode, carrossel…)
 //     ver CLAUDE.md — daemon é layer-shell, precisa de ambiente Wayland; já o cliente
 //     `awww img`/`awww query` só fala com o socket do daemon e roda direto por Process);
 //   • persiste a escolha no Settings ("wallpaperAll" / "wallpaperByOutput");
-//   • carrossel opcional: troca aleatória periódica em TODOS os monitores (Config.wallpaperCarousel/…Min).
+//   • carrossel opcional: troca aleatória periódica em TODOS os monitores (Config.wallpaperCarousel/…Min);
+//   • a cada troca gera (ffmpeg) uma versão borrada em Config.lockBackgroundPath — é o
+//     fundo que o gtklock usa (ver updateLockBackground(), ThemeExport.gtklockContent()).
 // O awww-daemon da sessão sobe daqui (init() no shell.qml) — um único daemon persistente
 // (diferente do swaybg: aqui NÃO se relança processo a cada troca, só se manda um comando).
 Singleton {
@@ -103,12 +105,32 @@ Singleton {
 
     function apply() {
         const script = awwwScript()
-        if (script) runAwww(script)
+        if (script) {
+            runAwww(script)
+            updateLockBackground(Settings.get("wallpaperAll", ""))
+        }
     }
     function runAwww(script) {
         spawnProc.exec(["sh", "-c", script])
     }
     Process { id: spawnProc }
+
+    // ═════════════════════════ Fundo do gtklock ═════════════════════════
+    // Gera (via ffmpeg) uma cópia borrada do wallpaper atual em Config.lockBackgroundPath
+    // — é isso que o gtklock mostra atrás do prompt de senha (config.ini -> background=,
+    // escrito por ThemeExport.gtklockContent()). Roda toda vez que o wallpaper muda
+    // (apply()/carouselTick()); não precisa de `niri msg action spawn-sh` porque o ffmpeg
+    // não é um cliente Wayland, só processa a imagem (igual ao próprio `awww img`/`find`
+    // deste arquivo, ver CLAUDE.md).
+    function updateLockBackground(src) {
+        if (!src) return
+        const dst = Config.lockBackgroundPath
+        const dir = dst.substring(0, dst.lastIndexOf("/"))
+        lockBgProc.exec(["sh", "-c",
+            "mkdir -p " + shq(dir) + " && ffmpeg -y -loglevel error -i " + shq(src)
+            + " -vf gblur=sigma=" + Config.wallpaperLockBlur + " " + shq(dst)])
+    }
+    Process { id: lockBgProc }
 
     // garante que o awww-daemon da sessão está de pé. É um app gráfico Wayland
     // (layer-shell) então sobe pelo COMPOSITOR (niri spawn-sh, ver CLAUDE.md); a guarda
@@ -210,5 +232,6 @@ Singleton {
         if (n > 1 && wallpapers[i].path === carouselCurrent) i = (i + 1) % n   // evita repetir
         carouselCurrent = wallpapers[i].path
         runAwww(imgCmd(carouselCurrent, null))
+        updateLockBackground(carouselCurrent)
     }
 }

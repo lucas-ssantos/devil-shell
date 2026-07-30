@@ -6,7 +6,7 @@ import Quickshell.Io
 // daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms).
 //
 // COMO: esses daemons são apps GRÁFICOS Wayland (awww-daemon = layer-shell; blueman = GTK;
-// swayidle fala o protocolo idle e dispara o swaylock). Para garantir um ambiente
+// swayidle fala o protocolo idle e dispara o gtklock). Para garantir um ambiente
 // Wayland correto, pedimos ao COMPOSITOR para lançá-los, via `niri msg action
 // spawn-sh`, apontando para o script services/session.sh (guardas pgrep + setsid lá
 // dentro). Chamado uma vez pelo shell.qml em Component.onCompleted.
