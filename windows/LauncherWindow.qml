@@ -713,6 +713,7 @@ PanelWindow {
                                     : row.modelData.fileType === "audio" ? "🎵"
                                     : row.modelData.fileType === "pdf" ? "📄"
                                     : "🎬"
+                                color: Config.launcherText   // sem isso cai no preto padrão do QML — some em tema escuro
                                 font.pixelSize: Config.launcherIconSize * 0.8
                             }
                         }
