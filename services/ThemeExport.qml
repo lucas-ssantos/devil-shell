@@ -19,7 +19,9 @@ import "root:/themes"   // Theme (paleta efetiva = paleta escolhida + overrides 
 //   gtk3    -> ~/.config/gtk-3.0/devil-shell.css             (habilitar 1x: @import
 //              url("devil-shell.css"); no topo do gtk-3.0/gtk.css do usuário)
 //   gtk4    -> ~/.config/gtk-4.0/devil-shell.css             (idem, no gtk-4.0/gtk.css;
-//              nomes de cor libadwaita — só apps GTK4/libadwaita respeitam todos)
+//              nomes de cor libadwaita, incl. sidebar_*/secondary_sidebar_* — barra de
+//              atalhos do seletor de arquivos — + overrides de seletor pro GTK4 "puro",
+//              ver gtk4SidebarOverrides())
 //
 // Além dos alvos acima, MESCLA (não sobrescreve — settings.ini não é arquivo dedicado
 // nosso, pode ter outras chaves do usuário) `gtk-application-prefer-dark-theme=1` em
@@ -27,8 +29,18 @@ import "root:/themes"   // Theme (paleta efetiva = paleta escolhida + overrides 
 // continua ativa mesmo com as cores do devil-shell.css sobrepostas.
 //
 // Também seta via `gsettings` (org.gnome.desktop.interface, systemwide): `color-scheme
-// =prefer-dark` e `accent-color=<red|pink, conforme a paleta>` — usado por libadwaita
-// (GTK4) em geral.
+// =prefer-dark` e `accent-color=<red|pink, conforme a paleta>`.
+// ⚠️ Isso não é cosmético opcional: libadwaita (AdwStyleManager) detecta claro/escuro
+// consultando o portal `org.freedesktop.impl.portal.Settings` (chave `color-scheme` do
+// namespace `org.gnome.desktop.interface`) mesmo fora de uma sessão GNOME — inclusive
+// diálogos NATIVOS de apps libadwaita comuns, não só os sandboxed. Se o gsettings acima
+// nunca rodou (ou o valor foi resetado por fora), esse portal continua respondendo
+// "default" (claro) e os diálogos libadwaita ficam claros mesmo com o resto do sistema
+// escuro — foi exatamente esse o sintoma reportado (algumas janelas de diálogo no modo
+// claro) com `~/.config/xdg-desktop-portal/portals.conf` apontando
+// `org.freedesktop.impl.portal.Settings=gnome` (serve a chave DIRETO do gsettings, não
+// do gtk-4.0/settings.ini). Conferir ao vivo: `gsettings get org.gnome.desktop.interface
+// color-scheme` deve ser `'prefer-dark'` depois de um export.
 //
 // ⚠️ TEMA NOMEADO (gtk-3.0) — por que existe além do override em ~/.config/gtk-3.0:
 // diagnosticado ao vivo (GTK Inspector + gresource extract) que o Adwaita/Adwaita-dark
@@ -58,13 +70,27 @@ import "root:/themes"   // Theme (paleta efetiva = paleta escolhida + overrides 
 // O `~/.config/gtk-3.0/devil-shell.css` (gtk3Content()) continua existindo em paralelo —
 // ainda é o que apps SEM portal leem (ex.: zenity).
 //
+// ⚠️ BARRA LATERAL (GTK4) — mesma classe de bug do parágrafo acima, versão GTK4: o tema
+// "Default" de FÁBRICA do GTK4 (confirmado via gresource extract em libgtk-4.so,
+// theme/Default/Default-dark.css) hardcoda `.sidebar`/`.navigation-sidebar`/
+// `stacksidebar` (ex.: `.sidebar { background-color: #313131; }`) em vez de usar
+// @define-color. Isso só afeta apps GTK4 que NÃO usam libadwaita — libadwaita já expõe
+// `sidebar_bg_color`/etc. como cores nomeadas de verdade (confirmado em libadwaita-1.so,
+// styles/gtk.css), incluído acima. `gtk4SidebarOverrides()` cobre o caso hardcoded
+// sobrescrevendo os seletores direto; como `~/.config/gtk-4.0/gtk.css` carrega com
+// prioridade USER (> THEME do GTK), vence sem precisar de !important. Foi essa lacuna
+// (só cobríamos os nomes libadwaita, não os dois casos) que deixava a barra de atalhos
+// do seletor de arquivo SEM tema mesmo com o resto correto.
+//
 // Antes de escrever, apaga backups antigos (<arquivo>.bak-*) e faz um novo BACKUP do
-// que existir (<arquivo>.bak-<timestamp>) — só o mais recente fica. Depois recarrega
-// ao vivo: niri (load-config-file), kitty (SIGUSR1 relê o config) e reinicia o
-// xdg-desktop-portal-gtk.service (ele é um daemon de vida longa que só lê o gtk.css/
-// settings.ini na própria inicialização — sem restart, o diálogo nativo de arquivos
-// de apps Electron como o Discord continua com o tema antigo). Os apps GTK comuns leem
-// o tema no próximo lançamento; o Vesktop recarrega o CSS sozinho quando habilitado.
+// que existir (<arquivo>.bak-<timestamp>) — só o mais recente fica. Depois recarrega ao
+// vivo: niri (load-config-file), kitty (SIGUSR1 relê o config) e reinicia TANTO
+// xdg-desktop-portal-gtk.service QUANTO xdg-desktop-portal-gnome.service (cada um é um
+// daemon de vida longa que só lê o gtk.css/settings.ini na própria inicialização; qual
+// dos dois desenha o diálogo nativo — de arquivo, impressão, etc. — depende de
+// ~/.config/xdg-desktop-portal/portals.conf, então reiniciamos os dois pra não depender
+// de saber qual está ativo). Os apps GTK comuns leem o tema no próximo lançamento; o
+// Vesktop recarrega o CSS sozinho quando habilitado.
 //
 // Export manual pela CLI (além do botão da SettingsWindow): `qs ipc call theme exportAll`.
 Singleton {
@@ -227,6 +253,43 @@ Singleton {
             + "@define-color popover_fg_color                                      " + hx(t.text) + ";\n"
             + "@define-color shade_color                                            rgba(0, 0, 0, 0.36);\n"
             + "@define-color scrollbar_outline_color                                 rgba(0, 0, 0, 0.5);\n"
+            // libadwaita define sidebar_*/secondary_sidebar_* como cores NOMEADAS de verdade
+            // (confirmado via gresource extract em libadwaita-1.so, styles/gtk.css) — ao
+            // contrário do bug do GTK3/Adwaita (ver mais abaixo), aqui basta @define-color.
+            // Sem isso, QUALQUER app libadwaita (Nautilus, Text Editor, e o file chooser NOVO
+            // do xdg-desktop-portal-gnome — GNOME 46+, reescrito em libadwaita) mostra a
+            // barra lateral de atalhos com o cinza de fábrica mesmo com o resto themado.
+            + "@define-color sidebar_bg_color                                        " + hx(t.mantle) + ";\n"
+            + "@define-color sidebar_fg_color                                         " + hx(t.text) + ";\n"
+            + "@define-color sidebar_backdrop_color                                    " + hx(t.mantle) + ";\n"
+            + "@define-color sidebar_border_color                                       " + hx(t.surface1) + ";\n"
+            + "@define-color sidebar_shade_color                                         rgba(0, 0, 0, 0.25);\n"
+            + "@define-color secondary_sidebar_bg_color                                   " + hx(t.crust) + ";\n"
+            + "@define-color secondary_sidebar_fg_color                                    " + hx(t.text) + ";\n"
+            + "@define-color secondary_sidebar_backdrop_color                               " + hx(t.crust) + ";\n"
+            + "@define-color secondary_sidebar_border_color                                  " + hx(t.surface1) + ";\n"
+            + "@define-color secondary_sidebar_shade_color                                    rgba(0, 0, 0, 0.25);\n"
+            + gtk4SidebarOverrides()
+    }
+
+    // ── GTK4 "puro" (sem libadwaita) — o tema "Default" de FÁBRICA do próprio GTK4
+    // (confirmado via gresource extract em libgtk-4.so, theme/Default/Default-dark.css)
+    // HARDCODA a cor de `.sidebar`/`.navigation-sidebar`/`stacksidebar` (ex.: `.sidebar {
+    // background-color: #313131; }`) em vez de usar @define-color — mesma classe de bug
+    // do Adwaita/GTK3 documentada abaixo, só que aqui é o GTK4 puro (apps que não linkam
+    // libadwaita, então não leem os sidebar_* de cima). Sobrescrevemos os seletores
+    // diretamente; como o nosso CSS é carregado com prioridade USER (> THEME do GTK), o
+    // valor daqui vence independente de especificidade — sem precisar de !important.
+    function gtk4SidebarOverrides() {
+        const t = Theme
+        return ".sidebar { background-color: " + hx(t.mantle) + "; }\n"
+            + ".sidebar:not(separator):dir(ltr), .sidebar:not(separator).left, .sidebar:not(separator).left:dir(rtl) { border-right-color: " + hx(t.surface1) + "; }\n"
+            + ".sidebar:not(separator):dir(rtl), .sidebar:not(separator).right { border-left-color: " + hx(t.surface1) + "; }\n"
+            + "separator.sidebar { background-color: " + hx(t.surface1) + "; }\n"
+            + ".navigation-sidebar > row:hover { background-color: " + hx(t.surface0) + "; }\n"
+            + ".navigation-sidebar > row:selected { background-color: " + hx(t.surface1) + "; color: " + hx(t.text) + "; }\n"
+            + ".navigation-sidebar > row:selected:hover { background-color: " + hx(t.overlay0) + "; }\n"
+            + "stacksidebar row:selected { background-color: " + hx(t.surface1) + "; color: " + hx(t.text) + "; }\n"
     }
 
     // ── GTK3 nomeado (~/.local/share/themes/devil-shell/gtk-3.0/) — cores extras que só
@@ -364,7 +427,13 @@ Singleton {
         // recarrega ao vivo (Process herda o env -> niri msg acha o socket; kitty relê no SIGUSR1)
         script += "command -v niri >/dev/null && niri msg action load-config-file || true\n"
         script += "pkill -USR1 -x kitty 2>/dev/null || true\n"
+        // Ambos os backends de portal são daemons de vida longa que só leem gtk.css/
+        // settings.ini na própria inicialização. Reinicia os DOIS porque qual deles
+        // desenha o file chooser/diálogos depende do ~/.config/xdg-desktop-portal/
+        // portals.conf do usuário (aqui, FileChooser/Settings/Screenshot/Clipboard
+        // apontam pra "gnome" — ver comentário grande no topo do arquivo).
         script += "systemctl --user try-restart xdg-desktop-portal-gtk.service 2>/dev/null || true\n"
+        script += "systemctl --user try-restart xdg-desktop-portal-gnome.service 2>/dev/null || true\n"
         script += "command -v notify-send >/dev/null && notify-send -a 'Devil Shell' 'Temas regenerados' 'kitty / niri / vesktop / swaylock / gtk3 / gtk4' || true\n"
         proc.exec(["sh", "-c", script])
     }
