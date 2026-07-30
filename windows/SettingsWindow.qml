@@ -340,6 +340,7 @@ PanelWindow {
                 { key: "wallpaperDir", label: "Pasta dos wallpapers", ftype: "string" },
                 { key: "wallpaperDefault", label: "Wallpaper padrão", ftype: "string" },
                 { key: "wallpaperMode", label: "Ajuste (awww)", ftype: "select", options: ["fill","fit","stretch","center"] },
+                { key: "wallpaperTransition", label: "Transição (awww)", ftype: "select", options: ["none","simple","fade","left","right","top","bottom","wipe","wave","grow","center","any","outer","random"] },
                 { key: "wallpaperCarousel", label: "Carrossel automático", ftype: "bool" },
                 { key: "wallpaperCarouselMin", label: "Intervalo do carrossel (min)", ftype: "int" }
             ]}

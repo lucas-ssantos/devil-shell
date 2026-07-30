@@ -68,7 +68,7 @@ Singleton {
     function imgCmd(path, output) {
         const mode = resizeMode(Config.wallpaperMode)
         const out = output ? ("-o " + shq(output) + " ") : ""
-        return "awww img " + out + "--resize " + mode + " --transition-type none -- " + shq(path)
+        return "awww img " + out + "--resize " + mode + " --transition-type " + shq(Config.wallpaperTransition) + " -- " + shq(path)
     }
 
     // um comando por override + um pra base (SEM -o = todos os outputs) aplicado ANTES,

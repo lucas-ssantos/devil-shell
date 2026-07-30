@@ -16,7 +16,8 @@ Item {
     property string ftype: "string"
     property var options: []        // para "select"
 
-    implicitHeight: 30
+    // "select" com muitas opções quebra linha (Flow); a altura acompanha (ver `editor`).
+    implicitHeight: Math.max(30, editor.height + 6)
     width: parent ? parent.width : 360
 
     // valor efetivo atual (override OU padrão). Referencia Settings.data p/ reavaliar.
@@ -58,12 +59,13 @@ Item {
         }
     }
 
-    // área do editor (direita)
+    // área do editor (direita). Altura fixa (24) pra maioria dos ftypes; "select" com
+    // opções demais pra caber numa linha cresce (ver selectFlow.implicitHeight).
     Item {
         id: editor
         anchors { right: parent.right; verticalCenter: parent.verticalCenter }
         width: parent.width * 0.50
-        height: 24
+        height: field.ftype === "select" ? Math.max(24, selectFlow.implicitHeight) : 24
 
         // ── COR: swatch + hex ──
         Row {
@@ -177,10 +179,11 @@ Item {
             }
         }
 
-        // ── SELECT: botões ──
-        Row {
+        // ── SELECT: botões (quebra linha se não couberem todos numa só) ──
+        Flow {
+            id: selectFlow
             visible: field.ftype === "select"
-            anchors.fill: parent
+            width: parent.width
             spacing: 6
             Repeater {
                 model: field.options
