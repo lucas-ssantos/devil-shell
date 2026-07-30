@@ -65,10 +65,16 @@ Singleton {
     }
 
     // ═════════════════════════ awww ═════════════════════════
+    // "grow"/"outer" são radiais (círculo crescendo/encolhendo a partir de um ponto,
+    // --transition-pos). Ancora esse ponto no centro-inferior da tela — onde a bola
+    // do menu fica escondida (só o ballPeek some do chão) — pra a transição parecer
+    // que nasce/volta pra ela. Os demais tipos (fade, wipe, wave…) não usam posição.
     function imgCmd(path, output) {
         const mode = resizeMode(Config.wallpaperMode)
+        const type = Config.wallpaperTransition
         const out = output ? ("-o " + shq(output) + " ") : ""
-        return "awww img " + out + "--resize " + mode + " --transition-type " + shq(Config.wallpaperTransition) + " -- " + shq(path)
+        const pos = (type === "grow" || type === "outer") ? " --transition-pos bottom" : ""
+        return "awww img " + out + "--resize " + mode + " --transition-type " + shq(type) + pos + " -- " + shq(path)
     }
 
     // um comando por override + um pra base (SEM -o = todos os outputs) aplicado ANTES,
