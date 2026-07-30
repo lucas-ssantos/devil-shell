@@ -222,9 +222,17 @@ Singleton {
     Process { id: killP }
     Timer { id: killRefresh; interval: 350; onTriggered: svc.refreshProcs() }
 
-    // ═════════════════════════ Ações /reload e /config ═════════════════════════
+    // ═════════════════════════ Ações /reload, /config e /lock ═════════════════════════
     function reloadShell() { hide(); Quickshell.reload(false) }   // false = soft (reusa janelas)
     function openConfig()  { hide(); Settings.open = true }       // mesma pasta: sem import
+
+    // bloqueia a tela na hora com o gtklock — mesmo guard `pidof` do session.sh (evita
+    // 2ª instância se já estiver bloqueado). App gráfico Wayland → precisa do spawn()
+    // pelo compositor (ver CLAUDE.md).
+    function lock() {
+        hide()
+        spawn("pidof gtklock || gtklock")
+    }
 
     // ═════════════════════════ Ações /reboot e /poweroff ═════════════════════════
     // Roda o comando de mesmo nome dentro do terminal configurado (Config.launcherTerminal -e

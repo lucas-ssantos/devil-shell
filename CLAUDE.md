@@ -166,10 +166,18 @@ Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de 
   `-o <output>` (aplicado DEPOIS da base, senão a base sobrescreveria o override). O cliente
   `awww img`/`awww query` não precisa de `spawn-sh` (não é um cliente Wayland gráfico, só fala com
   o socket do daemon) — roda direto via `Process.exec` normal. A cada troca (`apply()`/
-  `carouselTick()`), o `WallpaperService` também gera (via `ffmpeg -vf gblur`) uma cópia borrada do
+  `carouselTick()`), o `WallpaperService` também gera (via ffmpeg) uma cópia borrada do
   wallpaper atual em `Config.lockBackgroundPath` (`~/.cache/quickshell/gtklock-background.png`) —
   é o fundo que o `gtklock` mostra (`background=` no `config.ini`, escrito por
   `ThemeExport.gtklockContent()`); tampouco precisa de `spawn-sh` (ffmpeg não é cliente Wayland).
+  ⚠️ o gtklock **não tem opção de enquadramento**: o CSS embutido no binário é fixo
+  (`strings /usr/bin/gtklock` mostra `background-size: 100% 100%`) — ele sempre ESTICA a
+  imagem pra cobrir a janela, ignorando a proporção original. Por isso `updateLockBackground()`
+  já entrega a imagem PRÉ-enquadrada (via `-vf scale/crop/pad`, `lockResizeFilter()`) no mesmo
+  modo configurado pro awww (`Config.wallpaperMode`: fill/fit/stretch/center, mapeado por
+  `resizeMode()`) e já no tamanho do maior monitor conectado (`lockTargetSize()`, um fundo só
+  serve todos os outputs) — senão o fundo do lock fica sempre espremido, não importa o wallpaper.
+  Depois entra o `gblur=sigma=<wallpaperLockBlur>`.
 - O próprio `qs` é lançado pelo niri: `spawn-at-startup "qs"` no `~/.config/niri/config.kdl`.
   Certifique-se de que nenhum outro daemon de notificação (swaync/mako/dunst) suba antes do qs,
   senão o qs não registra o servidor de notificações.

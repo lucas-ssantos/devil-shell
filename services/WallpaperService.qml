@@ -122,13 +122,45 @@ Singleton {
     // (apply()/carouselTick()); não precisa de `niri msg action spawn-sh` porque o ffmpeg
     // não é um cliente Wayland, só processa a imagem (igual ao próprio `awww img`/`find`
     // deste arquivo, ver CLAUDE.md).
+    //
+    // ⚠️ o gtklock NÃO tem opção de enquadramento (sem --background-fit/CSS custom aqui):
+    // o CSS embutido no binário é fixo (`strings /usr/bin/gtklock` mostra
+    // "background-size: 100% 100%") — ele SEMPRE estica a imagem pra cobrir a janela
+    // inteira, ignorando a proporção original. Por isso o enquadramento (mesmo modo do
+    // awww: fill/fit/stretch/center, ver resizeMode()) precisa ser feito AQUI, na imagem,
+    // antes do gtklock esticá-la — senão fica sempre "espremida" independente do wallpaper.
+    function lockResizeFilter(w, h) {
+        const mode = resizeMode(Config.wallpaperMode)
+        if (mode === "crop")   // fill: cobre o alvo inteiro e corta a sobra (crop já centraliza por padrão)
+            return "scale=" + w + ":" + h + ":force_original_aspect_ratio=increase,crop=" + w + ":" + h
+        if (mode === "fit")    // cabe inteira dentro do alvo; sobra vira faixa preta (letterbox)
+            return "scale=" + w + ":" + h + ":force_original_aspect_ratio=decrease,pad=" + w + ":" + h
+                 + ":(ow-iw)/2:(oh-ih)/2:color=black"
+        if (mode === "no")     // center: sem redimensionar — só centraliza (pad se sobrar, crop se faltar)
+            return "pad=max(iw\\," + w + "):max(ih\\," + h + "):(ow-iw)/2:(oh-ih)/2:color=black,crop=" + w + ":" + h
+        return "scale=" + w + ":" + h   // stretch: já É o comportamento nativo do gtklock
+    }
+    // maior resolução entre os monitores conectados — alvo único p/ o fundo compartilhado
+    // (o gtklock não tem `background=` por output; um só arquivo serve a todos, ver
+    // ThemeExport.gtklockContent()).
+    function lockTargetSize() {
+        const scrs = Quickshell.screens
+        let w = 0, h = 0
+        for (let i = 0; i < scrs.length; i++) {
+            if (scrs[i].width > w) w = scrs[i].width
+            if (scrs[i].height > h) h = scrs[i].height
+        }
+        return (w > 0 && h > 0) ? { w: w, h: h } : { w: 1920, h: 1080 }
+    }
     function updateLockBackground(src) {
         if (!src) return
         const dst = Config.lockBackgroundPath
         const dir = dst.substring(0, dst.lastIndexOf("/"))
+        const size = lockTargetSize()
+        const vf = lockResizeFilter(size.w, size.h) + ",gblur=sigma=" + Config.wallpaperLockBlur
         lockBgProc.exec(["sh", "-c",
             "mkdir -p " + shq(dir) + " && ffmpeg -y -loglevel error -i " + shq(src)
-            + " -vf gblur=sigma=" + Config.wallpaperLockBlur + " " + shq(dst)])
+            + " -vf " + shq(vf) + " " + shq(dst)])
     }
     Process { id: lockBgProc }
 
