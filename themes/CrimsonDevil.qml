@@ -9,6 +9,8 @@ import QtQuick
 Singleton {
     id: palette
 
+    readonly property bool isLight: false
+
     // ── Base / superfícies (do mais escuro ao mais claro) ──
     readonly property color crust:     "#0d0d0d"   // preto profundo (bola)
     readonly property color mantle:    "#140606"

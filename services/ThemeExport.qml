@@ -28,23 +28,27 @@ import "root:/"         // Config (lockBackgroundPath, fundo do gtklock)
 //              ver gtk4SidebarOverrides())
 //
 // Além dos alvos acima, MESCLA (não sobrescreve — settings.ini não é arquivo dedicado
-// nosso, pode ter outras chaves do usuário) `gtk-application-prefer-dark-theme=1` em
-// gtk-3.0/settings.ini e gtk-4.0/settings.ini, senão a variante clara da Adwaita
-// continua ativa mesmo com as cores do devil-shell.css sobrepostas.
+// nosso, pode ter outras chaves do usuário) `gtk-application-prefer-dark-theme=<0|1>` em
+// gtk-3.0/settings.ini e gtk-4.0/settings.ini, conforme `Theme.isLight` da paleta ATIVA
+// (0 p/ paletas claras como DragonBlanc, 1 p/ escuras como CrimsonDevil/InfernalRose) —
+// senão a variante de Adwaita errada (clara/escura) continua ativa por baixo das cores do
+// devil-shell.css sobrepostas.
 //
 // Também seta via `gsettings` (org.gnome.desktop.interface, systemwide): `color-scheme
-// =prefer-dark` e `accent-color=<red|pink, conforme a paleta>`.
+// =<prefer-dark|prefer-light>` (idem, conforme `Theme.isLight`) e `accent-color=<red|pink,
+// conforme a paleta>`.
 // ⚠️ Isso não é cosmético opcional: libadwaita (AdwStyleManager) detecta claro/escuro
 // consultando o portal `org.freedesktop.impl.portal.Settings` (chave `color-scheme` do
 // namespace `org.gnome.desktop.interface`) mesmo fora de uma sessão GNOME — inclusive
 // diálogos NATIVOS de apps libadwaita comuns, não só os sandboxed. Se o gsettings acima
 // nunca rodou (ou o valor foi resetado por fora), esse portal continua respondendo
-// "default" (claro) e os diálogos libadwaita ficam claros mesmo com o resto do sistema
-// escuro — foi exatamente esse o sintoma reportado (algumas janelas de diálogo no modo
-// claro) com `~/.config/xdg-desktop-portal/portals.conf` apontando
+// "default" (claro) e os diálogos libadwaita não acompanham a polaridade da paleta ativa
+// — foi exatamente esse o sintoma reportado (diálogo do xdg-desktop-portal com fundo
+// escuro e texto ilegível mesmo com uma paleta clara ativa) com
+// `~/.config/xdg-desktop-portal/portals.conf` apontando
 // `org.freedesktop.impl.portal.Settings=gnome` (serve a chave DIRETO do gsettings, não
 // do gtk-4.0/settings.ini). Conferir ao vivo: `gsettings get org.gnome.desktop.interface
-// color-scheme` deve ser `'prefer-dark'` depois de um export.
+// color-scheme` deve bater com a polaridade da paleta ativa depois de um export.
 //
 // ⚠️ TEMA NOMEADO (gtk-3.0) — por que existe além do override em ~/.config/gtk-3.0:
 // diagnosticado ao vivo (GTK Inspector + gresource extract) que o Adwaita/Adwaita-dark
@@ -327,15 +331,21 @@ Singleton {
 
     // accent-color do libadwaita é um ENUM fixo (9 cores), não hex livre — mapeia pra
     // o mais próximo do ACENTO real de cada paleta (mauve): CrimsonDevil é vermelho puro,
-    // InfernalRose é rosa/magenta.
+    // InfernalRose é rosa/magenta, DragonBlanc é vermelho vivo.
     function accentEnum() {
-        const map = { "CrimsonDevil": "red", "InfernalRose": "pink" }
+        const map = { "CrimsonDevil": "red", "InfernalRose": "pink", "DragonBlanc": "red" }
         return map[Theme.shellName] ?? "red"
     }
 
     // Regenera TODOS os arquivos externos (backup + escrita + reload ao vivo).
     function exportAll() {
         const HOME = Quickshell.env("HOME")
+        // Polaridade do tema ATIVO (Theme.isLight) — nada de "sempre dark" fixo: uma
+        // paleta clara (ex.: DragonBlanc) precisa de prefer-dark-theme=0/color-scheme
+        // claro, senão os apps GTK caem na variante escura da base adw-gtk3 por baixo do
+        // nosso @define-color (o que já causou painéis escuros com texto escuro por cima).
+        const darkPref = Theme.isLight ? "0" : "1"
+        const colorScheme = Theme.isLight ? "prefer-light" : "prefer-dark"
         const targets = [
             { path: HOME + "/.config/kitty/themes/crimson-devil.conf", content: kittyContent() },
             { path: HOME + "/.config/niri/devil-shell/theme.kdl",       content: niriContent() },
@@ -371,8 +381,8 @@ Singleton {
             + "    printf '\\n[Settings]\\n%s=%s\\n' \"$key\" \"$val\" >> \"$f\"\n"
             + "  fi\n"
             + "}\n"
-            + "ini_set '" + HOME + "/.config/gtk-3.0/settings.ini' gtk-application-prefer-dark-theme 1\n"
-            + "ini_set '" + HOME + "/.config/gtk-4.0/settings.ini' gtk-application-prefer-dark-theme 1\n"
+            + "ini_set '" + HOME + "/.config/gtk-3.0/settings.ini' gtk-application-prefer-dark-theme " + darkPref + "\n"
+            + "ini_set '" + HOME + "/.config/gtk-4.0/settings.ini' gtk-application-prefer-dark-theme " + darkPref + "\n"
         // tema GTK3 nomeado, com base REAL (adw-gtk3-dark) por cima da qual anexamos
         // nossa paleta — ver o comentário grande no topo do arquivo pro porquê. Só roda
         // se a extensão Flatpak já estiver instalada; senão pula, sem quebrar nada.
@@ -388,7 +398,7 @@ Singleton {
             + "  ini_set '" + HOME + "/.config/gtk-3.0/settings.ini' gtk-theme-name devil-shell\n"
             + "fi\n"
         // libadwaita (GTK4) lê ISSO pra cor/tema, não o @define-color do devil-shell.css
-        script += "command -v gsettings >/dev/null && gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true\n"
+        script += "command -v gsettings >/dev/null && gsettings set org.gnome.desktop.interface color-scheme '" + colorScheme + "' || true\n"
         script += "command -v gsettings >/dev/null && gsettings set org.gnome.desktop.interface accent-color '" + accentEnum() + "' || true\n"
         // recarrega ao vivo (Process herda o env -> niri msg acha o socket; kitty relê no SIGUSR1)
         script += "command -v niri >/dev/null && niri msg action load-config-file || true\n"

@@ -26,6 +26,10 @@ Singleton {
     readonly property var shell: palettes[shellName] ?? CrimsonDevil
     readonly property var cava:  palettes[cavaName]  ?? InfernalRose
 
+    // ── Polaridade do tema do shell (clara/escura) — o ThemeExport usa isso pra
+    // decidir prefer-dark-theme/color-scheme dos apps GTK, em vez de um valor fixo. ──
+    readonly property bool isLight: shell.isLight ?? false
+
     // helper: cor crua da paleta do shell, com override individual "pal_<nome>"
     function pal(name, fallback) { return Settings.get("pal_" + name, fallback) }
 
