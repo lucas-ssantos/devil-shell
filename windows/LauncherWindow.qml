@@ -11,6 +11,7 @@ import "root:/"           // Config
 //   /dir           navegador de arquivos (dirs + imagens/vídeos) -> abre no VLC
 //   /proc          processos (ordenável por nome/PID/RAM/CPU; Enter finaliza)
 //   /bg            escolhedor de wallpaper (awww; Tab muda o alvo: todos/por monitor)
+//   /theme         escolhedor de paleta do shell (ex.: "/theme CrimsonDevil" já filtra/aplica)
 //   /reload        recarrega o Quickshell        /config  abre as configurações
 //   /lock          bloqueia a tela (gtklock)
 //   /reboot        reinicia o computador          /poweroff  desliga o computador
@@ -51,6 +52,7 @@ PanelWindow {
         if (q === "/dir" || q.indexOf("/dir ") === 0) return "files"
         if (q === "/proc" || q.indexOf("/proc ") === 0) return "proc"
         if (q === "/bg" || q.indexOf("/bg ") === 0) return "bg"
+        if (q === "/theme" || q.indexOf("/theme ") === 0) return "theme"
         if (q.length > 0 && q[0] === "/") return "cmds"
         return "apps"
     }
@@ -60,6 +62,7 @@ PanelWindow {
         if (mode === "files") return query.length > 5 ? query.substring(5) : ""   // após "/dir "
         if (mode === "proc")  return query.length > 6 ? query.substring(6) : ""
         if (mode === "bg")    return query.length > 4 ? query.substring(4) : ""   // após "/bg "
+        if (mode === "theme") return query.length > 7 ? query.substring(7) : ""   // após "/theme "
         if (mode === "cmds")  return query.substring(1)
         return query
     }
@@ -69,6 +72,7 @@ PanelWindow {
         { cmd: "/dir",    glyph: "🖼", name: "Imagens e vídeos", desc: "navegar pelos arquivos e abrir no VLC", complete: true },
         { cmd: "/proc",   glyph: "⚡", name: "Processos",        desc: "listar e finalizar processos",          complete: true },
         { cmd: "/bg",     glyph: "🌄", name: "Papel de parede",  desc: "escolher o wallpaper (todos ou por monitor)", complete: true },
+        { cmd: "/theme",  glyph: "🎨", name: "Tema",             desc: "trocar a paleta do shell", complete: true },
         { cmd: "/config", glyph: "⚙", name: "Configurações",    desc: "abrir as configurações do shell",       complete: false },
         { cmd: "/reload", glyph: "↻", name: "Recarregar",       desc: "recarregar o Quickshell",               complete: false },
         { cmd: "/lock",   glyph: "🔒", name: "Bloquear tela",   desc: "bloquear a tela com o gtklock",         complete: false },
@@ -125,6 +129,7 @@ PanelWindow {
         if (mode === "files") return fileResults(modeArg)
         if (mode === "proc")  return procResults(modeArg)
         if (mode === "bg")    return bgResults(modeArg)
+        if (mode === "theme") return themeResults(modeArg)
         return []
     }
 
@@ -218,6 +223,19 @@ PanelWindow {
         }
         return out
     }
+    function themeResults(q) {
+        void Settings.data                              // dependência: "atual" muda com a seleção
+        const ql = q.trim().toLowerCase()
+        const cur = Theme.shellName
+        const out = []
+        const names = Theme.paletteNames
+        for (let i = 0; i < names.length; i++) {
+            const n = names[i]
+            if (ql !== "" && n.toLowerCase().indexOf(ql) < 0) continue
+            out.push({ kind: "theme", name: n, sub: n === cur ? "atual" : "" })
+        }
+        return out
+    }
     function procResults(q) {
         const ql = q.trim().toLowerCase()
         const sort = procSort
@@ -288,6 +306,9 @@ PanelWindow {
         } else if (it.kind === "bg") {
             WallpaperService.setFor(bgTarget, it.path)
             if ((mods & Qt.ShiftModifier) === 0) LauncherService.hide()   // Shift: segue aberto p/ o outro monitor
+        } else if (it.kind === "theme") {
+            Settings.set("themeShell", it.name)
+            LauncherService.hide()
         } else if (it.kind === "calc") {
             if (it.ok) setQuery("=" + it.value)                 // encadeia a conta
         }
@@ -364,6 +385,7 @@ PanelWindow {
         if (mode === "files") return "Enter abre no VLC / entra na pasta · Backspace sobe · digite p/ filtrar"
         if (mode === "proc")  return "Digite p/ filtrar por nome/PID · Enter finaliza (TERM) · Shift+Enter mata (KILL) · Tab muda a ordem"
         if (mode === "bg")    return "↑↓←→ navegar · Enter aplica em “" + bgTargetLabel + "” · Shift+Enter sem fechar · Tab muda o alvo"
+        if (mode === "theme") return "↑↓ navegar · Enter aplica o tema · digite p/ filtrar"
         if (mode === "calc")  return "Enter usa o resultado na próxima conta"
         return ""
     }
@@ -469,6 +491,7 @@ PanelWindow {
                         : win.mode === "files" ? "ARQUIVOS"
                         : win.mode === "proc" ? "PROCESSOS"
                         : win.mode === "bg" ? "WALLPAPER"
+                        : win.mode === "theme" ? "TEMA"
                         : win.mode === "calc" ? "CALC"
                         : "COMANDOS"
                     color: Config.accent
@@ -703,6 +726,16 @@ PanelWindow {
                                     font.pixelSize: Config.launcherIconSize * 0.55
                                     font.bold: true
                                 }
+                            }
+                            Rectangle {   // amostra de cor do tema (acento cru da paleta)
+                                visible: row.modelData.kind === "theme"
+                                anchors.centerIn: parent
+                                width: Config.launcherIconSize; height: Config.launcherIconSize
+                                radius: width / 2
+                                color: row.modelData.kind === "theme"
+                                       ? (Theme.palettes[row.modelData.name] ?? Theme).mauve : "transparent"
+                                border.color: row.modelData.sub === "atual" ? Config.accent : Theme.surface2
+                                border.width: row.modelData.sub === "atual" ? 2 : 1
                             }
                             Text {   // glifo (comandos, pastas, vídeo/áudio/pdf)
                                 visible: row.modelData.kind === "cmd" || row.modelData.kind === "dir"
