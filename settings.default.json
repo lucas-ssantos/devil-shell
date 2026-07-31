@@ -1,9 +1,12 @@
 {
-  "wallpaperAll": "/home/luke/Imagens/Wallpapers//vigna2.jpg",
+  "wallpaperAll": "/home/luke/Themes/vigna/wallpapers/vigna2.jpg",
   "wallpaperByOutput": {},
   "dotTravelMs": 1000,
-  "wallpaperDir": "/home/luke/Imagens/Wallpapers/",
+  "wallpaperDir": "/home/luke/Themes/vigna",
   "notifTimeout": 3000,
   "notifAnim": 1000,
-  "wallpaperTransition": "grow"
+  "wallpaperTransition": "grow",
+  "themeShell": "CrimsonDevil",
+  "themeWallpaper_CrimsonDevil": "/home/luke/Themes/vigna/wallpapers/vigna2.jpg",
+  "themeWallpaper_DragonBlanc": "/home/luke/Themes/arknights/wallpapers/nian_led.jpg"
 }

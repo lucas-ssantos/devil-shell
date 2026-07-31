@@ -66,6 +66,15 @@ Singleton {
         apply()
     }
 
+    // aplica o wallpaper padrão configurado para um tema do shell (chave
+    // "themeWallpaper_<nome>", ver SettingsWindow.qml/SettingsField "image") em TODOS os
+    // monitores. Chamado pelo Settings.set() ao trocar "themeShell"; sem override
+    // configurado para o tema, não faz nada (mantém o wallpaper atual).
+    function applyThemeDefault(themeName) {
+        const path = Settings.get("themeWallpaper_" + themeName, "")
+        if (path) setFor("*", path)
+    }
+
     // sem "wallpaperAll" salvo ainda (1ª execução, ver refresh()/listProc): sorteia um
     // wallpaper da pasta; se a pasta não tiver nenhuma imagem, avisa por notificação.
     function ensureDefault() {

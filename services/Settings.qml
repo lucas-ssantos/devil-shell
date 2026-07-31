@@ -65,7 +65,11 @@ Singleton {
         data = d
         saveTimer.restart()
         // mudou cor da paleta ou tema -> regenera os temas externos (kitty/vesktop…)
-        if (key.indexOf("pal_") === 0 || key.indexOf("theme") === 0) exportTimer.restart()
+        // (checagem exata p/ não pegar "themeWallpaper_<nome>", que também começa com "theme")
+        if (key.indexOf("pal_") === 0 || key === "themeShell" || key === "themeCava") exportTimer.restart()
+        // trocou a paleta do shell -> aplica o wallpaper padrão configurado pra ela (se houver;
+        // ver "themeWallpaper_<nome>" na SettingsWindow e WallpaperService.applyThemeDefault)
+        if (key === "themeShell") WallpaperService.applyThemeDefault(value)
     }
 
     // remove um override (volta essa chave ao padrão)
@@ -75,7 +79,7 @@ Singleton {
         for (var k in data) if (k !== key) d[k] = data[k]
         data = d
         saveTimer.restart()
-        if (key.indexOf("pal_") === 0 || key.indexOf("theme") === 0) exportTimer.restart()
+        if (key.indexOf("pal_") === 0 || key === "themeShell" || key === "themeCava") exportTimer.restart()
     }
 
     // volta TUDO ao padrão: recarrega o arquivo settings.default.json (o "padrão de

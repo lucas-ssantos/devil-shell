@@ -37,6 +37,8 @@ Item {
         if (key.indexOf("pal_") === 0) return Theme[key.substr(4)]
         if (key === "themeShell") return Theme.shellName
         if (key === "themeCava")  return Theme.cavaName
+        // "themeWallpaper_<nome>" não tem property em Config (uma por tema, dinâmico) -> Settings direto
+        if (key.indexOf("themeWallpaper_") === 0) return Settings.get(key, "")
         return Config[key]
     }
 

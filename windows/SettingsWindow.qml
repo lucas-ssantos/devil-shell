@@ -50,6 +50,12 @@ PanelWindow {
                 { key: "themeShell", label: "Paleta do shell", ftype: "select", options: Theme.paletteNames },
                 { key: "themeCava",  label: "Paleta do CAVA",  ftype: "select", options: Theme.paletteNames }
             ]},
+            // um campo de imagem por paleta cadastrada em Theme.paletteNames — ao trocar a
+            // "Paleta do shell" acima, o WallpaperService aplica (em todos os monitores) o
+            // wallpaper aqui configurado para o novo tema, se houver (ver Settings.set()).
+            { name: "Wallpaper padrão por tema", fields: Theme.paletteNames.map(n => ({
+                key: "themeWallpaper_" + n, label: "Wallpaper — " + n, ftype: "image"
+            })) },
             { name: "Base e superfícies", fields: [
                 { key: "pal_crust", label: "crust (bola/fundo)", ftype: "color" },
                 { key: "pal_mantle", label: "mantle", ftype: "color" },
