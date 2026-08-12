@@ -104,6 +104,14 @@ Singleton {
     readonly property string iconRecording: Settings.get("iconRecording", "")     // parar (enquanto grava)
     readonly property color  captureRecColor: Settings.get("captureRecColor", Theme.red)  // vermelho enquanto grava (cristal de Sistema)
 
+    // ── Bloqueio por inatividade (swayidle; cristal de Sistema → lâmpada) ──
+    // Consumidos pelo services/session.sh via env vars (IdleService.sessionArgv()); mudar
+    // aqui reinicia o swayidle JÁ RODANDO com os novos valores (ver Connections em
+    // IdleService.qml). Não afeta o estado inibido (lâmpada) nem exige reload do qs.
+    readonly property int  idleLockTimeout: Settings.get("idleLockTimeout", 300)   // segundos parado até bloquear (gtklock)
+    readonly property int  idleDpmsTimeout: Settings.get("idleDpmsTimeout", 0)     // segundos parado até desligar os monitores; 0 = desativado
+    readonly property bool idleLockOnSleep: Settings.get("idleLockOnSleep", true)  // também bloquear ao suspender (before-sleep)
+
     // ── Bandeja / system tray (cristal da bandeja) ───────
     readonly property string iconTray: Settings.get("iconTray", "󰀻")       // ícone genérico quando a bandeja está vazia
     readonly property int    trayIconSize: Settings.get("trayIconSize", 18)     // tamanho dos ícones dos apps no cristal

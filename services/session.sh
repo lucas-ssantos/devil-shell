@@ -16,9 +16,25 @@
 # Idle / lock / dpms. swayidle dispara o gtklock (ext-session-lock-v1, protocolo
 # suportado pelo niri). Fundo/tema do lock ficam em ~/.config/gtklock/config.ini,
 # gerado por ThemeExport (ver CLAUDE.md). 'pidof gtklock ||' evita duas instâncias.
-# dpms: o niri tem ações nativas (power-off-monitors / power-on-monitors); ao acordar,
-# qualquer input religa as telas, mas religamos explicitamente no resume por garantia.
-pgrep -x swayidle >/dev/null || \
-    setsid swayidle -w \
-        timeout 300 'pidof gtklock || gtklock' \
-        before-sleep 'pidof gtklock || gtklock' &
+# dpms: o niri tem ações nativas (power-off-monitors / power-on-monitors); quando
+# IDLE_DPMS_TIMEOUT > 0 um 2º timeout desliga os monitores por ociosidade e o 'resume'
+# religa no primeiro input (garantia extra além do religamento automático do niri).
+#
+# Os 3 valores abaixo vêm do menu de configurações (Config.idleLockTimeout/
+# idleDpmsTimeout/idleLockOnSleep), passados como env vars por IdleService.sessionArgv()
+# (StartupService no boot, IdleService.enableLock()/applyLiveConfig() depois). O fallback
+# ("${VAR:-padrão}") é só para quando o script roda à mão, fora do quickshell.
+IDLE_LOCK_TIMEOUT="${IDLE_LOCK_TIMEOUT:-300}"
+IDLE_DPMS_TIMEOUT="${IDLE_DPMS_TIMEOUT:-0}"
+IDLE_LOCK_ON_SLEEP="${IDLE_LOCK_ON_SLEEP:-1}"
+
+pgrep -x swayidle >/dev/null || {
+    set -- timeout "$IDLE_LOCK_TIMEOUT" 'pidof gtklock || gtklock'
+    if [ "$IDLE_DPMS_TIMEOUT" -gt 0 ] 2>/dev/null; then
+        set -- "$@" timeout "$IDLE_DPMS_TIMEOUT" 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors'
+    fi
+    if [ "$IDLE_LOCK_ON_SLEEP" = "1" ]; then
+        set -- "$@" before-sleep 'pidof gtklock || gtklock'
+    fi
+    setsid swayidle -w "$@" &
+}

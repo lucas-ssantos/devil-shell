@@ -341,6 +341,13 @@ PanelWindow {
                 { key: "captureRecColor", label: "Cor gravando", ftype: "color" }
             ]}
         ]},
+        { title: "Bloqueio por inatividade (swayidle)", subs: [
+            { name: "", fields: [
+                { key: "idleLockTimeout", label: "Tempo até bloquear (s)", ftype: "int" },
+                { key: "idleDpmsTimeout", label: "Tempo até desligar monitores (s, 0=off)", ftype: "int" },
+                { key: "idleLockOnSleep", label: "Bloquear ao suspender", ftype: "bool" }
+            ]}
+        ]},
         { title: "Papel de parede", subs: [
             { name: "", fields: [
                 { key: "wallpaperDir", label: "Pasta dos wallpapers", ftype: "dir" },

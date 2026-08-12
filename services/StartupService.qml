@@ -16,12 +16,13 @@ import Quickshell.Io
 Singleton {
     id: svc
 
-    // dispara o script de daemons pelo compositor (ambiente Wayland correto).
+    // dispara o script de daemons pelo compositor (ambiente Wayland correto). O argv vem
+    // de IdleService.sessionArgv() (mesma pasta, sem import) — leva os valores atuais de
+    // timeout/dpms/before-sleep (Config.idleLockTimeout…) como env vars pro session.sh.
     // Em hot-reload o singleton é recriado e isto roda de novo — as guardas pgrep do
     // session.sh impedem duplicação, então é seguro.
     function start() {
-        proc.exec(["niri", "msg", "action", "spawn-sh", "--",
-            "\"$HOME/.config/quickshell/services/session.sh\""])
+        proc.exec(IdleService.sessionArgv())
     }
 
     Process { id: proc }
