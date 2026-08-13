@@ -104,6 +104,9 @@ Singleton {
     readonly property string iconRecording: Settings.get("iconRecording", "")     // parar (enquanto grava)
     readonly property color  captureRecColor: Settings.get("captureRecColor", Theme.red)  // vermelho enquanto grava (cristal de Sistema)
 
+    // ── Captura de tela (screenshot-path do niri; ver ThemeExport.niriContent) ──
+    readonly property string screenshotDir: Settings.get("screenshotDir", Quickshell.env("HOME") + "/Imagens/Screenshots")
+
     // ── Bloqueio por inatividade (swayidle; cristal de Sistema → lâmpada) ──
     // Consumidos pelo services/session.sh via env vars (IdleService.sessionArgv()); mudar
     // aqui reinicia o swayidle JÁ RODANDO com os novos valores (ver Connections em

@@ -338,6 +338,9 @@ PanelWindow {
             ]}
         ]},
         { title: "Gravação", subs: [
+            { name: "", fields: [
+                { key: "screenshotDir", label: "Pasta das capturas de tela", ftype: "dir" }
+            ]},
             { name: "Cores", fields: [
                 { key: "captureRecColor", label: "Cor gravando", ftype: "color" }
             ]}

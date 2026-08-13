@@ -64,9 +64,10 @@ Singleton {
         d[key] = value
         data = d
         saveTimer.restart()
-        // mudou cor da paleta ou tema -> regenera os temas externos (kitty/vesktop…)
+        // mudou cor da paleta, tema ou a pasta de screenshots -> regenera os temas
+        // externos (kitty/vesktop/niri…) — screenshotDir vai pro screenshot-path do niri
         // (checagem exata p/ não pegar "themeWallpaper_<nome>", que também começa com "theme")
-        if (key.indexOf("pal_") === 0 || key === "themeShell" || key === "themeCava") exportTimer.restart()
+        if (key.indexOf("pal_") === 0 || key === "themeShell" || key === "themeCava" || key === "screenshotDir") exportTimer.restart()
         // trocou a paleta do shell -> aplica o wallpaper padrão configurado pra ela (se houver;
         // ver "themeWallpaper_<nome>" na SettingsWindow e WallpaperService.applyThemeDefault)
         if (key === "themeShell") WallpaperService.applyThemeDefault(value)
@@ -79,7 +80,7 @@ Singleton {
         for (var k in data) if (k !== key) d[k] = data[k]
         data = d
         saveTimer.restart()
-        if (key.indexOf("pal_") === 0 || key === "themeShell" || key === "themeCava") exportTimer.restart()
+        if (key.indexOf("pal_") === 0 || key === "themeShell" || key === "themeCava" || key === "screenshotDir") exportTimer.restart()
     }
 
     // volta TUDO ao padrão: recarrega o arquivo settings.default.json (o "padrão de
