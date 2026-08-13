@@ -150,11 +150,14 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    [LauncherWindow.qml](windows/LauncherWindow.qml) (lançador próprio).
 
 ### Inicialização da sessão centralizada no Quickshell
-Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms) rodam de **dentro do quickshell**:
+Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms, proxy de tray XEmbed) rodam
+de **dentro do quickshell**:
 - [StartupService.qml](services/StartupService.qml) (singleton) é chamado uma vez por `shell.qml`
   (`Component.onCompleted: StartupService.start()`). Ele pede ao compositor (via `niri msg action
-  spawn-sh`) para rodar [session.sh](services/session.sh), que sobe `blueman-applet` e
-  `swayidle` (com guardas `pgrep` para não duplicar a cada reload, e `setsid` para sobreviverem).
+  spawn-sh`) para rodar [session.sh](services/session.sh), que sobe `blueman-applet`, `swayidle`
+  e `xembedsniproxy` (proxy StatusNotifierItem → XEmbed, p/ tray icons XEmbed puro — ex.: launchers de
+  jogos via Proton/Wine — aparecerem na bandeja SNI do shell) (com guardas `pgrep` para não
+  duplicar a cada reload, e `setsid` para sobreviverem).
 - O **awww-daemon** sobe pelo [WallpaperService.qml](services/WallpaperService.qml)
   (`WallpaperService.init()` no `shell.qml`, no boot e a cada reload; guarda `pgrep` via
   `niri msg action spawn-sh`, igual ao session.sh, pois é um app gráfico Wayland/layer-shell).
