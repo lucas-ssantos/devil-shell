@@ -146,6 +146,7 @@ Singleton {
     readonly property int    launcherIconSize: Settings.get("launcherIconSize", 24)  // ícone/miniatura das linhas
     readonly property int    launcherTopUsed: Settings.get("launcherTopUsed", 6)     // nº de "mais usados" no topo
     readonly property string launcherTerminal: Settings.get("launcherTerminal", "kitty") // p/ .desktop Terminal=true
+    readonly property int    launcherColorHistoryMax: Settings.get("launcherColorHistoryMax", 20) // itens guardados no histórico do /color-picker
     readonly property color  launcherBg: Settings.get("launcherBg", Theme.base)
     readonly property color  launcherBorder: Settings.get("launcherBorder", Theme.surface0)
     readonly property color  launcherSel: Settings.get("launcherSel", Theme.surface1)   // linha selecionada

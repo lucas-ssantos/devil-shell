@@ -12,6 +12,8 @@ import "root:/"           // Config (launcherTerminal)
 //   • a navegação de arquivos do modo /dir (find por diretório, imagem/vídeo/áudio/pdf)
 //     → VLC (imagem/vídeo/áudio) ou Zen Browser (pdf, via flatpak --file-forwarding);
 //   • a lista de processos do modo /proc (ps) + finalizar (kill);
+//   • o modo /color-picker (grim+slurp+imagemagick escolhem UM pixel da tela) + histórico
+//     persistido, com cópia pro clipboard (wl-copy) de um item salvo;
 //   • a calculadora do modo "=" (parser próprio — SEM eval, p/ não expor o escopo QML);
 //   • as ações /reload (Quickshell.reload), /config (Settings.open) e /reboot,
 //     /poweroff (rodam reboot/poweroff no terminal configurado);
@@ -221,6 +223,110 @@ Singleton {
     }
     Process { id: killP }
     Timer { id: killRefresh; interval: 350; onTriggered: svc.refreshProcs() }
+
+    // ═════════════════════════ /color-picker — captura de cor da tela ═════════════════════════
+    // Sem ferramenta pronta equivalente ao awww/gpu-screen-recorder pra "escolher 1 pixel";
+    // compõe grim (screenshot) + slurp -p (seleciona 1 PONTO — geometria "X,Y 1x1", já pronta
+    // pro -g do grim) + imagemagick (lê o pixel do PNG de 1x1 e devolve "srgb(r,g,b)"). Roda
+    // pelo compositor (spawn(), apps gráficos Wayland — ver CLAUDE.md); como o spawn-sh só
+    // LANÇA e larga o processo (sem devolver stdout pro Process que chamou), o resultado é
+    // escrito num arquivo de cache e um poll curto (Timer+Process) o lê. Um segundo arquivo
+    // ".done" marca o fim do script (sucesso OU cancelamento/Esc no slurp) sem depender de
+    // casar nome de processo (pgrep) — evita corrida entre o slurp fechar e o grim/magick
+    // ainda estarem escrevendo.
+    // A janela do lançador é ESCONDIDA antes de disparar (ela é uma layer surface Overlay
+    // cobrindo a tela inteira; se ficasse aberta, roubaria o clique do slurp) e reaberta
+    // sozinha (show()) quando o poll termina — colorReopenQuery guarda a query pra
+    // LauncherWindow restaurar o modo /color-picker (ver onIsOpenChanged lá).
+    readonly property string colorResultPath: home + "/.cache/quickshell/colorpicker-result"
+    readonly property string colorHistoryPath: home + "/.config/quickshell/color-history.json"
+    property bool colorPicking: false
+    property int colorPollTries: 0
+    property var colorHistory: []          // [{ hex: "#RRGGBB", rgb: "rgb(r, g, b)" }], mais recente primeiro
+    property string colorReopenQuery: ""   // consumida por LauncherWindow.onIsOpenChanged
+
+    function pickColor(currentQuery) {
+        if (colorPicking) return
+        colorReopenQuery = currentQuery
+        hide()
+        colorPicking = true
+        colorPollTries = 0
+        const f = colorResultPath
+        spawn("mkdir -p ~/.cache/quickshell; rm -f " + shq(f) + " " + shq(f + ".done") + "; "
+            + "{ G=$(slurp -p) && grim -g \"$G\" -t png - 2>/dev/null "
+            + "| magick png:- -format '%[pixel:p{0,0}]' info: > " + shq(f) + " 2>/dev/null; "
+            + "touch " + shq(f + ".done") + "; }")
+        colorPollTimer.start()
+    }
+    Timer {
+        id: colorPollTimer
+        interval: 200; repeat: true
+        onTriggered: {
+            svc.colorPollTries++
+            if (svc.colorPollTries > 300) { svc.colorPollDone("CANCEL"); return }   // ~60s sem sinal: desiste
+            colorPollProc.exec(["sh", "-c",
+                "D=" + svc.shq(svc.colorResultPath + ".done") + "; F=" + svc.shq(svc.colorResultPath) + "; "
+                + "[ -e \"$D\" ] || exit 0; "
+                + "if [ -s \"$F\" ]; then cat \"$F\"; else echo CANCEL; fi; rm -f \"$F\" \"$D\""])
+        }
+    }
+    Process {
+        id: colorPollProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const out = text.trim()
+                if (out !== "") svc.colorPollDone(out)
+            }
+        }
+    }
+    function colorPollDone(raw) {
+        colorPollTimer.stop()
+        colorPicking = false
+        if (raw !== "" && raw !== "CANCEL") {
+            const hex = parseMagickPixel(raw)
+            if (hex) addColorHistory(hex)
+        }
+        show()
+    }
+    // "srgb(170,187,204)"/"srgba(170,187,204,1)" (imagemagick) -> "#AABBCC"
+    function parseMagickPixel(raw) {
+        const m = ("" + raw).match(/rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/i)
+        if (!m) return ""
+        const c = [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])]
+        return "#" + c.map(n => Math.min(255, n).toString(16).padStart(2, "0").toUpperCase()).join("")
+    }
+    function addColorHistory(hex) {
+        const r = parseInt(hex.substring(1, 3), 16)
+        const g = parseInt(hex.substring(3, 5), 16)
+        const b = parseInt(hex.substring(5, 7), 16)
+        let list = colorHistory.filter(c => c.hex !== hex)   // evita duplicata; recente sobe pro topo
+        list.unshift({ hex: hex, rgb: "rgb(" + r + ", " + g + ", " + b + ")" })
+        if (list.length > Config.launcherColorHistoryMax) list = list.slice(0, Config.launcherColorHistoryMax)
+        colorHistory = list
+        colorHistorySaveTimer.restart()
+    }
+    function removeColorHistory(hex) {
+        colorHistory = colorHistory.filter(c => c.hex !== hex)
+        colorHistorySaveTimer.restart()
+    }
+    // copia um valor (hex OU rgb, ver LauncherWindow.activate) pro clipboard. wl-copy é um
+    // cliente Wayland de verdade (mantém a seleção viva) -> precisa do ambiente do
+    // compositor, daí spawn() (ver CLAUDE.md) em vez de Process direto.
+    function copyColor(text) {
+        spawn("printf %s " + shq(text) + " | wl-copy")
+    }
+    FileView {
+        id: colorHistoryFile
+        path: svc.colorHistoryPath
+        blockLoading: true
+        printErrors: false             // 1ª execução: arquivo ainda não existe (normal)
+        onLoaded: {
+            try { svc.colorHistory = JSON.parse(colorHistoryFile.text() || "[]") }
+            catch (e) { svc.colorHistory = [] }
+        }
+        onLoadFailed: svc.colorHistory = []
+    }
+    Timer { id: colorHistorySaveTimer; interval: 400; onTriggered: colorHistoryFile.setText(JSON.stringify(svc.colorHistory, null, 2)) }
 
     // ═════════════════════════ Ações /reload, /config e /lock ═════════════════════════
     function reloadShell() { hide(); Quickshell.reload(false) }   // false = soft (reusa janelas)

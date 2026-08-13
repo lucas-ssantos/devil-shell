@@ -233,7 +233,8 @@ PanelWindow {
             ]},
             { name: "Comportamento", fields: [
                 { key: "launcherTopUsed", label: "Nº de mais usados", ftype: "int" },
-                { key: "launcherTerminal", label: "Terminal (apps de texto)", ftype: "string" }
+                { key: "launcherTerminal", label: "Terminal (apps de texto)", ftype: "string" },
+                { key: "launcherColorHistoryMax", label: "Histórico do color-picker (itens)", ftype: "int" }
             ]},
             { name: "Cores", fields: [
                 { key: "launcherBg", label: "Fundo", ftype: "color" },

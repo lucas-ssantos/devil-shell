@@ -10,6 +10,8 @@ import "root:/"           // Config
 //   (vazio/texto)  aplicativos instalados — vazio lista os MAIS USADOS primeiro
 //   /dir           navegador de arquivos (dirs + imagens/vídeos) -> abre no VLC
 //   /proc          processos (ordenável por nome/PID/RAM/CPU; Enter finaliza)
+//   /color-picker  captura a cor de um pixel da tela (grim+slurp+imagemagick) + histórico
+//                  (Enter copia o HEX, Shift+Enter o RGB, Delete remove o item selecionado)
 //   /bg            escolhedor de wallpaper (awww; Tab muda o alvo: todos/por monitor)
 //   /theme         escolhedor de paleta do shell (ex.: "/theme CrimsonDevil" já filtra/aplica)
 //   /reload        recarrega o Quickshell        /config  abre as configurações
@@ -51,6 +53,7 @@ PanelWindow {
         if (q.length > 0 && q[0] === "=") return "calc"
         if (q === "/dir" || q.indexOf("/dir ") === 0) return "files"
         if (q === "/proc" || q.indexOf("/proc ") === 0) return "proc"
+        if (q === "/color-picker" || q.indexOf("/color-picker ") === 0) return "color"
         if (q === "/bg" || q.indexOf("/bg ") === 0) return "bg"
         if (q === "/theme" || q.indexOf("/theme ") === 0) return "theme"
         if (q.length > 0 && q[0] === "/") return "cmds"
@@ -61,6 +64,7 @@ PanelWindow {
         if (mode === "calc")  return query.substring(1)
         if (mode === "files") return query.length > 5 ? query.substring(5) : ""   // após "/dir "
         if (mode === "proc")  return query.length > 6 ? query.substring(6) : ""
+        if (mode === "color") return query.length > 14 ? query.substring(14) : ""   // após "/color-picker "
         if (mode === "bg")    return query.length > 4 ? query.substring(4) : ""   // após "/bg "
         if (mode === "theme") return query.length > 7 ? query.substring(7) : ""   // após "/theme "
         if (mode === "cmds")  return query.substring(1)
@@ -71,6 +75,7 @@ PanelWindow {
     readonly property var commands: [
         { cmd: "/dir",    glyph: "🖼", name: "Imagens e vídeos", desc: "navegar pelos arquivos e abrir no VLC", complete: true },
         { cmd: "/proc",   glyph: "⚡", name: "Processos",        desc: "listar e finalizar processos",          complete: true },
+        { cmd: "/color-picker", glyph: "💧", name: "Seletor de cor", desc: "capturar um pixel da tela e ver o histórico", complete: true },
         { cmd: "/bg",     glyph: "🌄", name: "Papel de parede",  desc: "escolher o wallpaper (todos ou por monitor)", complete: true },
         { cmd: "/theme",  glyph: "🎨", name: "Tema",             desc: "trocar a paleta do shell", complete: true },
         { cmd: "/config", glyph: "⚙", name: "Configurações",    desc: "abrir as configurações do shell",       complete: false },
@@ -128,6 +133,7 @@ PanelWindow {
         if (mode === "calc")  return calcResults(modeArg)
         if (mode === "files") return fileResults(modeArg)
         if (mode === "proc")  return procResults(modeArg)
+        if (mode === "color") return colorResults(modeArg)
         if (mode === "bg")    return bgResults(modeArg)
         if (mode === "theme") return themeResults(modeArg)
         return []
@@ -236,6 +242,18 @@ PanelWindow {
         }
         return out
     }
+    function colorResults(q) {
+        void LauncherService.colorHistory               // dependência: reavalia quando o histórico muda
+        const ql = q.trim().toLowerCase()
+        const out = [{ kind: "colorpick", name: "Capturar cor da tela",
+                       sub: "clique num pixel da tela pra pegar a cor" }]
+        const hist = LauncherService.colorHistory.filter(c =>
+            ql === "" || c.hex.toLowerCase().indexOf(ql) >= 0 || c.rgb.toLowerCase().indexOf(ql) >= 0)
+        if (hist.length > 0) out.push({ kind: "header", name: "Histórico" })
+        for (let i = 0; i < hist.length; i++)
+            out.push({ kind: "color", name: hist[i].hex, sub: hist[i].rgb, hex: hist[i].hex, rgb: hist[i].rgb })
+        return out
+    }
     function procResults(q) {
         const ql = q.trim().toLowerCase()
         const sort = procSort
@@ -303,6 +321,11 @@ PanelWindow {
             LauncherService.openFile(it.path)
         } else if (it.kind === "proc") {
             LauncherService.killProc(it.pid, (mods & Qt.ShiftModifier) !== 0)
+        } else if (it.kind === "colorpick") {
+            LauncherService.pickColor(win.query)
+        } else if (it.kind === "color") {
+            LauncherService.copyColor((mods & Qt.ShiftModifier) ? it.rgb : it.hex)
+            LauncherService.hide()
         } else if (it.kind === "bg") {
             WallpaperService.setFor(bgTarget, it.path)
             if ((mods & Qt.ShiftModifier) === 0) LauncherService.hide()   // Shift: segue aberto p/ o outro monitor
@@ -336,7 +359,16 @@ PanelWindow {
         const act = mons.find(m => m.active)
         const scr = act ? Quickshell.screens.find(sc => sc.name === act.name) : undefined
         openScreen = scr ?? (Quickshell.screens.length > 0 ? Quickshell.screens[0] : null)
-        input.text = ""
+        // /color-picker esconde a janela pra capturar e reabre sozinha (LauncherService.show());
+        // colorReopenQuery guarda a query de então pra voltar direto pro modo, com o histórico
+        // já atualizado, em vez de cair de volta nos aplicativos
+        if (LauncherService.colorReopenQuery !== "") {
+            input.text = LauncherService.colorReopenQuery
+            LauncherService.colorReopenQuery = ""
+        } else {
+            input.text = ""
+        }
+        input.cursorPosition = input.text.length
         LauncherService.cwd = ""
         LauncherService.files = []
         bgTarget = "*"
@@ -384,6 +416,7 @@ PanelWindow {
         if (mode === "cmds")  return "Enter escolhe o comando"
         if (mode === "files") return "Enter abre no VLC / entra na pasta · Backspace sobe · digite p/ filtrar"
         if (mode === "proc")  return "Digite p/ filtrar por nome/PID · Enter finaliza (TERM) · Shift+Enter mata (KILL) · Tab muda a ordem"
+        if (mode === "color") return "Enter captura/copia o HEX · Shift+Enter copia o RGB · Delete remove do histórico"
         if (mode === "bg")    return "↑↓←→ navegar · Enter aplica em “" + bgTargetLabel + "” · Shift+Enter sem fechar · Tab muda o alvo"
         if (mode === "theme") return "↑↓ navegar · Enter aplica o tema · digite p/ filtrar"
         if (mode === "calc")  return "Enter usa o resultado na próxima conta"
@@ -471,6 +504,10 @@ PanelWindow {
                                    && LauncherService.cwd !== "/" && LauncherService.cwd !== LauncherService.home) {
                             LauncherService.dirUp()   // no $HOME/raiz o Backspace volta a apagar o texto
                             ev.accepted = true
+                        } else if (ev.key === Qt.Key_Delete && win.mode === "color"
+                                   && win.results[win.selIndex] && win.results[win.selIndex].kind === "color") {
+                            LauncherService.removeColorHistory(win.results[win.selIndex].hex)
+                            ev.accepted = true
                         }
                     }
                 }
@@ -490,6 +527,7 @@ PanelWindow {
                     text: win.mode === "apps" ? ""              // some E libera a largura p/ o campo
                         : win.mode === "files" ? "ARQUIVOS"
                         : win.mode === "proc" ? "PROCESSOS"
+                        : win.mode === "color" ? "COR"
                         : win.mode === "bg" ? "WALLPAPER"
                         : win.mode === "theme" ? "TEMA"
                         : win.mode === "calc" ? "CALC"
@@ -737,11 +775,22 @@ PanelWindow {
                                 border.color: row.modelData.sub === "atual" ? Config.accent : Theme.surface2
                                 border.width: row.modelData.sub === "atual" ? 2 : 1
                             }
-                            Text {   // glifo (comandos, pastas, vídeo/áudio/pdf)
+                            Rectangle {   // amostra da cor capturada (valor cru do usuário — não vem da paleta)
+                                visible: row.modelData.kind === "color"
+                                anchors.centerIn: parent
+                                width: Config.launcherIconSize; height: Config.launcherIconSize
+                                radius: 6
+                                color: row.modelData.hex ?? "transparent"
+                                border.color: Theme.surface2
+                                border.width: 1
+                            }
+                            Text {   // glifo (comandos, pastas, vídeo/áudio/pdf, capturar cor)
                                 visible: row.modelData.kind === "cmd" || row.modelData.kind === "dir"
+                                      || row.modelData.kind === "colorpick"
                                       || (row.modelData.kind === "file" && row.modelData.fileType !== "image")
                                 anchors.centerIn: parent
                                 text: row.modelData.kind === "cmd" ? (row.modelData.glyph ?? "❯")
+                                    : row.modelData.kind === "colorpick" ? "💧"
                                     : row.modelData.kind === "dir" ? (row.modelData.up ? "↩" : "📁")
                                     : row.modelData.fileType === "audio" ? "🎵"
                                     : row.modelData.fileType === "pdf" ? "📄"
