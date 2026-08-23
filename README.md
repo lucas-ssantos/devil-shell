@@ -51,12 +51,20 @@ Teclado: `↑↓` navega, `Enter` ativa, `Esc` fecha, `Tab` muda a ordenação n
 
 ## 📦 Dependências
 
+Lista **exaustiva** — todo binário/pacote que algum `.qml`/`.sh`/`.py` do repo invoca, direta ou
+indiretamente (achada varrendo `exec(`/`command:`/`spawn-sh` em todo o projeto), separada em
+obrigatório vs. por recurso. Se um recurso não te interessa, pode ignorar a linha dele sem quebrar
+o resto do shell (cada `Process` falha isolado, só aquele recurso fica inerte).
+
 ### Núcleo (obrigatório)
 | O quê | Para quê |
 |------|----------|
-| **Quickshell** | runtime QML do shell (com suporte a Wayland, Pipewire, DBus). Comando `qs`. |
-| **Niri** | o compositor; o shell usa o IPC `niri msg` para workspaces, foco, screenshot e `spawn-sh`. |
-| **Symbols Nerd Font** | ícones dos cristais de áudio/captura/bandeja (`Config.iconFont`). |
+| **[Quickshell](https://quickshell.org)** | runtime QML do shell (Wayland/`wlroots`, Pipewire, DBus, SystemTray, Polkit, Mpris). Comando `qs`. Normalmente compilado da fonte / repositório próprio (não está no `apt`). |
+| **[Niri](https://github.com/YaLTeR/niri)** | o compositor; o shell inteiro gira em torno do IPC `niri msg` (`event-stream`, `workspaces`/`windows`/`outputs`, `action spawn-sh`, `focus-*`, `screenshot`, `power-*-monitors`, `load-config-file`). |
+| **coreutils / sh / grep / sed / gawk / findutils / procps** | usados o tempo todo em scripts inline (`sh -c`, `find`, `awk`, `sed`, `cat`, `ps`, `pgrep`/`pkill`, `kill`) por praticamente todo serviço — já vêm em qualquer instalação base do Debian. |
+| **python3** | interpretador dos dois helpers Python do projeto: o patch do `layout` do niri em `ThemeExport.qml` ([`niriLayoutPatchPy()`](services/ThemeExport.qml)) e o seletor de arquivos/pastas ([`services/portal-pick.py`](services/portal-pick.py), usado pela janela de configurações). Sem `python3` no PATH, os dois recursos pulam silenciosamente. |
+| **python3-gi** (PyGObject, módulos `GLib`/`Gio`) | só para o `portal-pick.py` — fala com o `xdg-desktop-portal` via DBus (`Gio.bus_get_sync`). |
+| **Uma Nerd Font** | ícones dos cristais/cápsulas/notificações/lançador (`Config.iconFont`). O padrão de fábrica é **JetBrainsMono Nerd Font**, mas qualquer Nerd Font serve — é só trocar `Config.iconFont`/`iconFont` no `settings.json`. |
 
 > Este shell é **específico do Niri** — depende do `niri msg` (event-stream/actions) e do
 > comportamento do compositor.
@@ -64,27 +72,54 @@ Teclado: `↑↓` navega, `Enter` ativa, `Esc` fecha, `Tab` muda a ordenação n
 ### Por recurso (opcional, mas recomendado)
 | Recurso | Precisa de |
 |--------|-----------|
-| **Áudio** (volume/mudo/dispositivos) | **PipeWire** (+ WirePlumber) |
-| **Visualizador CAVA** | **cava** (lido via `cava -p cava.conf`) |
-| **Lançador — modo `/dir`** | **VLC** (abre imagens e vídeos); o lançador em si não precisa de nada externo |
-| **Gravação de tela** | **gpu-screen-recorder** e **procps** (`pgrep`, para detectar gravação ativa) |
-| **Bandeja** | apps que exponham **StatusNotifierItem** (Discord/Vesktop, Steam…) |
-| **Notificações** | Quickshell como **único** servidor de notificações (ver aviso abaixo) |
-| **Papel de parede** (via `WallpaperService.qml`) | **awww** + **awww-daemon** |
-| **Fundo do lock** (blur do wallpaper atual) | **ffmpeg** (filtro `gblur`) |
-| **Sessão** (via `session.sh`) | **blueman-applet**, **swayidle**, **gtklock** |
+| **Áudio** (volume/mudo/dispositivos, `AudioMenu`/`AudioDevices`) | **PipeWire** + **WirePlumber** — via a API nativa `Quickshell.Services.Pipewire`, sem CLI nenhuma (nada de `pactl`/`wpctl`). |
+| **Visualizador CAVA** (`cava/`) | **cava** (lido via `cava -p cava.conf`). |
+| **Notificações** (toasts) | Quickshell como **único** servidor freedesktop (ver aviso abaixo); **libnotify-bin** (`notify-send`) é usado internamente pelo próprio shell para avisos de lock/idle/tema, além de ser o comando que apps terceiros usam pra notificar. |
+| **Foco de janela pela bandeja/notificação** | nenhuma dependência extra — só `niri msg --json windows` + `action focus-window` (já cobertos pelo núcleo). |
+| **Bandeja (system tray)** | apps que exponham **StatusNotifierItem** (Discord/Vesktop, Steam…); para tray icons **XEmbed puro** (ex.: launchers de jogos via Proton/Wine) é preciso o proxy **xembedsniproxy** rodando (subido pelo `session.sh`). |
+| **Sensores** (`SensorsService` → popups de RAM/temperatura/CPU/VRAM) | nada além de coreutils/awk — lê direto `/sys/class/hwmon` (drivers de kernel `k10temp`/`amdgpu`; ajuste o `case` se a CPU/GPU for outra), `/proc/stat`, `/proc/meminfo` e `/sys/class/drm/card0/device/mem_info_vram_*` (exclusivo do driver `amdgpu`). |
+| **Clima** (`WeatherService`, cápsula do topo) | **curl** + rede até `wttr.in`. |
+| **Gravação de tela** | **gpu-screen-recorder** (setup único de capability, ver abaixo) + **procps** (`pgrep`/`pkill`, para detectar/parar gravação ativa). |
+| **Papel de parede** (`WallpaperService`) | **awww** + **awww-daemon** ([codeberg.org/LGFae/awww](https://codeberg.org/LGFae/awww); não está no `apt`, compile com `cargo`). |
+| **Fundo do lock** (blur do wallpaper atual) | **ffmpeg** (filtro `gblur`, além de `scale`/`crop`/`pad` pro enquadramento). |
+| **Lançador — modo `/dir`** | **VLC** (abre imagens/vídeos/áudio) e, para PDF, **Zen Browser via Flatpak** (`flatpak run --file-forwarding app.zen_browser.zen`, `flatpak` precisa estar instalado e com o app.zen_browser.zen instalado). |
+| **Lançador — modo `/color-picker`** | **grim** (screenshot Wayland) + **slurp** (seleção de ponto na tela) + **ImageMagick** (`magick`/`convert`, lê o pixel) + **wl-clipboard** (`wl-copy`, para copiar o hex/rgb salvo). |
+| **Lançador — `Terminal=true`** nos `.desktop` | um terminal (padrão `Config.launcherTerminal` = **kitty**, chamado como `kitty -e <argv>`; trocável no `settings.json`). |
+| **Janela de configurações — campos de pasta/imagem** (seletor de arquivo) | **xdg-desktop-portal** + backend **xdg-desktop-portal-gtk** registrado para `org.freedesktop.portal.FileChooser` (o backend `gnome` falha sob Niri, ver `~/.config/xdg-desktop-portal/portals.conf`) — além de python3-gi acima. |
+| **Sessão** (`session.sh`, subido pelo `StartupService`) | **blueman-applet** (applet Bluetooth; atualmente comentado no script), **swayidle** + **gtklock** (idle/lock/dpms, via `ext-session-lock-v1`). |
+| **Export de temas** (`ThemeExport`, cristal Sistema → engrenagem) | **kitty** (relê tema com `SIGUSR1`) e **Vesktop** como alvos opcionais de tema; **glib2.0-bin**/**libglib2.0-bin** (`gsettings`, chave `org.gnome.desktop.interface` — precisa do schema `gsettings-desktop-schemas`) pra sincronizar `color-scheme`/`accent-color` com libadwaita; **flatpak** + a extensão `org.gtk.Gtk3theme.adw-gtk3-dark` (instalação manual única, ver comando abaixo) pra corrigir o fundo hardcoded do diálogo nativo GTK3 do `xdg-desktop-portal-gtk`; **systemd** (`systemctl --user restart xdg-desktop-portal-gtk.service`) pra recarregar esse backend. Tudo isso é melhor-esforço: os comandos são precedidos de `command -v` e falham silenciosamente se o binário não existir. |
 
 Instalação no Debian (exemplo; nomes podem variar):
 
 ```sh
-sudo apt install niri cava vlc gpu-screen-recorder pipewire wireplumber procps \
-                 swayidle blueman gtklock ffmpeg
+sudo apt install niri cava vlc gpu-screen-recorder pipewire wireplumber \
+                 procps coreutils grep sed gawk findutils \
+                 python3 python3-gi \
+                 swayidle blueman gtklock ffmpeg \
+                 libnotify-bin curl \
+                 grim slurp imagemagick wl-clipboard \
+                 kitty flatpak \
+                 xdg-desktop-portal xdg-desktop-portal-gtk \
+                 libglib2.0-bin gsettings-desktop-schemas
+
 # gpu-screen-recorder: setup único (o gsr-kms-server precisa de CAP_SYS_ADMIN p/ capturar via KMS):
 sudo setcap cap_sys_admin+ep /usr/bin/gsr-kms-server
+
 # awww/awww-daemon (https://codeberg.org/LGFae/awww): NÃO estão no apt, compile com
 # `cargo build --release` e instale os dois binários (target/release/{awww,awww-daemon}) no PATH.
+
+# xembedsniproxy: costuma vir no pacote do plasma-workspace (ou lxqt-*/kde) — se não estiver
+# no apt como pacote próprio, procure em `apt-file search xembedsniproxy`.
+
+# Zen Browser (modo /dir do lançador, só PDFs):
+flatpak install --user flathub app.zen_browser.zen
+
+# adw-gtk3-dark (corrige o diálogo nativo do xdg-desktop-portal-gtk sob paleta escura — opcional):
+flatpak install --user flathub org.gtk.Gtk3theme.adw-gtk3-dark
+
 # Quickshell normalmente é compilado / vem de repositório próprio (não do apt).
-# Symbols Nerd Font: baixe de https://www.nerdfonts.com/ e instale em ~/.local/share/fonts
+# Nerd Font: baixe a de sua preferência em https://www.nerdfonts.com/ e instale em
+# ~/.local/share/fonts (o padrão de fábrica do Config.iconFont é "JetBrainsMono Nerd Font").
 ```
 
 ### ⚠️ Avisos importantes
