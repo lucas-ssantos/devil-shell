@@ -9,7 +9,8 @@ import "root:/"           // Config
 // campo de busca e uma lista de resultados. O MODO é derivado do texto digitado:
 //   (vazio/texto)  aplicativos instalados — vazio lista os MAIS USADOS primeiro
 //   /dir           navegador de arquivos (dirs + imagens/vídeos) -> abre no VLC
-//   /proc          processos (ordenável por nome/PID/RAM/CPU; Enter finaliza)
+//   /proc          processos AGRUPADOS por app (soma real de RAM/CPU da subárvore;
+//                  →/Enter expande p/ ver os filhos; Shift+Enter finaliza)
 //   /color-picker  captura a cor de um pixel da tela (grim+slurp+imagemagick) + histórico
 //                  (Enter copia o HEX, Shift+Enter o RGB, Delete remove o item selecionado)
 //   /bg            escolhedor de wallpaper (awww; Tab muda o alvo: todos/por monitor)
@@ -97,6 +98,25 @@ PanelWindow {
         const order = ["name", "pid", "ram", "cpu"]
         procSort = order[(order.indexOf(procSort) + 1) % order.length]
     }
+
+    // ── Grupos do /proc: quais subárvores estão expandidas (chave = pid raiz) ──
+    // Reatribui o mapa inteiro a cada toggle p/ o binding de `results` reavaliar.
+    property var procExpanded: ({})
+    function toggleGroup(pid) {
+        const m = Object.assign({}, procExpanded)
+        if (m[pid]) delete m[pid]; else m[pid] = true
+        procExpanded = m
+    }
+    // processos "recipiente" (sessão/shell/dbus): NÃO viram grupo — cada filho deles
+    // é a raiz do seu próprio app (senão tudo cairia num "systemd"/"niri" gigante).
+    // comm vem truncado em 15 chars pelo ps (ex.: "dbus-broker-launch" -> "dbus-broker-lau").
+    // inclui os wrappers de sandbox (bwrap/flatpak/firejail/snap): sem isso todo app
+    // Flatpak apareceria agrupado como "bwrap" em vez do nome real.
+    readonly property var procContainers: ["systemd", "(sd-pam)", "init", "niri",
+        "dbus-daemon", "dbus-broker", "dbus-broker-lau", "login", "agetty", "sshd",
+        "su", "sudo", "doas", "bash", "zsh", "fish", "sh", "dash",
+        "quickshell", ".quickshell-wr",
+        "bwrap", "flatpak", "firejail", "snap-confine", "snap"]
 
     // total de CPU em uso por TODOS os processos (independe do filtro de busca);
     // RAM vem pronta de LauncherService.memUsedMB (soma de RSS por processo conta
@@ -254,18 +274,80 @@ PanelWindow {
             out.push({ kind: "color", name: hist[i].hex, sub: hist[i].rgb, hex: hist[i].hex, rgb: hist[i].rgb })
         return out
     }
-    function procResults(q) {
-        const ql = q.trim().toLowerCase()
+    // ordena processos/grupos pelo critério atual (RAM/CPU = maior primeiro; nome/PID = crescente)
+    function procCmp(a, b) {
         const sort = procSort
-        const list = LauncherService.procs.filter(p => ql === "" || p.name.toLowerCase().indexOf(ql) >= 0
-                                                      || ("" + p.pid).indexOf(ql) === 0)
-        list.sort((a, b) => {
-            if (sort === "cpu") return b.cpu - a.cpu || b.mem - a.mem
-            if (sort === "ram") return b.mem - a.mem || b.cpu - a.cpu
-            if (sort === "pid") return a.pid - b.pid
-            return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.pid - b.pid
-        })
-        return list.map(p => ({ kind: "proc", name: p.name, pid: p.pid, cpu: p.cpu, mem: p.mem }))
+        if (sort === "cpu") return b.cpu - a.cpu || b.mem - a.mem
+        if (sort === "ram") return b.mem - a.mem || b.cpu - a.cpu
+        if (sort === "pid") return a.pid - b.pid
+        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.pid - b.pid
+    }
+    // Monta a árvore de processos e agrupa cada app numa linha só (soma de RAM/CPU
+    // de TODA a subárvore). Grupos com >1 processo são expansíveis (→ mostra os
+    // filhos indentados). O filtro por nome/PID casa contra o grupo OU qualquer
+    // filho; um filho casado força o grupo a abrir naquele render.
+    function procResults(q) {
+        void procExpanded                                    // dependência do binding
+        const ql = q.trim().toLowerCase()
+        const raw = LauncherService.procs
+        const byPid = {}
+        for (let i = 0; i < raw.length; i++) byPid[raw[i].pid] = raw[i]
+
+        // raiz = quem não tem pai na lista OU cujo pai é um "recipiente"
+        const isRoot = {}
+        for (let i = 0; i < raw.length; i++) {
+            const p = raw[i]
+            const par = byPid[p.ppid]
+            isRoot[p.pid] = !par || procContainers.indexOf(par.name) >= 0
+        }
+        // sobe até a raiz do app (guarda contra ciclos)
+        function rootOf(p) {
+            let cur = p
+            for (let hop = 0; hop < 64; hop++) {
+                if (isRoot[cur.pid]) return cur
+                const par = byPid[cur.ppid]
+                if (!par) return cur
+                cur = par
+            }
+            return cur
+        }
+        // agrega a subárvore de cada raiz
+        const groups = {}
+        for (let i = 0; i < raw.length; i++) {
+            const p = raw[i]
+            const r = rootOf(p)
+            let g = groups[r.pid]
+            if (!g) g = groups[r.pid] = { pid: r.pid, name: r.name, cpu: 0, mem: 0, members: [] }
+            g.cpu += p.cpu
+            g.mem += p.mem
+            g.members.push(p)
+        }
+
+        const out = []
+        const list = []
+        for (const k in groups) list.push(groups[k])
+        list.sort(procCmp)
+        for (let i = 0; i < list.length; i++) {
+            const g = list[i]
+            const multi = g.members.length > 1
+            // filtro: casa o grupo, o pid raiz, ou algum membro
+            let hitRoot = ql === "" || g.name.toLowerCase().indexOf(ql) >= 0 || ("" + g.pid).indexOf(ql) === 0
+            const hitMembers = ql !== "" && g.members.some(m => m.name.toLowerCase().indexOf(ql) >= 0
+                                                              || ("" + m.pid).indexOf(ql) === 0)
+            if (!hitRoot && !hitMembers) continue
+
+            const expanded = multi && (procExpanded[g.pid] === true || hitMembers)
+            out.push({ kind: "proc", isGroup: true, expandable: multi, expanded: expanded,
+                       name: g.name, pid: g.pid, cpu: g.cpu, mem: g.mem, count: g.members.length,
+                       pids: g.members.map(m => m.pid) })
+            if (expanded) {
+                const kids = g.members.slice().sort(procCmp)
+                for (let j = 0; j < kids.length; j++)
+                    out.push({ kind: "proc", isChild: true, name: kids[j].name, pid: kids[j].pid,
+                               cpu: kids[j].cpu, mem: kids[j].mem })
+            }
+        }
+        return out
     }
 
     // ── Grade do /bg (colunas dependem da largura atual do painel) ──
@@ -337,7 +419,14 @@ PanelWindow {
         } else if (it.kind === "file") {
             LauncherService.openFile(it.path)
         } else if (it.kind === "proc") {
-            LauncherService.killProc(it.pid, (mods & Qt.ShiftModifier) !== 0)
+            const hard = (mods & Qt.ShiftModifier) !== 0
+            if (it.isGroup && it.expandable) {
+                // grupo de app: Enter abre/fecha; Shift+Enter finaliza a subárvore toda
+                if (hard) LauncherService.killTree(it.pids, false)
+                else win.toggleGroup(it.pid)
+            } else {
+                LauncherService.killProc(it.pid, hard)
+            }
         } else if (it.kind === "colorpick") {
             LauncherService.pickColor(win.query)
         } else if (it.kind === "color") {
@@ -389,6 +478,7 @@ PanelWindow {
         LauncherService.cwd = ""
         LauncherService.files = []
         bgTarget = "*"
+        procExpanded = ({})
         input.forceActiveFocus()
     }
     // entrar no modo /dir pela 1ª vez carrega o $HOME; /proc liga o refresh (Timer);
@@ -432,7 +522,7 @@ PanelWindow {
         if (mode === "apps")  return "↑↓ navegar · Enter abrir · “/” comandos · “=” calculadora"
         if (mode === "cmds")  return "Enter escolhe o comando"
         if (mode === "files") return "Enter abre no VLC / entra na pasta · Backspace sobe · digite p/ filtrar"
-        if (mode === "proc")  return "Digite p/ filtrar por nome/PID · Enter finaliza (TERM) · Shift+Enter mata (KILL) · Tab muda a ordem"
+        if (mode === "proc")  return "→/← ou Enter abre o app · Shift+Enter finaliza · nos filhos: Enter TERM, Shift+Enter KILL · Tab muda a ordem"
         if (mode === "color") return "Enter captura/copia o HEX · Shift+Enter copia o RGB · Delete remove do histórico"
         if (mode === "bg")    return "↑↓←→ navegar · Enter aplica em “" + bgTargetLabel + "” · Shift+Enter sem fechar · Tab muda o alvo"
         if (mode === "theme") return "↑↓ navegar · Enter aplica o tema · digite p/ filtrar"
@@ -505,6 +595,28 @@ PanelWindow {
                         else if (ev.key === Qt.Key_Up) { win.moveSel(win.mode === "bg" ? -win.bgCols : -1); ev.accepted = true }
                         else if (win.mode === "bg" && ev.key === Qt.Key_Right) { win.moveSel(1); ev.accepted = true }
                         else if (win.mode === "bg" && ev.key === Qt.Key_Left) { win.moveSel(-1); ev.accepted = true }
+                        else if (win.mode === "proc" && ev.key === Qt.Key_Right) {
+                            const it = win.results[win.selIndex]
+                            if (it && it.isGroup && it.expandable && win.procExpanded[it.pid] !== true)
+                                win.toggleGroup(it.pid)
+                            ev.accepted = true
+                        }
+                        else if (win.mode === "proc" && ev.key === Qt.Key_Left) {
+                            const it = win.results[win.selIndex]
+                            if (it && it.isGroup && win.procExpanded[it.pid] === true) {
+                                win.toggleGroup(it.pid)
+                            } else if (it && it.isChild) {
+                                // sobe pro cabeçalho do grupo e fecha
+                                for (let i = win.selIndex - 1; i >= 0; i--)
+                                    if (win.results[i] && win.results[i].isGroup) {
+                                        win.selIndex = i
+                                        if (win.procExpanded[win.results[i].pid] === true)
+                                            win.toggleGroup(win.results[i].pid)
+                                        break
+                                    }
+                            }
+                            ev.accepted = true
+                        }
                         else if (ev.key === Qt.Key_PageDown) { win.moveSel(8); ev.accepted = true }
                         else if (ev.key === Qt.Key_PageUp) { win.moveSel(-8); ev.accepted = true }
                         else if (ev.key === Qt.Key_Return || ev.key === Qt.Key_Enter) {
@@ -840,17 +952,37 @@ PanelWindow {
                             }
                         }
 
-                        // linha de processo: nome + colunas PID/CPU/RAM
+                        // linha de processo: grupo de app (soma da subárvore, expansível)
+                        // ou processo-filho indentado. Colunas PID/CPU/RAM à direita.
                         Item {
+                            id: procLine
                             visible: row.modelData.kind === "proc"
                             anchors.fill: parent
                             anchors { leftMargin: 12; rightMargin: 10 }
-                            Text {
-                                anchors { left: parent.left; right: procCols.left; rightMargin: 8
+                            readonly property bool isChild: row.modelData.isChild === true
+                            readonly property bool isGroup: row.modelData.isGroup === true
+                            readonly property bool expandable: row.modelData.expandable === true
+                            readonly property bool emphasize: isGroup && expandable   // linha "cabeçalho"
+
+                            Text {   // triângulo de expandir/recolher (só grupos com >1 processo)
+                                id: caret
+                                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                                width: 16
+                                horizontalAlignment: Text.AlignHCenter
+                                text: procLine.expandable ? (row.modelData.expanded ? "▾" : "▸") : ""
+                                color: Config.launcherSub
+                                font.pixelSize: Config.launcherFontSize - 3
+                            }
+                            Text {   // nome do app (+ nº de processos) ou "└ nome" do filho
+                                anchors { left: caret.right; leftMargin: procLine.isChild ? 16 : 2
+                                          right: procCols.left; rightMargin: 8
                                           verticalCenter: parent.verticalCenter }
-                                text: row.modelData.name ?? ""
-                                color: Config.launcherText
-                                font.pixelSize: Config.launcherFontSize
+                                text: procLine.isChild
+                                      ? "└ " + (row.modelData.name ?? "")
+                                      : (row.modelData.name ?? "") + (procLine.expandable ? "  ·" + row.modelData.count : "")
+                                color: procLine.isChild ? Config.launcherSub : Config.launcherText
+                                font.pixelSize: procLine.isChild ? Config.launcherFontSize - 1 : Config.launcherFontSize
+                                font.bold: procLine.emphasize
                                 elide: Text.ElideRight
                             }
                             Row {
@@ -870,13 +1002,15 @@ PanelWindow {
                                     color: win.procSort === "cpu" ? Config.accent : Config.launcherSub
                                     font.pixelSize: Config.launcherFontSize - 1
                                     font.family: "monospace"
+                                    font.bold: procLine.emphasize
                                 }
                                 Text {
                                     width: 88; horizontalAlignment: Text.AlignRight
-                                    text: (row.modelData.mem ?? 0) + " MB"
+                                    text: win.fmtMem(row.modelData.mem ?? 0)
                                     color: win.procSort === "ram" ? Config.accent : Config.launcherSub
                                     font.pixelSize: Config.launcherFontSize - 1
                                     font.family: "monospace"
+                                    font.bold: procLine.emphasize
                                 }
                             }
                         }

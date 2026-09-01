@@ -165,7 +165,11 @@ Singleton {
     }
 
     // ═════════════════════════ /proc — processos ═════════════════════════
-    property var procs: []             // [{ pid, cpu, mem, name }] (mem em MiB)
+    // [{ pid, ppid, cpu, mem, name }] (mem em MiB, fracionário). O `ppid` deixa a
+    // view (LauncherWindow) montar a ÁRVORE e agrupar toda a subárvore de um app
+    // num item só (ex.: as dezenas de "Isolated Web Co" do navegador viram 1 linha
+    // com a soma real de RAM/CPU, expansível pra ver os filhos).
+    property var procs: []
     // RAM realmente em uso no sistema (MiB) — NÃO é a soma do RSS de cada processo
     // (isso conta várias vezes a mesma lib compartilhada e passa fácil do total físico).
     // Vem de /proc/meminfo: usado = MemTotal - MemAvailable (mesma conta do `free` moderno).
@@ -173,7 +177,7 @@ Singleton {
     property real memTotalMB: 0
 
     function refreshProcs() {
-        psProc.exec(["ps", "axo", "pid=,pcpu=,pmem=,rss=,comm="])
+        psProc.exec(["ps", "-eo", "pid=,ppid=,pcpu=,rss=,comm="])
         memProc.exec(["cat", "/proc/meminfo"])
     }
     Process {
@@ -183,13 +187,16 @@ Singleton {
                 const out = []
                 const lines = text.split("\n")
                 for (let i = 0; i < lines.length; i++) {
-                    // pid %cpu %mem rss comm  (comm pode ter espaços: "Isolated Web Co")
-                    const m = lines[i].match(/^\s*(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+(\d+)\s+(.+)$/)
+                    // pid ppid %cpu rss comm  (comm pode ter espaços: "Isolated Web Co")
+                    const m = lines[i].match(/^\s*(\d+)\s+(\d+)\s+([\d.,]+)\s+(\d+)\s+(.+)$/)
                     if (!m) continue
+                    const pid = parseInt(m[1]), ppid = parseInt(m[2])
+                    if (pid === 2 || ppid === 2) continue   // descarta threads de kernel (filhos do kthreadd)
                     out.push({
-                        pid: parseInt(m[1]),
-                        cpu: parseFloat(m[2].replace(",", ".")),
-                        mem: Math.round(parseInt(m[4]) / 1024),
+                        pid: pid,
+                        ppid: ppid,
+                        cpu: parseFloat(m[3].replace(",", ".")),
+                        mem: parseInt(m[4]) / 1024,   // MiB (fracionário; a view soma e formata)
                         name: m[5].trim()
                     })
                 }
@@ -219,6 +226,12 @@ Singleton {
     // finaliza um processo (padrão: SIGTERM; hard=true: SIGKILL) e relê a lista
     function killProc(pid, hard) {
         killP.exec(["kill", hard ? "-KILL" : "-TERM", "" + pid])
+        killRefresh.restart()
+    }
+    // finaliza o GRUPO inteiro de um app (todos os PIDs da subárvore de uma vez)
+    function killTree(pids, hard) {
+        if (!pids || pids.length === 0) return
+        killP.exec(["kill", hard ? "-KILL" : "-TERM"].concat(pids.map(p => "" + p)))
         killRefresh.restart()
     }
     Process { id: killP }
