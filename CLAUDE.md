@@ -250,6 +250,16 @@ init — `Settings` não toca `Theme`/`ThemeExport` na construção, só em time
 da SettingsWindow). O **modo** deriva do texto digitado: apps (padrão; vazio = "mais usados" pela
 contagem em `launcher-usage.json`, que está no .gitignore), `=expr` calculadora, `/dir` navegador
 de mídia → VLC, `/proc` processos (ordena nome/PID/RAM/CPU; Enter TERM, Shift+Enter KILL),
+`/notes` notas de texto — um `.txt` por nota em `Config.launcherNotesDir`; o nome exibido é a 1ª
+linha do arquivo (`head -n1`). "Criar nota"/abrir uma nota entra num **editor embutido** (números
+de linha num Flickable sem wrap, botões Salvar/Voltar, Ctrl+S, Esc). **Salvar** grava o `.txt` e
+apaga o rascunho; **Voltar** sem salvar grava um RASCUNHO em `<dir>/.sketches/<arquivo>` (nota nova
+sem conteúdo não chega a existir). Reabrir uma nota com rascunho mostra a tela de revisão (Manter
+rascunho / Descartar → abre a versão salva). `refreshNotes` também lista rascunhos órfãos (nota
+nunca salva) como `saved:false`. Escrita: `printf '%s' '<conteúdo>'` num `sh -c` (aspas simples =
+UTF-8 e `\n` preservados; **não** usar `Qt.btoa`, que é Latin-1). Delete/Shift+Enter apaga a nota.
+Estado do editor: properties `editorOpen/editorPath/editorLoaded/editorInitial/sketchReview*` no
+`LauncherService`, observadas pela `LauncherWindow`.
 `/bg` escolhedor de wallpaper ([WallpaperService.qml](services/WallpaperService.qml); chips de alvo
 "Ambos"/por monitor — Tab alterna, Shift+Enter aplica sem fechar — + chip do carrossel; pasta e
 opções no grupo "Papel de parede" das configurações), `/reload` (`Quickshell.reload(false)`),

@@ -234,7 +234,10 @@ PanelWindow {
             { name: "Comportamento", fields: [
                 { key: "launcherTopUsed", label: "Nº de mais usados", ftype: "int" },
                 { key: "launcherTerminal", label: "Terminal (apps de texto)", ftype: "string" },
-                { key: "launcherColorHistoryMax", label: "Histórico do color-picker (itens)", ftype: "int" }
+                { key: "launcherColorHistoryMax", label: "Histórico do color-picker (itens)", ftype: "int" },
+                { key: "launcherNotesDir", label: "Pasta das notas (/notes)", ftype: "string" },
+                { key: "launcherNotesW", label: "Largura do editor de notas", ftype: "real" },
+                { key: "launcherNotesEditorH", label: "Altura da área de edição", ftype: "real" }
             ]},
             { name: "Cores", fields: [
                 { key: "launcherBg", label: "Fundo", ftype: "color" },

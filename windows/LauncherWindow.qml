@@ -11,6 +11,11 @@ import "root:/"           // Config
 //   /dir           navegador de arquivos (dirs + imagens/vídeos) -> abre no VLC
 //   /proc          processos AGRUPADOS por app (soma real de RAM/CPU da subárvore;
 //                  →/Enter expande p/ ver os filhos; Shift+Enter finaliza)
+//   /notes         notas de texto (um .txt por nota; nome = 1ª linha). "Criar nota"
+//                  ou abrir uma nota entra num EDITOR embutido (números de linha,
+//                  Salvar/Voltar). Voltar sem salvar guarda um RASCUNHO; reabrir a
+//                  nota mostra a tela de revisão (manter rascunho / descartar).
+//                  Texto após "/notes " vira o título da nova nota; Delete apaga a nota.
 //   /color-picker  captura a cor de um pixel da tela (grim+slurp+imagemagick) + histórico
 //                  (Enter copia o HEX, Shift+Enter o RGB, Delete remove o item selecionado)
 //   /bg            escolhedor de wallpaper (awww; Tab muda o alvo: todos/por monitor)
@@ -54,6 +59,7 @@ PanelWindow {
         if (q.length > 0 && q[0] === "=") return "calc"
         if (q === "/dir" || q.indexOf("/dir ") === 0) return "files"
         if (q === "/proc" || q.indexOf("/proc ") === 0) return "proc"
+        if (q === "/notes" || q.indexOf("/notes ") === 0) return "notes"
         if (q === "/color-picker" || q.indexOf("/color-picker ") === 0) return "color"
         if (q === "/bg" || q.indexOf("/bg ") === 0) return "bg"
         if (q === "/theme" || q.indexOf("/theme ") === 0) return "theme"
@@ -65,6 +71,7 @@ PanelWindow {
         if (mode === "calc")  return query.substring(1)
         if (mode === "files") return query.length > 5 ? query.substring(5) : ""   // após "/dir "
         if (mode === "proc")  return query.length > 6 ? query.substring(6) : ""
+        if (mode === "notes") return query.length > 7 ? query.substring(7) : ""   // após "/notes "
         if (mode === "color") return query.length > 14 ? query.substring(14) : ""   // após "/color-picker "
         if (mode === "bg")    return query.length > 4 ? query.substring(4) : ""   // após "/bg "
         if (mode === "theme") return query.length > 7 ? query.substring(7) : ""   // após "/theme "
@@ -72,10 +79,18 @@ PanelWindow {
         return query
     }
 
+    // ── /notes: editor / revisão de rascunho embutidos ──
+    // Quando um destes está ativo, o campo de busca + a lista somem e o painel
+    // mostra o editor (ou a tela de revisão) no lugar.
+    readonly property bool notesEdit: LauncherService.editorOpen
+    readonly property bool notesReview: LauncherService.sketchReviewPath !== ""
+    readonly property bool notesFull: mode === "notes" && (notesEdit || notesReview)
+
     // ── Comandos "/" (paleta) ───────────────────────────
     readonly property var commands: [
         { cmd: "/dir",    glyph: "🖼", name: "Imagens e vídeos", desc: "navegar pelos arquivos e abrir no VLC", complete: true },
         { cmd: "/proc",   glyph: "⚡", name: "Processos",        desc: "listar e finalizar processos",          complete: true },
+        { cmd: "/notes",  glyph: "📝", name: "Notas",            desc: "criar e abrir notas de texto",          complete: true },
         { cmd: "/color-picker", glyph: "💧", name: "Seletor de cor", desc: "capturar um pixel da tela e ver o histórico", complete: true },
         { cmd: "/bg",     glyph: "🌄", name: "Papel de parede",  desc: "escolher o wallpaper (todos ou por monitor)", complete: true },
         { cmd: "/theme",  glyph: "🎨", name: "Tema",             desc: "trocar a paleta do shell", complete: true },
@@ -158,6 +173,7 @@ PanelWindow {
         if (mode === "calc")  return calcResults(modeArg)
         if (mode === "files") return fileResults(modeArg)
         if (mode === "proc")  return procResults(modeArg)
+        if (mode === "notes") return noteResults(modeArg)
         if (mode === "color") return colorResults(modeArg)
         if (mode === "bg")    return bgResults(modeArg)
         if (mode === "theme") return themeResults(modeArg)
@@ -264,6 +280,25 @@ PanelWindow {
             const n = names[i]
             if (ql !== "" && n.toLowerCase().indexOf(ql) < 0) continue
             out.push({ kind: "theme", name: n, sub: n === cur ? "atual" : "" })
+        }
+        return out
+    }
+    function noteResults(q) {
+        void LauncherService.notes                      // dependência: reavalia quando a lista muda
+        const t = q.trim()
+        const ql = t.toLowerCase()
+        const out = [{ kind: "noteNew",
+                       name: t === "" ? "Criar nota" : "Criar nota “" + t + "”",
+                       sub: t === "" ? "abre o editor com uma nota nova" : "primeira linha: " + t }]
+        const ns = LauncherService.notes.filter(n => ql === "" || n.name.toLowerCase().indexOf(ql) >= 0)
+        if (ns.length > 0) out.push({ kind: "header", name: "Notas" })
+        for (let i = 0; i < ns.length; i++) {
+            const n = ns[i]
+            out.push({ kind: "note", name: (n.hasSketch ? "● " : "") + n.name, path: n.path,
+                       saved: n.saved, hasSketch: n.hasSketch,
+                       sub: n.hasSketch ? (n.saved ? "rascunho não salvo desde a última edição"
+                                                   : "rascunho não salvo — nunca foi salva")
+                                        : "" })
         }
         return out
     }
@@ -432,6 +467,12 @@ PanelWindow {
             } else {
                 LauncherService.killProc(it.pid, hard)
             }
+        } else if (it.kind === "noteNew") {
+            LauncherService.newNote(win.modeArg)
+        } else if (it.kind === "note") {
+            if ((mods & Qt.ShiftModifier) !== 0) LauncherService.deleteNote(it.path)
+            else if (it.hasSketch) LauncherService.reviewSketch(it.path)
+            else LauncherService.editNote(it.path)
         } else if (it.kind === "colorpick") {
             LauncherService.pickColor(win.query)
         } else if (it.kind === "color") {
@@ -464,7 +505,13 @@ PanelWindow {
     // e reabrir nesse meio-tempo também precisa resetar.
     readonly property bool isOpen: LauncherService.open
     onIsOpenChanged: {
-        if (!isOpen) return
+        if (!isOpen) {
+            // fechou com o editor aberto → guarda um rascunho (não perde o texto);
+            // na tela de revisão, só cancela
+            if (LauncherService.editorOpen) LauncherService.leaveEditor(noteEditor.text)
+            else if (LauncherService.sketchReviewPath !== "") LauncherService.cancelReview()
+            return
+        }
         // trava o monitor focado agora; não muda mais enquanto aberto
         const mons = niri ? (niri.monitors ?? []) : []
         const act = mons.find(m => m.active)
@@ -493,11 +540,29 @@ PanelWindow {
             LauncherService.listDir(LauncherService.home)
         if (mode === "bg")
             WallpaperService.refresh()
+        if (mode === "notes")
+            LauncherService.refreshNotes()
     }
     Timer {
         interval: 2000; repeat: true; triggeredOnStart: true
         running: LauncherService.open && win.mode === "proc"   // não segue tique durante o fade-out
         onTriggered: LauncherService.refreshProcs()
+    }
+    // ao sair do editor / da revisão de notas, limpa o filtro e devolve o foco ao campo
+    // (callLater: espera o campo de busca voltar a ser visível antes do forceActiveFocus)
+    Connections {
+        target: LauncherService
+        function onEditorOpenChanged() {
+            if (!LauncherService.editorOpen && win.mode === "notes" && !win.notesReview) {
+                win.setQuery("/notes ")
+                Qt.callLater(() => input.forceActiveFocus())
+            }
+        }
+        function onSketchReviewPathChanged() {
+            if (LauncherService.sketchReviewPath === "" && !LauncherService.editorOpen
+                    && win.mode === "notes")
+                Qt.callLater(() => input.forceActiveFocus())
+        }
     }
 
     function fileUrl(p) {
@@ -528,6 +593,7 @@ PanelWindow {
         if (mode === "cmds")  return "Enter escolhe o comando"
         if (mode === "files") return "Enter abre no VLC / entra na pasta · Backspace sobe · digite p/ filtrar"
         if (mode === "proc")  return "→/← ou Enter abre o app · Shift+Enter finaliza · nos filhos: Enter TERM, Shift+Enter KILL · Tab muda a ordem"
+        if (mode === "notes") return "Enter abre no editor · Shift+Enter ou Delete apaga · digite p/ filtrar ou dar título à nova nota"
         if (mode === "color") return "Enter captura/copia o HEX · Shift+Enter copia o RGB · Delete remove do histórico"
         if (mode === "bg")    return "↑↓←→ navegar · Enter aplica em “" + bgTargetLabel + "” · Shift+Enter sem fechar · Tab muda o alvo"
         if (mode === "theme") return "↑↓ navegar · Enter aplica o tema · digite p/ filtrar"
@@ -552,7 +618,8 @@ PanelWindow {
         opacity: win.reveal
         scale: 0.96 + 0.04 * win.reveal
         transformOrigin: Item.Top
-        width: Math.min(parent.width - 80, win.mode === "bg" ? Config.launcherBgW : Config.launcherW)
+        width: Math.min(parent.width - 80, win.mode === "bg" ? Config.launcherBgW
+                                        : win.notesFull ? Config.launcherNotesW : Config.launcherW)
         Behavior on width {
             enabled: win.reveal === 1
             NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
@@ -572,8 +639,9 @@ PanelWindow {
             width: panel.width - 24
             spacing: 8
 
-            // ── Campo de busca ──
+            // ── Campo de busca ── (some no editor/revisão de notas)
             Item {
+                visible: !win.notesFull
                 width: col.width
                 height: 40
 
@@ -642,6 +710,10 @@ PanelWindow {
                                    && win.results[win.selIndex] && win.results[win.selIndex].kind === "color") {
                             LauncherService.removeColorHistory(win.results[win.selIndex].hex)
                             ev.accepted = true
+                        } else if (ev.key === Qt.Key_Delete && win.mode === "notes"
+                                   && win.results[win.selIndex] && win.results[win.selIndex].kind === "note") {
+                            LauncherService.deleteNote(win.results[win.selIndex].path)
+                            ev.accepted = true
                         }
                     }
                 }
@@ -661,6 +733,7 @@ PanelWindow {
                     text: win.mode === "apps" ? ""              // some E libera a largura p/ o campo
                         : win.mode === "files" ? "ARQUIVOS"
                         : win.mode === "proc" ? "PROCESSOS"
+                        : win.mode === "notes" ? "NOTAS"
                         : win.mode === "color" ? "COR"
                         : win.mode === "bg" ? "WALLPAPER"
                         : win.mode === "theme" ? "TEMA"
@@ -780,7 +853,7 @@ PanelWindow {
                 }
             }
 
-            Rectangle { width: col.width; height: 1; color: Config.launcherBorder }
+            Rectangle { visible: !win.notesFull; width: col.width; height: 1; color: Config.launcherBorder }
 
             // ── /proc: rótulos das colunas (PID/CPU/RAM) — casam com os widths
             //    64/74/88 das linhas de processo; acende no acento a coluna ordenada ──
@@ -860,7 +933,7 @@ PanelWindow {
             // ── Lista de resultados (todos os modos exceto /bg, que usa a grade abaixo) ──
             ListView {
                 id: list
-                visible: win.mode !== "bg"
+                visible: win.mode !== "bg" && !win.notesFull
                 width: col.width
                 // altura acompanha o conteúdo até o teto; vazio mantém espaço p/ o aviso
                 height: Math.min(Math.max(contentHeight, win.resultCount === 0 ? 64 : 0), Config.launcherListMaxH)
@@ -953,13 +1026,16 @@ PanelWindow {
                                 border.color: Theme.surface2
                                 border.width: 1
                             }
-                            Text {   // glifo (comandos, pastas, vídeo/áudio/pdf, capturar cor)
+                            Text {   // glifo (comandos, pastas, vídeo/áudio/pdf, capturar cor, notas)
                                 visible: row.modelData.kind === "cmd" || row.modelData.kind === "dir"
                                       || row.modelData.kind === "colorpick"
+                                      || row.modelData.kind === "note" || row.modelData.kind === "noteNew"
                                       || (row.modelData.kind === "file" && row.modelData.fileType !== "image")
                                 anchors.centerIn: parent
                                 text: row.modelData.kind === "cmd" ? (row.modelData.glyph ?? "❯")
                                     : row.modelData.kind === "colorpick" ? "💧"
+                                    : row.modelData.kind === "noteNew" ? "➕"
+                                    : row.modelData.kind === "note" ? "📝"
                                     : row.modelData.kind === "dir" ? (row.modelData.up ? "↩" : "📁")
                                     : row.modelData.fileType === "audio" ? "🎵"
                                     : row.modelData.fileType === "pdf" ? "📄"
@@ -1199,8 +1275,320 @@ PanelWindow {
                 }
             }
 
+            // ══════════ /notes: editor de texto embutido ══════════
+            Item {
+                id: notesEditorBox
+                visible: win.mode === "notes" && win.notesEdit
+                width: col.width
+                height: visible ? (edHeader.height + 8 + edFrame.height + 8 + edHint.height) : 0
+
+                // texto do editor (a fonte de verdade enquanto edita)
+                property alias text: noteEditor.text
+                readonly property bool dirty: text !== LauncherService.editorInitial
+                readonly property string title: {
+                    const l = ("" + noteEditor.text).split("\n")[0].trim()
+                    return l !== "" ? l : "(sem título)"
+                }
+
+                function loadIn() {
+                    noteEditor.text = LauncherService.editorLoaded
+                    noteEditor.cursorPosition = noteEditor.text.length
+                    Qt.callLater(() => noteEditor.forceActiveFocus())
+                }
+                function save()  { LauncherService.saveEditor(noteEditor.text) }
+                function leave() { LauncherService.leaveEditor(noteEditor.text) }
+                onVisibleChanged: if (visible) loadIn()
+
+                FontMetrics { id: edFm; font: noteEditor.font }
+
+                // cabeçalho: nome da nota + botões Voltar / Salvar
+                Item {
+                    id: edHeader
+                    width: parent.width
+                    height: 30
+                    Text {
+                        anchors { left: parent.left; leftMargin: 6; right: edBtns.left; rightMargin: 10
+                                  verticalCenter: parent.verticalCenter }
+                        text: notesEditorBox.title + (notesEditorBox.dirty ? "  ·  não salvo" : "")
+                        color: notesEditorBox.dirty ? Config.accent : Config.launcherText
+                        font.pixelSize: Config.launcherFontSize + 1
+                        font.bold: true
+                        elide: Text.ElideRight
+                    }
+                    Row {
+                        id: edBtns
+                        anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
+                        spacing: 6
+                        Repeater {
+                            model: [{ k: "back", label: "← Voltar", accent: false },
+                                    { k: "save", label: "Salvar",   accent: true }]
+                            delegate: Rectangle {
+                                required property var modelData
+                                width: bTxt.implicitWidth + 20
+                                height: 24
+                                radius: 12
+                                color: modelData.accent ? Config.accent : Theme.surface0
+                                border.color: modelData.accent ? Config.accent : Theme.surface2
+                                border.width: 1
+                                Text {
+                                    id: bTxt
+                                    anchors.centerIn: parent
+                                    text: parent.modelData.label
+                                    color: parent.modelData.accent ? Theme.crust : Config.launcherText
+                                    font.pixelSize: 11
+                                    font.bold: parent.modelData.accent
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: parent.modelData.k === "save" ? notesEditorBox.save() : notesEditorBox.leave()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // moldura da área de edição: calha de números (overlay fixo à esquerda)
+                // + TextEdit num Flickable (rola nos dois eixos, sem wrap)
+                Rectangle {
+                    id: edFrame
+                    anchors.top: edHeader.bottom
+                    anchors.topMargin: 8
+                    width: parent.width
+                    height: Config.launcherNotesEditorH
+                    radius: 8
+                    color: Theme.surface0
+                    border.color: Config.launcherBorder
+                    border.width: 1
+                    clip: true
+
+                    readonly property int pad: 6
+                    readonly property int gutterW: Math.max(28,
+                        Math.round(edFm.advanceWidth("8") * ("" + Math.max(1, noteEditor.lineCount)).length) + 14)
+
+                    Flickable {
+                        id: edFlick
+                        anchors.fill: parent
+                        anchors.leftMargin: edFrame.pad + edFrame.gutterW + 5
+                        anchors.rightMargin: edFrame.pad
+                        anchors.topMargin: edFrame.pad
+                        anchors.bottomMargin: edFrame.pad
+                        contentWidth: Math.max(width, noteEditor.contentWidth + 4)
+                        contentHeight: Math.max(height, noteEditor.contentHeight)
+                        boundsBehavior: Flickable.StopAtBounds
+                        clip: true
+
+                        TextEdit {
+                            id: noteEditor
+                            width: Math.max(edFlick.width, contentWidth + 4)
+                            color: Config.launcherText
+                            font.family: "monospace"
+                            font.pixelSize: Config.launcherFontSize
+                            selectionColor: Config.launcherSel
+                            selectByMouse: true
+                            wrapMode: TextEdit.NoWrap
+                            textFormat: TextEdit.PlainText
+                            persistentSelection: true
+
+                            // mantém o cursor visível dentro do Flickable (com clamp aos limites)
+                            onCursorRectangleChanged: {
+                                const r = cursorRectangle
+                                const maxY = Math.max(0, edFlick.contentHeight - edFlick.height)
+                                const maxX = Math.max(0, edFlick.contentWidth - edFlick.width)
+                                let ny = edFlick.contentY
+                                if (r.y < ny) ny = r.y
+                                else if (r.y + r.height > ny + edFlick.height) ny = r.y + r.height - edFlick.height
+                                edFlick.contentY = Math.max(0, Math.min(ny, maxY))
+                                let nx = edFlick.contentX
+                                if (r.x < nx + 8) nx = r.x - 8
+                                else if (r.x > nx + edFlick.width - 8) nx = r.x - edFlick.width + 24
+                                edFlick.contentX = Math.max(0, Math.min(nx, maxX))
+                            }
+                            Keys.onPressed: (ev) => {
+                                if (ev.key === Qt.Key_Escape) {
+                                    notesEditorBox.leave(); ev.accepted = true
+                                } else if (ev.key === Qt.Key_S && (ev.modifiers & Qt.ControlModifier)) {
+                                    notesEditorBox.save(); ev.accepted = true
+                                } else if (ev.key === Qt.Key_Tab) {
+                                    noteEditor.insert(noteEditor.cursorPosition, "    ")
+                                    ev.accepted = true
+                                }
+                            }
+                        }
+                    }
+
+                    // calha de números: overlay fixo à esquerda, só o Y acompanha o scroll
+                    Item {
+                        x: edFrame.pad
+                        y: edFrame.pad
+                        width: edFrame.gutterW
+                        height: edFrame.height - 2 * edFrame.pad
+                        clip: true
+                        Column {
+                            y: -edFlick.contentY
+                            width: parent.width
+                            Repeater {
+                                model: Math.max(1, noteEditor.lineCount)
+                                delegate: Text {
+                                    required property int index
+                                    width: edFrame.gutterW - 6
+                                    height: edFm.lineSpacing
+                                    horizontalAlignment: Text.AlignRight
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: "" + (index + 1)
+                                    color: Config.launcherSub
+                                    font.family: "monospace"
+                                    font.pixelSize: Config.launcherFontSize
+                                }
+                            }
+                        }
+                    }
+                    Rectangle {   // filete separando calha e texto
+                        x: edFrame.pad + edFrame.gutterW + 2
+                        y: edFrame.pad
+                        width: 1
+                        height: edFrame.height - 2 * edFrame.pad
+                        color: Config.launcherBorder
+                    }
+
+                    // barra de rolagem vertical fina (overlay fixo sobre a moldura)
+                    Rectangle {
+                        visible: edFlick.contentHeight > edFlick.height
+                        anchors { right: parent.right; rightMargin: 2 }
+                        y: edFrame.pad + (edFlick.contentHeight > edFlick.height
+                                ? (edFlick.contentY / (edFlick.contentHeight - edFlick.height))
+                                  * (edFlick.height - height)
+                                : 0)
+                        width: 4; radius: 2
+                        color: Theme.surface2
+                        height: edFlick.contentHeight > 0
+                                ? edFlick.height * (edFlick.height / edFlick.contentHeight) : 0
+                    }
+                }
+
+                Text {
+                    id: edHint
+                    anchors.top: edFrame.bottom
+                    anchors.topMargin: 8
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    width: parent.width - 12
+                    text: "Ctrl+S salva · Esc/Voltar guarda um rascunho e volta · o nome da nota é a 1ª linha"
+                    color: Config.launcherSub
+                    font.pixelSize: Config.launcherFontSize - 3
+                    elide: Text.ElideRight
+                }
+            }
+
+            // ══════════ /notes: revisão de rascunho não salvo ══════════
+            Item {
+                id: notesReviewBox
+                visible: win.mode === "notes" && win.notesReview
+                width: col.width
+                height: visible ? (rvHead.height + 6 + rvSub.height + 8 + rvFrame.height + 10 + rvBtns.height) : 0
+
+                // o campo de busca fica invisível aqui (perde o foco) → esta tela
+                // captura o teclado sozinha: Enter mantém, Delete descarta, Esc cancela
+                focus: visible
+                activeFocusOnTab: false
+                onVisibleChanged: if (visible) forceActiveFocus()
+                Keys.onPressed: (ev) => {
+                    if (ev.key === Qt.Key_Return || ev.key === Qt.Key_Enter) { LauncherService.keepSketch(); ev.accepted = true }
+                    else if (ev.key === Qt.Key_Delete) { LauncherService.discardSketch(); ev.accepted = true }
+                    else if (ev.key === Qt.Key_Escape) { LauncherService.cancelReview(); ev.accepted = true }
+                }
+
+                Text {
+                    id: rvHead
+                    width: parent.width
+                    anchors.left: parent.left; anchors.leftMargin: 6
+                    text: "“" + LauncherService.sketchReviewName + "” foi fechada sem salvar"
+                    color: Config.launcherText
+                    font.pixelSize: Config.launcherFontSize + 2
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+                Text {
+                    id: rvSub
+                    anchors.top: rvHead.bottom; anchors.topMargin: 6
+                    anchors.left: parent.left; anchors.leftMargin: 6
+                    width: parent.width - 12
+                    text: "Há um rascunho guardado. Manter e continuar editando, ou descartar e "
+                          + "abrir a última versão salva?"
+                    color: Config.launcherSub
+                    font.pixelSize: Config.launcherFontSize - 1
+                    wrapMode: Text.WordWrap
+                }
+                Rectangle {
+                    id: rvFrame
+                    anchors.top: rvSub.bottom; anchors.topMargin: 8
+                    width: parent.width
+                    height: Math.min(Config.launcherNotesEditorH, 240)
+                    radius: 8
+                    color: Theme.surface0
+                    border.color: Config.launcherBorder
+                    border.width: 1
+                    clip: true
+                    Flickable {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        contentWidth: width
+                        contentHeight: rvText.height
+                        boundsBehavior: Flickable.StopAtBounds
+                        clip: true
+                        Text {
+                            id: rvText
+                            width: parent.width
+                            text: LauncherService.sketchReviewText
+                            color: Config.launcherText
+                            font.family: "monospace"
+                            font.pixelSize: Config.launcherFontSize - 1
+                            wrapMode: Text.Wrap
+                        }
+                    }
+                }
+                Row {
+                    id: rvBtns
+                    anchors.top: rvFrame.bottom; anchors.topMargin: 10
+                    anchors.left: parent.left; anchors.leftMargin: 6
+                    spacing: 8
+                    Repeater {
+                        model: [{ k: "keep",    label: "Manter rascunho", accent: true },
+                                { k: "discard", label: "Descartar",       accent: false },
+                                { k: "cancel",  label: "Cancelar",        accent: false }]
+                        delegate: Rectangle {
+                            required property var modelData
+                            width: rvTxt.implicitWidth + 22
+                            height: 26
+                            radius: 13
+                            color: modelData.accent ? Config.accent : Theme.surface0
+                            border.color: modelData.accent ? Config.accent : Theme.surface2
+                            border.width: 1
+                            Text {
+                                id: rvTxt
+                                anchors.centerIn: parent
+                                text: parent.modelData.label
+                                color: parent.modelData.accent ? Theme.crust : Config.launcherText
+                                font.pixelSize: 11
+                                font.bold: parent.modelData.accent
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (parent.modelData.k === "keep") LauncherService.keepSketch()
+                                    else if (parent.modelData.k === "discard") LauncherService.discardSketch()
+                                    else LauncherService.cancelReview()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // ── Rodapé: dicas + contagem ──
             Item {
+                visible: !win.notesFull
                 width: col.width
                 height: 18
                 Text {

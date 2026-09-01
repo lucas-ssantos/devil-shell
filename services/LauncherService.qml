@@ -12,6 +12,9 @@ import "root:/"           // Config (launcherTerminal)
 //   • a navegação de arquivos do modo /dir (find por diretório, imagem/vídeo/áudio/pdf)
 //     → VLC (imagem/vídeo/áudio) ou Zen Browser (pdf, via flatpak --file-forwarding);
 //   • a lista de processos do modo /proc (ps) + finalizar (kill);
+//   • as notas do modo /notes (um .txt por nota em Config.launcherNotesDir; o nome
+//     da nota é a 1ª linha do arquivo) + o editor de texto EMBUTIDO, com rascunhos
+//     ("sketch") p/ quem sai sem salvar e revisão ao reabrir;
 //   • o modo /color-picker (grim+slurp+imagemagick escolhem UM pixel da tela) + histórico
 //     persistido, com cópia pro clipboard (wl-copy) de um item salvo;
 //   • a calculadora do modo "=" (parser próprio — SEM eval, p/ não expor o escopo QML);
@@ -354,6 +357,198 @@ Singleton {
         onLoadFailed: svc.colorHistory = []
     }
     Timer { id: colorHistorySaveTimer; interval: 400; onTriggered: colorHistoryFile.setText(JSON.stringify(svc.colorHistory, null, 2)) }
+
+    // ═════════════════════════ /notes — notas de texto + editor embutido ═════════════════════════
+    // Uma nota = um .txt em Config.launcherNotesDir; o "nome" exibido é a PRIMEIRA
+    // LINHA do arquivo (o nome do arquivo em si é só um timestamp). O editor mora
+    // DENTRO do lançador (windows/LauncherWindow.qml lê estas properties):
+    //   • Salvar   → grava o .txt e apaga o rascunho
+    //   • Voltar   → se mudou e não está vazio, grava um RASCUNHO ("sketch") em
+    //                <dir>/.sketches/<arquivo> e volta pra lista sem tocar no .txt
+    // Ao reabrir uma nota que tem rascunho, a janela mostra a tela de revisão
+    // (manter o rascunho e continuar editando, ou descartá-lo).
+    // Escrita: `printf '%s' '<conteúdo>'` num `sh -c` (aspas simples preservam
+    // bytes UTF-8 e quebras de linha; `shq` escapa as aspas) — nada de base64
+    // (Qt.btoa é Latin-1 e estraga acento). Leitura: `cat` + StdioCollector (UTF-8).
+    property var notes: []            // [{ name, path, mtime, saved, hasSketch }] — mais recente 1º
+    property int notesSeq: 0          // descarta respostas fora de ordem
+
+    readonly property string sketchDir: Config.launcherNotesDir + "/.sketches"
+    function sketchPathFor(notePath) {
+        return sketchDir + "/" + notePath.substring(notePath.lastIndexOf("/") + 1)
+    }
+    function firstLineOf(s) {
+        const l = ("" + (s ?? "")).split("\n")[0].trim()
+        return l !== "" ? l : "(sem título)"
+    }
+
+    function refreshNotes() {
+        notesSeq++
+        notesProc.seq = notesSeq
+        // linha por nota: "<saved>\t<hasSketch>\t<mtime>\t<caminho canônico>\t<1ª linha>"
+        //   - varre os .txt da pasta (saved=1) e, à parte, os rascunhos órfãos (saved=0)
+        notesProc.exec(["sh", "-c",
+            "d=" + shq(Config.launcherNotesDir) + "; s=\"$d/.sketches\"; "
+            + "mkdir -p \"$s\" 2>/dev/null; "
+            + "for f in \"$d\"/*.txt; do [ -e \"$f\" ] || continue; b=${f##*/}; "
+            + "hs=0; [ -e \"$s/$b\" ] && hs=1; "
+            + "printf '1\\t%s\\t%s\\t%s\\t' \"$hs\" \"$(stat -c %Y \"$f\" 2>/dev/null)\" \"$f\"; "
+            + "head -n 1 \"$f\" 2>/dev/null; echo; done; "
+            + "for f in \"$s\"/*.txt; do [ -e \"$f\" ] || continue; b=${f##*/}; "
+            + "[ -e \"$d/$b\" ] && continue; "
+            + "printf '0\\t1\\t%s\\t%s\\t' \"$(stat -c %Y \"$f\" 2>/dev/null)\" \"$d/$b\"; "
+            + "head -n 1 \"$f\" 2>/dev/null; echo; done"])
+    }
+    Process {
+        id: notesProc
+        property int seq: 0
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (notesProc.seq !== svc.notesSeq) return   // relido no meio: ignora
+                const out = []
+                const lines = text.split("\n")
+                for (let i = 0; i < lines.length; i++) {
+                    const ln = lines[i]
+                    const p1 = ln.indexOf("\t"); if (p1 < 0) continue
+                    const p2 = ln.indexOf("\t", p1 + 1); if (p2 < 0) continue
+                    const p3 = ln.indexOf("\t", p2 + 1); if (p3 < 0) continue
+                    const p4 = ln.indexOf("\t", p3 + 1); if (p4 < 0) continue
+                    const first = ln.substring(p4 + 1).trim()
+                    out.push({
+                        saved: ln.substring(0, p1) === "1",
+                        hasSketch: ln.substring(p1 + 1, p2) === "1",
+                        mtime: parseInt(ln.substring(p2 + 1, p3)) || 0,
+                        path: ln.substring(p3 + 1, p4),
+                        name: first !== "" ? first : "(sem título)"
+                    })
+                }
+                out.sort((x, y) => y.mtime - x.mtime)
+                svc.notes = out
+            }
+        }
+    }
+
+    // ── Estado do editor embutido (a LauncherWindow observa) ──
+    property bool   editorOpen: false
+    property string editorPath: ""       // caminho canônico do .txt
+    property string editorLoaded: ""     // texto a colocar no editor ao abrir
+    property string editorInitial: ""    // referência p/ detectar alteração
+    property bool   editorIsNew: false   // nota que ainda não foi salva nenhuma vez
+    property string sketchReviewPath: "" // != "" → janela mostra a tela de revisão
+    property string sketchReviewName: ""
+    property string sketchReviewText: ""
+
+    function _openEditor(path, content, isNew) {
+        editorPath = path
+        editorIsNew = isNew
+        editorLoaded = content
+        editorInitial = content
+        sketchReviewPath = ""
+        sketchReviewName = ""
+        sketchReviewText = ""
+        editorOpen = true
+    }
+    function closeEditor() {
+        editorOpen = false
+        editorPath = ""
+        editorLoaded = ""
+        editorInitial = ""
+        editorIsNew = false
+    }
+
+    // "Criar nota": abre o editor vazio (com a 1ª linha = título digitado, se houver)
+    function newNote(title) {
+        const t = ("" + (title ?? "")).trim()
+        const stamp = Qt.formatDateTime(new Date(), "yyyyMMdd-HHmmss")
+        _openEditor(Config.launcherNotesDir + "/nota-" + stamp + ".txt",
+                    t !== "" ? t + "\n" : "", true)
+    }
+    // abre uma nota salva (lê o .txt)
+    function editNote(path) {
+        editorPath = path
+        noteCat.mode = "note"
+        noteCat.exec(["cat", "--", path])
+    }
+    // tela de revisão: há um rascunho não salvo p/ esta nota
+    function reviewSketch(path) {
+        const e = (notes || []).find(n => n.path === path)
+        sketchReviewName = e ? e.name : firstLineOf(path)
+        sketchReviewPath = path
+        noteCat.mode = "review"
+        noteCat.exec(["cat", "--", sketchPathFor(path)])
+    }
+    function keepSketch() {          // "Manter rascunho" → edita a partir do rascunho
+        editorPath = sketchReviewPath
+        noteCat.mode = "sketch"
+        noteCat.exec(["cat", "--", sketchPathFor(sketchReviewPath)])
+    }
+    function discardSketch() {       // "Descartar" → apaga o rascunho
+        const p = sketchReviewPath
+        _deleteFiles([sketchPathFor(p)])
+        const e = (notes || []).find(n => n.path === p)
+        sketchReviewPath = ""
+        sketchReviewName = ""
+        sketchReviewText = ""
+        if (e && e.saved) editNote(p)     // abre a versão salva
+        else notesRefresh.restart()       // rascunho órfão: some da lista
+    }
+    function cancelReview() {
+        sketchReviewPath = ""
+        sketchReviewName = ""
+        sketchReviewText = ""
+    }
+    Process {
+        id: noteCat
+        property string mode: "note"     // note | sketch | review
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (noteCat.mode === "review") svc.sketchReviewText = text
+                else svc._openEditor(svc.editorPath, text, false)
+            }
+        }
+    }
+
+    // "Salvar": grava o .txt, apaga o rascunho, volta pra lista
+    function saveEditor(content) {
+        _writeFile(editorPath, content)
+        _deleteFiles([sketchPathFor(editorPath)])
+        editorInitial = content
+        editorIsNew = false
+        closeEditor()
+        notesRefresh.restart()
+    }
+    // "Voltar" sem salvar:
+    //   • nota nova ou alterada, com conteúdo → grava um RASCUNHO
+    //   • nota existente esvaziada → descarta rascunho velho (não mexe no .txt salvo)
+    //   • nota nova vazia / inalterada → nada (a nota nem passa a existir)
+    function leaveEditor(content) {
+        const empty = content.trim() === ""
+        const changed = content !== editorInitial
+        if (!empty && (editorIsNew || changed))
+            _writeFile(sketchPathFor(editorPath), content)
+        else if (changed)
+            _deleteFiles([sketchPathFor(editorPath)])
+        closeEditor()
+        notesRefresh.restart()
+    }
+
+    function deleteNote(path) {
+        _deleteFiles([path, sketchPathFor(path)])
+        notesRefresh.restart()
+    }
+
+    // grava `content` (UTF-8, com quebras de linha) em `path`, criando a pasta
+    function _writeFile(path, content) {
+        const dir = path.substring(0, path.lastIndexOf("/"))
+        fileWriteProc.exec(["sh", "-c",
+            "mkdir -p " + shq(dir) + " && printf '%s' " + shq(content) + " > " + shq(path)])
+    }
+    function _deleteFiles(paths) {
+        fileDelProc.exec(["rm", "-f", "--"].concat(paths))
+    }
+    Process { id: fileWriteProc }
+    Process { id: fileDelProc }
+    Timer { id: notesRefresh; interval: 250; onTriggered: svc.refreshNotes() }
 
     // ═════════════════════════ Ações /reload, /config e /lock ═════════════════════════
     function reloadShell() { hide(); Quickshell.reload(false) }   // false = soft (reusa janelas)

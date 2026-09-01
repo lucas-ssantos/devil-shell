@@ -150,6 +150,11 @@ Singleton {
     readonly property int    launcherTopUsed: Settings.get("launcherTopUsed", 6)     // nº de "mais usados" no topo
     readonly property string launcherTerminal: Settings.get("launcherTerminal", "kitty") // p/ .desktop Terminal=true
     readonly property int    launcherColorHistoryMax: Settings.get("launcherColorHistoryMax", 20) // itens guardados no histórico do /color-picker
+    // modo /notes: uma nota = um .txt nesta pasta; o "nome" da nota é a 1ª linha do arquivo.
+    // O editor é EMBUTIDO no lançador (números de linha, Salvar/Voltar, rascunhos).
+    readonly property string launcherNotesDir: Settings.get("launcherNotesDir", Quickshell.env("HOME") + "/.local/share/quickshell/notes")
+    readonly property real   launcherNotesW: Settings.get("launcherNotesW", 780)        // largura do painel no editor de notas
+    readonly property real   launcherNotesEditorH: Settings.get("launcherNotesEditorH", 340) // altura da área de edição
     readonly property color  launcherBg: Settings.get("launcherBg", Theme.base)
     readonly property color  launcherBorder: Settings.get("launcherBorder", Theme.surface0)
     readonly property color  launcherSel: Settings.get("launcherSel", Theme.surface1)   // linha selecionada
