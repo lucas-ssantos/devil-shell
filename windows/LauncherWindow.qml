@@ -118,7 +118,8 @@ PanelWindow {
         "quickshell", ".quickshell-wr",
         "bwrap", "flatpak", "firejail", "snap-confine", "snap"]
 
-    // total de CPU em uso por TODOS os processos (independe do filtro de busca);
+    // total de CPU em uso por TODOS os processos (independe do filtro de busca; soma
+    // crua do %cpu do ps — fmtCpu divide pelos núcleos antes de exibir);
     // RAM vem pronta de LauncherService.memUsedMB (soma de RSS por processo conta
     // memória compartilhada várias vezes e passa do total físico da máquina)
     readonly property real procTotalCpu: {
@@ -129,6 +130,10 @@ PanelWindow {
     }
     function fmtMem(mb) {
         return mb >= 1024 ? (mb / 1024).toFixed(1) + " GB" : Math.round(mb) + " MB"
+    }
+    // %cpu cru (pode ser >100% p/ subárvores multi-thread) -> fatia real da máquina
+    function fmtCpu(raw) {
+        return (raw / Math.max(1, LauncherService.cpuCount)).toFixed(1) + "%"
     }
 
     // ── Alvo do /bg (todos os monitores ou um específico) ──
@@ -777,8 +782,43 @@ PanelWindow {
 
             Rectangle { width: col.width; height: 1; color: Config.launcherBorder }
 
-            // ── /proc: cabeçalho com o total de RAM/CPU em uso, no mesmo layout
-            //    das linhas de processo (nome à esquerda + colunas PID/CPU/RAM) ──
+            // ── /proc: rótulos das colunas (PID/CPU/RAM) — casam com os widths
+            //    64/74/88 das linhas de processo; acende no acento a coluna ordenada ──
+            Item {
+                visible: win.mode === "proc"
+                width: col.width
+                height: 15
+                Text {
+                    anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
+                    text: "APLICATIVO"
+                    color: win.procSort === "name" ? Config.accent : Config.launcherSub
+                    font.pixelSize: Config.launcherFontSize - 3
+                    font.bold: true; font.letterSpacing: 1
+                }
+                Row {
+                    anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                    spacing: 0
+                    Text {
+                        width: 64; horizontalAlignment: Text.AlignRight; text: "PID"
+                        color: win.procSort === "pid" ? Config.accent : Config.launcherSub
+                        font.pixelSize: Config.launcherFontSize - 3
+                        font.bold: true; font.letterSpacing: 1
+                    }
+                    Text {
+                        width: 74; horizontalAlignment: Text.AlignRight; text: "CPU"
+                        color: win.procSort === "cpu" ? Config.accent : Config.launcherSub
+                        font.pixelSize: Config.launcherFontSize - 3
+                        font.bold: true; font.letterSpacing: 1
+                    }
+                    Text {
+                        width: 88; horizontalAlignment: Text.AlignRight; text: "RAM"
+                        color: win.procSort === "ram" ? Config.accent : Config.launcherSub
+                        font.pixelSize: Config.launcherFontSize - 3
+                        font.bold: true; font.letterSpacing: 1
+                    }
+                }
+            }
+            // total de CPU/RAM em uso na máquina, alinhado às mesmas colunas
             Item {
                 visible: win.mode === "proc"
                 width: col.width
@@ -799,7 +839,7 @@ PanelWindow {
                     Text { width: 64; horizontalAlignment: Text.AlignRight; text: "" }
                     Text {
                         width: 74; horizontalAlignment: Text.AlignRight
-                        text: win.procTotalCpu.toFixed(1) + "%"
+                        text: win.fmtCpu(win.procTotalCpu)
                         color: Config.accent
                         font.pixelSize: Config.launcherFontSize - 1
                         font.family: "monospace"
@@ -998,7 +1038,7 @@ PanelWindow {
                                 }
                                 Text {
                                     width: 74; horizontalAlignment: Text.AlignRight
-                                    text: (row.modelData.cpu ?? 0).toFixed(1) + "%"
+                                    text: win.fmtCpu(row.modelData.cpu ?? 0)
                                     color: win.procSort === "cpu" ? Config.accent : Config.launcherSub
                                     font.pixelSize: Config.launcherFontSize - 1
                                     font.family: "monospace"

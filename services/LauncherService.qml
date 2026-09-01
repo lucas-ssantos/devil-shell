@@ -175,10 +175,24 @@ Singleton {
     // Vem de /proc/meminfo: usado = MemTotal - MemAvailable (mesma conta do `free` moderno).
     property real memUsedMB: 0
     property real memTotalMB: 0
+    // nº de núcleos lógicos — o `%cpu` do ps é "tempo de CPU / tempo de vida" e um
+    // processo/subárvore multi-thread passa fácil de 100%. A view divide por isto p/
+    // mostrar a fatia REAL da máquina (0–100% no total), não "% de um núcleo".
+    property int cpuCount: 1
 
     function refreshProcs() {
         psProc.exec(["ps", "-eo", "pid=,ppid=,pcpu=,rss=,comm="])
         memProc.exec(["cat", "/proc/meminfo"])
+        if (svc.cpuCount <= 1) nprocProc.exec(["nproc"])
+    }
+    Process {
+        id: nprocProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const n = parseInt(text.trim())
+                if (n > 0) svc.cpuCount = n
+            }
+        }
     }
     Process {
         id: psProc
