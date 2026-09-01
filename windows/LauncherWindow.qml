@@ -277,6 +277,14 @@ PanelWindow {
 
     // ── Seleção (pula headers) ──────────────────────────
     property int selIndex: 0
+    // pid do item selecionado em /proc — o Timer de 2s reordena/relê a lista sozinho;
+    // sem isso, cada tique jogava a seleção de volta pro topo (via onResultsChanged)
+    // no meio de um kill ou de uma olhada na lista.
+    property int selProcPid: -1
+    onSelIndexChanged: {
+        if (mode === "proc" && results[selIndex] && results[selIndex].kind === "proc")
+            selProcPid = results[selIndex].pid
+    }
     function selectableIndex(from, dir) {
         const n = results.length
         if (n === 0) return -1
@@ -295,6 +303,15 @@ PanelWindow {
         else list.positionViewAtIndex(selIndex, ListView.Contain)
     }
     onResultsChanged: {
+        // /proc: acha o mesmo pid na lista relida; só cai pro topo se o processo já morreu
+        if (mode === "proc" && selProcPid !== -1) {
+            const i = results.findIndex(r => r.kind === "proc" && r.pid === selProcPid)
+            if (i >= 0) {
+                selIndex = i
+                list.positionViewAtIndex(i, ListView.Contain)
+                return
+            }
+        }
         selIndex = selectableIndex(0, 1)
         if (mode === "bg") bgGrid.positionViewAtBeginning()
         else list.positionViewAtBeginning()
