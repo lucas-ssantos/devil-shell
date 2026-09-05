@@ -45,6 +45,7 @@ Singleton {
 
     // ── Extras ──
     readonly property color dimGreen:  "#5e1414"   // (antigo "verde apagado" → vermelho escuro)
+    readonly property color shadow:    "#050101"   // sombra (barra Draco): preto c/ tinta vermelha
 
     // ── Espectro do visualizador CAVA (interno → meio → pontas) ──
     readonly property color cavaInner: "#8b1a1a"

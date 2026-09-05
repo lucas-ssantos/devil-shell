@@ -257,31 +257,40 @@ Singleton {
     readonly property bool   isDraco: shellMode === "draco"
 
     // ── Barra Draco (modo draco; windows/DracoBar.qml + ui/DracoCapsule.qml) ──
-    // Barra FLUTUANTE no topo (estilo Noctalia): não encosta nas bordas (margens), cantos
-    // arredondados, widgets em cápsulas, e reserva espaço (exclusive zone) p/ as janelas do
-    // niri ficarem abaixo — o niri ainda soma os `gaps` dele entre a barra e a janela;
-    // dracoGap é folga EXTRA além disso.
-    readonly property real   dracoBarH: Settings.get("dracoBarH", 36)              // altura da barra
-    readonly property real   dracoMarginTop: Settings.get("dracoMarginTop", 6)     // folga do topo da tela
-    readonly property real   dracoMarginSide: Settings.get("dracoMarginSide", 10)  // folga das laterais (= gaps do niri alinha com as janelas)
+    // Barra COLADA no topo, ocupando uma fração da largura da tela (centralizada), cantos
+    // arredondados só embaixo, fundo translúcido e SOMBRA difusa por trás (Canvas). Os widgets
+    // são "chapados" (sem pílula própria) dentro de três chips discretos (esquerda / centro /
+    // direita). Reserva espaço (exclusive zone) p/ as janelas do niri ficarem abaixo — o niri
+    // ainda soma os `gaps` dele entre a barra e a janela; dracoGap é folga EXTRA além disso.
+    readonly property real   dracoBarH: Settings.get("dracoBarH", 30)              // altura da barra
+    readonly property real   dracoWidthFrac: Settings.get("dracoWidthFrac", 0.8)   // fração da largura da tela (centralizada)
+    readonly property real   dracoMarginTop: Settings.get("dracoMarginTop", 0)     // folga do topo (0 = colada; > 0 arredonda também em cima)
     readonly property real   dracoGap: Settings.get("dracoGap", 0)                 // folga extra barra → janelas (além dos gaps do niri)
-    readonly property real   dracoRadius: Settings.get("dracoRadius", 12)          // cantos da barra e dos popups flutuantes
-    readonly property real   dracoPad: Settings.get("dracoPad", 8)                 // recuo interno (laterais)
-    readonly property real   dracoSpacing: Settings.get("dracoSpacing", 6)         // espaço entre as cápsulas
-    readonly property real   dracoCapsuleH: Settings.get("dracoCapsuleH", 26)      // altura das cápsulas (widgets)
-    readonly property real   dracoCapsulePad: Settings.get("dracoCapsulePad", 10)  // recuo interno das cápsulas
-    readonly property int    dracoIconSize: Settings.get("dracoIconSize", 14)
+    readonly property real   dracoRadius: Settings.get("dracoRadius", 10)          // cantos (de baixo) da barra e dos popups flutuantes
+    readonly property real   dracoPad: Settings.get("dracoPad", 6)                 // recuo interno (laterais)
+    readonly property real   dracoSpacing: Settings.get("dracoSpacing", 2)         // espaço entre widgets dentro de um chip
+    readonly property real   dracoChipRadius: Settings.get("dracoChipRadius", 8)   // cantos dos chips (grupos) e do hover dos widgets
+    readonly property real   dracoChipPad: Settings.get("dracoChipPad", 3)         // recuo interno dos chips
+    readonly property real   dracoChipOpacity: Settings.get("dracoChipOpacity", 0.7) // opacidade dos chips (0–1)
+    readonly property real   dracoCapsuleH: Settings.get("dracoCapsuleH", 20)      // altura dos widgets
+    readonly property real   dracoCapsulePad: Settings.get("dracoCapsulePad", 7)   // recuo interno dos widgets
+    readonly property int    dracoIconSize: Settings.get("dracoIconSize", 13)
     readonly property int    dracoTextSize: Settings.get("dracoTextSize", 12)
     readonly property real   dracoTitleMaxW: Settings.get("dracoTitleMaxW", 520)   // largura máx do título da janela (corta com …)
     readonly property int    dracoWsMin: Settings.get("dracoWsMin", 3)             // mínimo de cápsulas de workspace (completa c/ fantasmas)
     readonly property real   dracoPopupGap: Settings.get("dracoPopupGap", 8)       // folga barra → popups (calendário/sistema/temperatura/menus)
     readonly property string dracoClockFormat: Settings.get("dracoClockFormat", "HH:mm")
     readonly property int    dracoAnim: Settings.get("dracoAnim", 160)             // hover/troca de estado (ms)
-    readonly property real   dracoBgOpacity: Settings.get("dracoBgOpacity", 0.96)  // opacidade do fundo da barra (0–1)
+    readonly property real   dracoBgOpacity: Settings.get("dracoBgOpacity", 0.85)  // opacidade do fundo da barra (0–1)
+    readonly property real   dracoShadowBlur: Settings.get("dracoShadowBlur", 18)  // desfoque da sombra (px; 0 = sem sombra)
+    readonly property real   dracoShadowOffsetY: Settings.get("dracoShadowOffsetY", 6) // deslocamento vertical da sombra (px)
+    readonly property real   dracoShadowOpacity: Settings.get("dracoShadowOpacity", 0.55) // força da sombra (0–1)
+    readonly property real   dracoBorderW: Settings.get("dracoBorderW", 0)         // borda da barra (px; 0 = sem borda)
     readonly property color  dracoBg: Settings.get("dracoBg", Theme.crust)          // mesma cor da bola (Config.ball)
-    readonly property color  dracoBorder: Settings.get("dracoBorder", Theme.surface0)
-    readonly property color  dracoCapsuleBg: Settings.get("dracoCapsuleBg", Theme.surface0)
-    readonly property color  dracoCapsuleHover: Settings.get("dracoCapsuleHover", Theme.surface1)
+    readonly property color  dracoBorder: Settings.get("dracoBorder", Theme.surface0)   // borda da barra (se dracoBorderW > 0) e dos popups flutuantes
+    readonly property color  dracoShadow: Settings.get("dracoShadow", Theme.shadow)
+    readonly property color  dracoCapsuleBg: Settings.get("dracoCapsuleBg", Theme.surface0)       // chips (grupos de widgets)
+    readonly property color  dracoCapsuleHover: Settings.get("dracoCapsuleHover", Theme.surface1) // widget sob o cursor / popup aberto; pílulas de workspace
     readonly property color  dracoText: Settings.get("dracoText", Theme.text)
     readonly property color  dracoSub: Settings.get("dracoSub", Theme.subtext0)      // texto apagado (fantasmas, mudo, janela sem foco)
     readonly property color  dracoAccent: Settings.get("dracoAccent", Theme.mauve)   // workspace ativo / botão do lançador

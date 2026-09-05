@@ -7,14 +7,15 @@ import "root:/services"   // AudioService, CaptureService, IdleService, Launcher
 import "root:/"           // Config (raiz)
 
 // Barra do modo DRACO (uma por monitor): substitui bola/cristais/cápsulas por uma barra
-// FLUTUANTE no topo, estilo Noctalia — não encosta nas bordas (margens), cantos
-// arredondados, widgets em cápsulas — e reserva espaço (exclusive zone) p/ as janelas
-// do niri ficarem abaixo dela; o niri ainda soma os `gaps` dele entre a barra e a
-// janela (Config.dracoGap é folga EXTRA).
+// COLADA no topo, estilo Noctalia — ocupa uma fração da largura da tela (centralizada),
+// cantos arredondados só embaixo, fundo translúcido e uma SOMBRA difusa por trás — e
+// reserva espaço (exclusive zone) p/ as janelas do niri ficarem abaixo dela; o niri ainda
+// soma os `gaps` dele entre a barra e a janela (Config.dracoGap é folga EXTRA).
+// Os widgets são "chapados" (sem pílula própria) dentro de três chips discretos:
 //   Esquerda: lançador · relógio (popup do calendário) · recursos RAM/CPU (popup do
 //             sistema) · temperatura da CPU (popup de temperaturas)
 //   Centro:   título da janela ATIVA deste monitor (com o ícone do app); sem janela no
-//             workspace, as cápsulas dos workspaces (clique troca; mín. Config.dracoWsMin)
+//             workspace, as pílulas dos workspaces (clique troca; mín. Config.dracoWsMin)
 //   Direita:  saída/microfone (esquerdo = mudo, scroll = volume, direito = dispositivos) ·
 //             gravação de tela DESTE monitor · lock/idle (lâmpada) · configurações · bandeja
 //             (esquerdo = foca a janela do app, direito = menu do app)
@@ -32,15 +33,23 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     color: "transparent"
+    // a surface vai de ponta a ponta no topo: a barra (fração da largura) fica centralizada
+    // dentro dela e a sombra cabe nas laterais/embaixo. Começa na BORDA da tela (sem margem)
+    // p/ a barra poder deslizar de lá; a folga do topo (se houver) é desenhada dentro.
     anchors { top: true; left: true; right: true }
-    // a surface começa na BORDA da tela (sem margem no topo) p/ a barra poder deslizar de lá;
-    // a folga do topo é desenhada dentro dela (panel.y = dracoMarginTop)
-    margins { left: Config.dracoMarginSide; right: Config.dracoMarginSide }
-    implicitHeight: Config.dracoMarginTop + Config.dracoBarH
+    // faixa extra p/ a sombra (embaixo): desfoque + deslocamento
+    readonly property real shadowPad: Config.dracoShadowBlur > 0 ? Config.dracoShadowBlur + Config.dracoShadowOffsetY + 2 : 0
+    implicitHeight: Config.dracoMarginTop + Config.dracoBarH + shadowPad
     // reserva folga do topo + barra + folga extra enquanto a barra está em cena (shown); a zona
     // cai junto com o deslizar de saída → as janelas do niri voltam a subir. Escondida → nada.
+    // A faixa da sombra NÃO é reservada: ela cai sobre o gap/janelas, como uma sombra de verdade.
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: shown ? Math.round(Config.dracoMarginTop + Config.dracoBarH + Config.dracoGap) : 0
+    // só a barra recebe input; as laterais e a faixa da sombra são click-through
+    mask: Region {
+        x: Math.round(panel.x); y: Math.round(panel.y)
+        width: Math.round(panel.width); height: Math.round(panel.height)
+    }
 
     // ── Transição de modo (Config.isDraco) ──
     // Draco liga -> espera a bola/cristais afundarem (Config.modeSinkTotal) e entra deslizando da
@@ -79,7 +88,7 @@ PanelWindow {
             if (tags[i].is_active) return tags[i].index
         return 0
     }
-    // cápsulas de workspace: os reais + "fantasmas" até Config.dracoWsMin (só visuais)
+    // pílulas de workspace: os reais + "fantasmas" até Config.dracoWsMin (só visuais)
     readonly property var wsList: {
         const out = tags.slice()
         for (let i = out.length; i < Config.dracoWsMin; i++)
@@ -114,8 +123,8 @@ PanelWindow {
         precision: Config.dracoClockFormat.indexOf("s") >= 0 ? SystemClock.Seconds : SystemClock.Minutes
     }
 
-    // ── Popups (brotam abaixo da cápsula que os abre, centralizados nela) ──
-    // ponto de ancoragem: centro-X da cápsula (coord. da janela) + base da barra
+    // ── Popups (brotam abaixo do widget que os abre, centralizados nele) ──
+    // ponto de ancoragem: centro-X do widget (coord. da janela) + base da barra
     function anchorOf(item) {
         const p = item.mapToItem(null, item.width / 2, 0)
         return { x: p.x, y: panel.y + panel.height }
@@ -137,20 +146,112 @@ PanelWindow {
     TrayMenu      { id: trayMenu;      ctx: bar; below: true }
     AudioDevices  { id: audioDevices;  ctx: bar; below: true }
 
-    // ── Corpo da barra ──
-    Rectangle {
-        id: panel
-        anchors { left: parent.left; right: parent.right }
-        height: Config.dracoBarH
-        // desliza da borda superior da tela: escondida, fica inteira acima da surface (recortada)
-        y: bar.shown ? Config.dracoMarginTop : -(Config.dracoBarH + 2)
-        Behavior on y { NumberAnimation { duration: Config.dracoSlideMs; easing.type: bar.entering ? Easing.OutCubic : Easing.InCubic } }
-        radius: Config.dracoRadius
-        color: Qt.rgba(Config.dracoBg.r, Config.dracoBg.g, Config.dracoBg.b, Config.dracoBgOpacity)
-        border.color: Config.dracoBorder
-        border.width: 1
+    // chip: fundo discreto de um GRUPO de widgets (esquerda / centro / direita); os filhos
+    // declarados dentro dele caem na Row interna
+    component Chip: Rectangle {
+        default property alias content: chipRow.data
+        implicitWidth: chipRow.implicitWidth + 2 * Config.dracoChipPad
+        implicitHeight: Config.dracoCapsuleH + 2 * Config.dracoChipPad
+        radius: Config.dracoChipRadius
+        color: Qt.rgba(Config.dracoCapsuleBg.r, Config.dracoCapsuleBg.g, Config.dracoCapsuleBg.b, Config.dracoChipOpacity)
+        Row { id: chipRow; anchors.centerIn: parent; spacing: Config.dracoSpacing }
+    }
 
-        // scroll no fundo (e nas cápsulas que não consomem a roda) → workspace deste monitor
+    // ── Corpo da barra ──
+    Item {
+        id: panel
+        width: Math.round(bar.width * Config.dracoWidthFrac)
+        x: Math.round((bar.width - width) / 2)
+        height: Config.dracoBarH
+        // desliza da borda superior da tela: escondida, fica inteira (sombra incluída) acima da surface
+        y: bar.shown ? Config.dracoMarginTop : -(Config.dracoBarH + bar.shadowPad + 2)
+        Behavior on y { NumberAnimation { duration: Config.dracoSlideMs; easing.type: bar.entering ? Easing.OutCubic : Easing.InCubic } }
+
+        // fundo + sombra. O Canvas é maior que a barra (margens negativas) p/ a sombra caber; a
+        // sombra é pintada como halo da forma e depois a PRÓPRIA forma é recortada
+        // (destination-out) — senão ela escureceria o fundo translúcido por baixo. Cantos de
+        // baixo arredondados; os de cima só se houver folga do topo (barra "solta").
+        Canvas {
+            id: bgCanvas
+            anchors.fill: parent
+            anchors.margins: -bar.shadowPad
+            antialiasing: true
+            property color bg: Config.dracoBg
+            property real  bgA: Config.dracoBgOpacity
+            property color sh: Config.dracoShadow
+            property real  shA: Config.dracoShadowOpacity
+            property real  blur: Config.dracoShadowBlur
+            property real  offY: Config.dracoShadowOffsetY
+            property real  rad: Config.dracoRadius
+            property real  topRad: Config.dracoMarginTop > 0 ? Config.dracoRadius : 0
+            property color edge: Config.dracoBorder
+            property real  edgeW: Config.dracoBorderW
+            onBgChanged: requestPaint()
+            onBgAChanged: requestPaint()
+            onShChanged: requestPaint()
+            onShAChanged: requestPaint()
+            onBlurChanged: requestPaint()
+            onOffYChanged: requestPaint()
+            onRadChanged: requestPaint()
+            onTopRadChanged: requestPaint()
+            onEdgeChanged: requestPaint()
+            onEdgeWChanged: requestPaint()
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            Component.onCompleted: requestPaint()
+
+            // caminho da barra: retângulo com cantos de cima `rt` e de baixo `rb`
+            function shape(g, x, y, w, h, rt, rb) {
+                g.beginPath()
+                g.moveTo(x + rt, y)
+                g.lineTo(x + w - rt, y)
+                if (rt > 0) g.arcTo(x + w, y, x + w, y + rt, rt)
+                g.lineTo(x + w, y + h - rb)
+                g.arcTo(x + w, y + h, x + w - rb, y + h, rb)
+                g.lineTo(x + rb, y + h)
+                g.arcTo(x, y + h, x, y + h - rb, rb)
+                g.lineTo(x, y + rt)
+                if (rt > 0) g.arcTo(x, y, x + rt, y, rt)
+                g.closePath()
+            }
+            onPaint: {
+                const g = getContext("2d")
+                g.reset()
+                const p = bar.shadowPad
+                const x = p, y = p, w = width - 2 * p, h = height - 2 * p
+                if (w <= 0 || h <= 0) return
+                const rb = Math.max(0, Math.min(rad, w / 2, h / 2))
+                const rt = Math.max(0, Math.min(topRad, w / 2, h / 2))
+                // 1) sombra: forma opaca com shadow; depois a forma é recortada -> sobra só o halo
+                if (blur > 0 && shA > 0) {
+                    g.save()
+                    g.shadowColor = Qt.rgba(sh.r, sh.g, sh.b, shA)
+                    g.shadowBlur = blur
+                    g.shadowOffsetY = offY
+                    g.fillStyle = "#000000"   // qualquer cor opaca: só a sombra sobrevive ao recorte
+                    shape(g, x, y, w, h, rt, rb)
+                    g.fill()
+                    g.restore()
+                    g.globalCompositeOperation = "destination-out"
+                    shape(g, x, y, w, h, rt, rb)
+                    g.fill()
+                    g.globalCompositeOperation = "source-over"
+                }
+                // 2) corpo translúcido
+                g.fillStyle = Qt.rgba(bg.r, bg.g, bg.b, bgA)
+                shape(g, x, y, w, h, rt, rb)
+                g.fill()
+                // 3) borda opcional (dentro da forma)
+                if (edgeW > 0) {
+                    g.strokeStyle = edge
+                    g.lineWidth = edgeW
+                    shape(g, x + edgeW / 2, y + edgeW / 2, w - edgeW, h - edgeW, rt, rb)
+                    g.stroke()
+                }
+            }
+        }
+
+        // scroll no fundo (e nos widgets que não consomem a roda) → workspace deste monitor
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
@@ -158,10 +259,9 @@ PanelWindow {
         }
 
         // ══ Esquerda ══
-        Row {
-            id: leftRow
+        Chip {
+            id: leftChip
             anchors { left: parent.left; leftMargin: Config.dracoPad; verticalCenter: parent.verticalCenter }
-            spacing: Config.dracoSpacing
 
             DracoCapsule {                                   // lançador próprio
                 icon: Config.iconLauncher
@@ -194,22 +294,20 @@ PanelWindow {
             }
         }
 
-        // ══ Centro: título da janela ativa OU cápsulas de workspaces ══
-        Item {
-            id: center
+        // ══ Centro: título da janela ativa OU pílulas de workspaces ══
+        Chip {
+            id: centerChip
             anchors.centerIn: parent
-            height: Config.dracoCapsuleH
-            width: bar.hasWin ? titleCap.width : wsRow.width
-            // o título nunca invade as laterais: teto = o que sobra entre os dois blocos
+            // o título nunca invade os chips laterais: teto = o que sobra entre os dois
             readonly property real titleMaxW: Math.max(120, Math.min(Config.dracoTitleMaxW,
-                bar.width - 2 * Math.max(leftRow.width, rightRow.width) - 4 * Config.dracoPad))
+                panel.width - 2 * Math.max(leftChip.width, rightChip.width) - 6 * Config.dracoPad))
 
             DracoCapsule {
                 id: titleCap
                 visible: bar.hasWin
                 image: bar.appIcon
                 label: bar.activeWin ? (bar.activeWin.title || bar.activeWin.appId || "") : ""
-                labelMaxW: center.titleMaxW
+                labelMaxW: centerChip.titleMaxW
                 // apagado quando a janela ativa deste monitor não é a focada da sessão
                 textColor: (bar.activeWin && bar.activeWin.focused) ? Config.dracoText : Config.dracoSub
                 onClicked: if (bar.activeWin && bar.niri) bar.niri.focusWindow(bar.activeWin.id)
@@ -218,7 +316,8 @@ PanelWindow {
                 id: wsRow
                 visible: !bar.hasWin
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: Config.dracoSpacing
+                spacing: 5
+                leftPadding: 4; rightPadding: 4
                 Repeater {
                     model: bar.wsList
                     delegate: Rectangle {
@@ -228,12 +327,12 @@ PanelWindow {
                         readonly property bool ghost: modelData.ghost === true
                         readonly property bool busy: (modelData.client_count ?? 0) > 0
                         anchors.verticalCenter: parent.verticalCenter
-                        height: Config.dracoCapsuleH - 6
+                        height: Config.dracoCapsuleH - 4
                         // a ativa fica alongada (pílula), as outras quase redondas
-                        width: Math.max(height, num.implicitWidth + 14) + (isActive ? 14 : 0)
+                        width: Math.max(height, num.implicitWidth + 12) + (isActive ? 14 : 0)
                         radius: height / 2
-                        color: isActive ? Config.dracoAccent
-                             : pillMA.containsMouse ? Config.dracoCapsuleHover : Config.dracoCapsuleBg
+                        color: isActive ? Config.dracoAccent : Config.dracoCapsuleHover
+                        opacity: (isActive || pillMA.containsMouse) ? 1.0 : 0.8
                         border.width: modelData.is_urgent ? 1 : 0
                         border.color: Config.dotUrgent
                         Behavior on width { NumberAnimation { duration: Config.dracoAnim; easing.type: Easing.OutCubic } }
@@ -260,10 +359,9 @@ PanelWindow {
         }
 
         // ══ Direita ══
-        Row {
-            id: rightRow
+        Chip {
+            id: rightChip
             anchors { right: parent.right; rightMargin: Config.dracoPad; verticalCenter: parent.verticalCenter }
-            spacing: Config.dracoSpacing
 
             DracoCapsule {                                   // saída (headphone)
                 id: sinkCap
@@ -300,71 +398,62 @@ PanelWindow {
                 iconOpacity: IdleService.inhibited ? 1.0 : 0.55
                 onClicked: IdleService.toggle()
             }
-            Rectangle {                                      // bandeja (system tray)
-                id: trayCap
+            DracoCapsule {                                   // configurações do shell
+                icon: Config.iconConfig
+                active: Settings.open
+                onClicked: Settings.open = true
+            }
+            Row {                                            // bandeja (system tray): ícones chapados
                 visible: SystemTray.items.values.length > 0
                 anchors.verticalCenter: parent.verticalCenter
-                width: trayRow.implicitWidth + 2 * Config.dracoCapsulePad
-                height: Config.dracoCapsuleH
-                radius: height / 2
-                color: Config.dracoCapsuleBg
-
-                Row {
-                    id: trayRow
-                    anchors.centerIn: parent
-                    spacing: 8
-                    Repeater {
-                        model: SystemTray.items
-                        delegate: Item {
-                            id: trayCell
-                            required property var modelData
-                            width: Config.dracoIconSize + 4
-                            height: Config.dracoCapsuleH
-                            Image {
-                                id: trayImg
-                                // só aparece quando carregou (evita o ícone "quebrado" de SNIs tortos)
-                                visible: status === Image.Ready
-                                anchors.centerIn: parent
-                                source: trayCell.modelData.icon
-                                sourceSize.width: Config.dracoIconSize + 2
-                                sourceSize.height: Config.dracoIconSize + 2
-                                width: Config.dracoIconSize + 2
-                                height: Config.dracoIconSize + 2
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                            }
-                            Text {                           // fallback: inicial do app
-                                visible: trayImg.status !== Image.Ready
-                                anchors.centerIn: parent
-                                text: (trayCell.modelData.title || trayCell.modelData.id || "?").charAt(0).toUpperCase()
-                                font.pixelSize: Config.dracoIconSize
-                                font.bold: true
-                                color: Config.dracoText
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: (mouse) => {
-                                    if (mouse.button === Qt.RightButton) {
-                                        if (trayMenu.visible) { trayMenu.visible = false; return }   // direito de novo fecha
-                                        if (trayCell.modelData.menu) {
-                                            const a = bar.anchorOf(trayCell)
-                                            trayMenu.openAt(trayCell.modelData, a.x, a.y)
-                                        }
-                                    } else if (bar.niri) {
-                                        bar.niri.focusTrayApp(trayCell.modelData)   // esquerdo: traz/foca a janela do app
+                spacing: 6
+                leftPadding: 5; rightPadding: 5
+                Repeater {
+                    model: SystemTray.items
+                    delegate: Item {
+                        id: trayCell
+                        required property var modelData
+                        width: Config.dracoIconSize + 4
+                        height: Config.dracoCapsuleH
+                        Image {
+                            id: trayImg
+                            // só aparece quando carregou (evita o ícone "quebrado" de SNIs tortos)
+                            visible: status === Image.Ready
+                            anchors.centerIn: parent
+                            source: trayCell.modelData.icon
+                            sourceSize.width: Config.dracoIconSize + 2
+                            sourceSize.height: Config.dracoIconSize + 2
+                            width: Config.dracoIconSize + 2
+                            height: Config.dracoIconSize + 2
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                        }
+                        Text {                               // fallback: inicial do app
+                            visible: trayImg.status !== Image.Ready
+                            anchors.centerIn: parent
+                            text: (trayCell.modelData.title || trayCell.modelData.id || "?").charAt(0).toUpperCase()
+                            font.pixelSize: Config.dracoIconSize
+                            font.bold: true
+                            color: Config.dracoText
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: (mouse) => {
+                                if (mouse.button === Qt.RightButton) {
+                                    if (trayMenu.visible) { trayMenu.visible = false; return }   // direito de novo fecha
+                                    if (trayCell.modelData.menu) {
+                                        const a = bar.anchorOf(trayCell)
+                                        trayMenu.openAt(trayCell.modelData, a.x, a.y)
                                     }
+                                } else if (bar.niri) {
+                                    bar.niri.focusTrayApp(trayCell.modelData)   // esquerdo: traz/foca a janela do app
                                 }
                             }
                         }
                     }
                 }
-            }
-            DracoCapsule {                                   // configurações do shell
-                icon: Config.iconConfig
-                active: Settings.open
-                onClicked: Settings.open = true
             }
         }
     }

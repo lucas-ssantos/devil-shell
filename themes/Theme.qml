@@ -61,6 +61,7 @@ Singleton {
     readonly property color blue:      pal("blue",      shell.blue)
     readonly property color lavender:  pal("lavender",  shell.lavender)
     readonly property color dimGreen:  pal("dimGreen",  shell.dimGreen)
+    readonly property color shadow:    pal("shadow",    shell.shadow)
 
     // ── Espectro do CAVA (do tema 'cava', interno → meio → pontas) ──
     readonly property color cavaInner: pal("cavaInner", cava.cavaInner)

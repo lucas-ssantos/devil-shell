@@ -9,8 +9,9 @@ e há um **visualizador de áudio (CAVA)** ao fundo, no estilo do [Cavasik](http
 (espectro suave preenchido na barra inferior + um círculo pulsante ao redor da bola).
 
 Esse é o modo **Devil**. `Mod+Ctrl+Return` alterna para o modo **Draco**: bola, cristais e cápsulas
-somem e entra uma **barra flutuante no topo** (estilo [Noctalia](https://github.com/noctalia-dev/noctalia-shell)),
-com as mesmas funções em cápsulas — e as janelas do niri ficam abaixo dela, com gap.
+somem e entra uma **barra no topo** (colada na borda, ~80% da largura, translúcida e com sombra, estilo
+[Noctalia](https://github.com/noctalia-dev/noctalia-shell)), com as mesmas funções agrupadas em chips —
+e as janelas do niri ficam abaixo dela, com gap.
 
 > Tudo é hot-reloaded: salvar qualquer `.qml` recarrega o shell na hora.
 
@@ -30,7 +31,7 @@ com as mesmas funções em cápsulas — e as janelas do niri ficam abaixo dela,
   - **4ª — Bandeja (system tray):** ícones dos apps; **esquerdo** foca a janela, **direito** abre o
     menu do app (menu estilizado no tema).
 - **Modo Draco** (`Mod+Ctrl+Return`, `qs ipc call mode toggle`, ou a janela de configurações):
-  barra flutuante no topo, por monitor. **Esquerda:** lançador · relógio (popup do calendário) ·
+  barra no topo (colada, ~80% da largura, com sombra), por monitor. **Esquerda:** lançador · relógio (popup do calendário) ·
   RAM/CPU (popup do sistema) · temperatura (popup de temperaturas). **Centro:** título da janela
   ativa do monitor (com ícone do app); sem janela, cápsulas dos workspaces (clique troca).
   **Direita:** saída e microfone (esquerdo = mudo, scroll = volume, direito = dispositivos) ·

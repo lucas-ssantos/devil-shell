@@ -1,10 +1,11 @@
 import QtQuick
 import "root:/"   // Config (raiz)
 
-// Cápsula (pílula) da barra Draco: ícone (glifo Nerd Font e/ou imagem) + texto, com um
-// 2º par ícone+texto opcional (ex.: RAM + CPU numa cápsula só), hover, estado "ativo"
-// (popup aberto) e sinais de clique esquerdo/direito/scroll. É o widget genérico da
-// barra — a DracoBar.qml decide o que cada uma faz.
+// Widget "chapado" da barra Draco: ícone (glifo Nerd Font e/ou imagem) + texto, com um 2º
+// par ícone+texto opcional (ex.: RAM + CPU num widget só). Não tem fundo próprio — vive
+// dentro de um chip da DracoBar — e só ganha um fundo discreto sob o cursor ou com o popup
+// dele aberto (`active`). Sinais de clique esquerdo/direito/scroll; a DracoBar decide o
+// que cada um faz.
 Rectangle {
     id: cap
     property string icon: ""            // glifo (Config.iconFont)
@@ -26,14 +27,17 @@ Rectangle {
 
     implicitWidth: row.implicitWidth + 2 * Config.dracoCapsulePad
     implicitHeight: Config.dracoCapsuleH
-    radius: height / 2
-    color: (active || hovered) ? Config.dracoCapsuleHover : Config.dracoCapsuleBg
+    radius: Math.max(0, Config.dracoChipRadius - 2)
+    // fundo só no hover/ativo; o estado "transparente" mantém o RGB do hover p/ a animação
+    // ser só de alfa (sem passar por um tom escuro no meio do caminho)
+    color: (active || hovered) ? Config.dracoCapsuleHover
+         : Qt.rgba(Config.dracoCapsuleHover.r, Config.dracoCapsuleHover.g, Config.dracoCapsuleHover.b, 0)
     Behavior on color { ColorAnimation { duration: Config.dracoAnim } }
 
     Row {
         id: row
         anchors.centerIn: parent
-        spacing: 6
+        spacing: 5
 
         Text {
             visible: cap.icon !== ""

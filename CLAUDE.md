@@ -11,7 +11,8 @@ inferior de cada monitor com uma **escadaria de cristais** fincados no chão dos
 cristal ergue só ele —, mostra os workspaces como pontos dentro da bola e tem um visualizador
 de áudio **CAVA** ao fundo. Toda a configuração é hot-reloaded pelo Quickshell ao salvar.
 Esse é o modo **Devil**; há também o modo **Draco** (`Mod+Ctrl+Return` alterna), em que bola,
-cristais e cápsulas somem e entra uma **barra flutuante no topo** (estilo Noctalia) — ver
+cristais e cápsulas somem e entra uma **barra no topo** (colada na borda, ~80% da largura,
+translúcida e com sombra; estilo Noctalia) — ver
 "Modos Devil × Draco" abaixo.
 
 Não há build, lint ou testes — é QML interpretado. Os comentários do código são em **português**;
@@ -183,19 +184,24 @@ shell / Barra Draco" da SettingsWindow também troca.
   (2) Animação de ENTRADA numa janela recém `visible = true` roda no vazio até a surface mapear —
   espere `onBackingWindowVisibleChanged` (+40 ms) antes de mudar a property animada, senão a
   bola/barra já aparecem quase no lugar final.
-- **DracoBar** = `PanelWindow` no topo com `margins` (flutuante, não encosta nas bordas), cantos
-  arredondados, `exclusionMode: Normal` + `exclusiveZone: dracoBarH + dracoGap` — o compositor soma
-  a margem do topo sozinho (protocolo layer-shell: "the exclusive zone includes the margin") e ainda
-  aplica os `gaps` do niri entre a barra e as janelas (por isso `dracoGap` padrão é 0 e
-  `dracoMarginSide` = 10 alinha a barra com as janelas). Três blocos: esquerda (lançador, relógio →
+- **DracoBar** = `PanelWindow` de ponta a ponta no topo (surface = folga do topo + barra + faixa da
+  sombra). A barra em si é um `Item` centralizado com `dracoWidthFrac` (80%) da largura, COLADA no
+  topo (`dracoMarginTop` 0; > 0 arredonda também em cima), cantos de baixo `dracoRadius`, fundo
+  translúcido (`dracoBgOpacity`) e SOMBRA difusa desenhada num `Canvas` (`dracoShadow*`; a própria
+  forma é recortada com `destination-out` p/ a sombra não escurecer o fundo translúcido por baixo).
+  A `mask` cobre só a barra (laterais e faixa da sombra são click-through). `exclusionMode: Normal` +
+  `exclusiveZone: marginTop + barH + dracoGap`; o niri ainda aplica os `gaps` dele entre a barra e as
+  janelas (`dracoGap` padrão 0). Widgets "chapados" ([DracoCapsule.qml](ui/DracoCapsule.qml) só ganha
+  fundo no hover/popup aberto) dentro de três chips (`dracoCapsuleBg` @ `dracoChipOpacity`,
+  `component Chip` inline na DracoBar). Três blocos: esquerda (lançador, relógio →
   CalendarPopup, RAM+CPU → RamPopup, temperatura → TempPopup), centro (título da janela ATIVA deste
   monitor com ícone do app via `DesktopEntries.heuristicLookup`; sem janela, cápsulas dos workspaces —
   mín. `dracoWsMin`, fantasmas só visuais; clique troca) e direita (saída/mic: esquerdo mudo, scroll
   volume, direito AudioDevices; gravação DESTE monitor; lâmpada do idle; engrenagem; bandeja: esquerdo
-  foca a janela, direito TrayMenu). Scroll no fundo da barra troca workspace (wrap 1↔N). Cada widget é
-  uma [DracoCapsule.qml](ui/DracoCapsule.qml) (ícone/imagem + texto, 2º par opcional, hover/ativo,
-  sinais clicked/rightClicked/wheel; sem `wheelEnabled` a roda passa p/ o fundo). Aqui a interação é por
-  MouseArea por widget (layout estático) — o hit-test geométrico é só da ShellWindow.
+  foca a janela, direito TrayMenu). Scroll no fundo da barra troca workspace (wrap 1↔N). A DracoCapsule
+  tem ícone/imagem + texto, 2º par opcional e sinais clicked/rightClicked/wheel (sem `wheelEnabled` a
+  roda passa p/ o fundo). Aqui a interação é por MouseArea por widget (layout estático) — o hit-test
+  geométrico é só da ShellWindow.
 - Os popups são REUTILIZADOS: `CalendarPopup/TempPopup/RamPopup` ganharam `floating: true` (cartão solto
   abaixo da barra com `dracoPopupGap`, 4 cantos `dracoRadius`, borda, fundo `dracoBg`) e
   `TrayMenu/AudioDevices` ganharam `below: true` (abrem ABAIXO do ponto em vez de acima). O anchor

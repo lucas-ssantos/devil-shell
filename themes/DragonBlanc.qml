@@ -55,6 +55,7 @@ Singleton {
 
     // ── Extras ──
     readonly property color dimGreen:  "#e8dcd8"   // (antigo "verde apagado" → sigilo sutil, quase a cor da bola)
+    readonly property color shadow:    "#2a1418"   // sombra (barra Draco): borgonha bem escura (sombra é escura mesmo no tema claro)
 
     // ── Espectro do visualizador CAVA (interno → meio → pontas) ──
     readonly property color cavaInner: "#7a1a24"   // borgonha escura
