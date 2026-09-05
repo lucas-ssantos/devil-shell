@@ -300,11 +300,6 @@ PanelWindow {
                 iconOpacity: IdleService.inhibited ? 1.0 : 0.55
                 onClicked: IdleService.toggle()
             }
-            DracoCapsule {                                   // configurações do shell
-                icon: Config.iconConfig
-                active: Settings.open
-                onClicked: Settings.open = true
-            }
             Rectangle {                                      // bandeja (system tray)
                 id: trayCap
                 visible: SystemTray.items.values.length > 0
@@ -365,6 +360,11 @@ PanelWindow {
                         }
                     }
                 }
+            }
+            DracoCapsule {                                   // configurações do shell
+                icon: Config.iconConfig
+                active: Settings.open
+                onClicked: Settings.open = true
             }
         }
     }
