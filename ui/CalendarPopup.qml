@@ -61,7 +61,16 @@ PopupWindow {
     readonly property var monthNames: ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
                                         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
     readonly property var weekDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
-    readonly property var today: new Date()
+
+    // "hoje" reativo (não fixo na criação): sem isso, o destaque do dia atual ficava
+    // preso na data de quando o qs foi iniciado, já que este popup é criado uma vez
+    // por monitor e nunca é destruído (ver TopCapsules.qml). Precisão de hora é o
+    // suficiente p/ pegar a virada da meia-noite sem acordar o processo toda hora.
+    // (não deriva `viewDate` daqui: como `cells` depende dos dois, escrever um a partir
+    // do outro closure num `on...Changed` gera loop de binding — ver openAt() acima,
+    // que já resincroniza `viewDate` com o mês atual toda vez que o popup abre.)
+    SystemClock { id: sysClock; precision: SystemClock.Hours }
+    readonly property var today: sysClock.date
 
     // 42 células (6 semanas): dias do mês anterior/seguinte entram apagados p/ a grade ficar cheia
     readonly property var cells: {
