@@ -8,6 +8,10 @@ ela sobe e abre um **menu radial de cristais**; os **workspaces** aparecem como 
 e há um **visualizador de áudio (CAVA)** ao fundo, no estilo do [Cavasik](https://github.com/TheWisker/Cavasik)
 (espectro suave preenchido na barra inferior + um círculo pulsante ao redor da bola).
 
+Esse é o modo **Devil**. `Mod+Ctrl+Return` alterna para o modo **Draco**: bola, cristais e cápsulas
+somem e entra uma **barra flutuante no topo** (estilo [Noctalia](https://github.com/noctalia-dev/noctalia-shell)),
+com as mesmas funções em cápsulas — e as janelas do niri ficam abaixo dela, com gap.
+
 > Tudo é hot-reloaded: salvar qualquer `.qml` recarrega o shell na hora.
 
 ---
@@ -25,6 +29,13 @@ e há um **visualizador de áudio (CAVA)** ao fundo, no estilo do [Cavasik](http
     **clique direito** abre o **seletor de dispositivo** (saída/entrada).
   - **4ª — Bandeja (system tray):** ícones dos apps; **esquerdo** foca a janela, **direito** abre o
     menu do app (menu estilizado no tema).
+- **Modo Draco** (`Mod+Ctrl+Return`, `qs ipc call mode toggle`, ou a janela de configurações):
+  barra flutuante no topo, por monitor. **Esquerda:** lançador · relógio (popup do calendário) ·
+  RAM/CPU (popup do sistema) · temperatura (popup de temperaturas). **Centro:** título da janela
+  ativa do monitor (com ícone do app); sem janela, cápsulas dos workspaces (clique troca).
+  **Direita:** saída e microfone (esquerdo = mudo, scroll = volume, direito = dispositivos) ·
+  gravação de tela · lock/idle · configurações · bandeja (esquerdo foca, direito abre o menu).
+  Scroll no fundo da barra troca o workspace. O modo fica salvo (`shellMode` no `settings.json`).
 - **Notificações** (toast no topo-centro do monitor focado) — o Quickshell atua como servidor
   de notificações freedesktop.
 - **Tema centralizado** (Catppuccin Mocha) e **toda** a customização num só lugar, com janela de
@@ -140,6 +151,9 @@ qs                       # inicia o Quickshell carregando ./shell.qml
 pkill quickshell; qs     # reinicia
 ```
 
+Keybinds no `config.kdl` do niri: `Mod+Space` abre o lançador e `Mod+Ctrl+Return` alterna os modos
+Devil/Draco (`spawn "qs" "ipc" "call" "mode" "toggle"`).
+
 Em uso normal o `qs` é lançado pelo niri (`spawn-at-startup "qs"` no `~/.config/niri/config.kdl`);
 ao subir, o próprio `qs` sobe os daemons da sessão (wallpaper, bluetooth, idle-lock) via
 `services/session.sh`. Os `console.log` só aparecem se o `qs` for iniciado por um terminal
@@ -181,17 +195,17 @@ Config.qml       config central (singleton) — todos os valores ajustáveis
 themes/          Theme (seletor) + paletas CrimsonDevil e InfernalRose (os hex)
 services/        NiriService, AudioService, CaptureService, MediaService, WeatherService,
                  NotificationService, StartupService, IdleService, LauncherService,
-                 Settings, ThemeExport + session.sh
+                 Settings, ThemeExport, ModeService (devil/draco) + session.sh
 cava/            CavaService, CavaWindow, CavaBars, CavaRing + cava.conf
 windows/         ShellWindow (UI interativa), NotificationWindow (toasts), SettingsWindow,
-                 LauncherWindow (lançador)
+                 LauncherWindow (lançador), DracoBar (barra do modo draco)
 ui/              MenuBall, Crystal, GothicCorners, AudioMenu, AudioDevices, TrayMenu,
-                 SettingsField, Capsule, TopCapsules
+                 SettingsField, Capsule, TopCapsules, DracoCapsule, CalendarPopup/TempPopup/RamPopup
 ```
 
 - **Por monitor** (`Variants`): `CavaWindow` (camada de baixo) + `ShellWindow` (camada de cima) +
-  `TopCapsules` (cápsulas do topo). `NotificationWindow`, `SettingsWindow` e `LauncherWindow` são
-  únicas (monitor focado).
+  `TopCapsules` (cápsulas do topo) no modo devil; `DracoBar` no modo draco. `NotificationWindow`,
+  `SettingsWindow` e `LauncherWindow` são únicas (monitor focado).
 - **Inicialização da sessão centralizada no qs:** `StartupService` (chamado pelo `shell.qml`) sobe
   wallpaper / bluetooth / idle-lock via `services/session.sh` (pedido ao compositor por
   `niri msg action spawn-sh`).

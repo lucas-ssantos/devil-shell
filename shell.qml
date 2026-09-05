@@ -6,12 +6,14 @@ import Quickshell
 import QtQuick
 import "root:/services"   // NiriService, StartupService
 import "root:/cava"       // CavaService, CavaWindow
-import "root:/windows"    // ShellWindow, NotificationWindow
+import "root:/windows"    // ShellWindow, NotificationWindow, DracoBar
 import "root:/ui"         // TopCapsules
 
 // Ponto de entrada: só liga os serviços, os dados e as janelas por monitor.
 // A lógica/visual fica nos componentes (ShellWindow, MenuBall, Crystal,
 // GothicCorners, CavaWindow, CavaBars, CavaRing, CavaService, NiriService).
+// Dois MODOS (Config.shellMode, alternado por Mod+Ctrl+Return → ModeService): "devil"
+// = bola + cristais + cápsulas do topo; "draco" = só a barra flutuante do topo (DracoBar).
 Scope {
     id: root
 
@@ -22,11 +24,12 @@ Scope {
     // Sobe os daemons da sessão (blueman, idle/lock) centralizados no qs — ver
     // services/StartupService.qml e services/session.sh. O wallpaper (awww) sobe
     // pelo WallpaperService (última escolha persistida; modo /bg do lançador).
-    // O ThemeExport.init() só instancia o singleton p/ registrar o IPC.
+    // ThemeExport.init()/ModeService.init() só instanciam os singletons p/ registrar os IPCs.
     Component.onCompleted: {
         StartupService.start()
         WallpaperService.init()
         ThemeExport.init()
+        ModeService.init()
     }
 
     // ── Dados (data-driven) ──
@@ -74,9 +77,15 @@ Scope {
                     levels: cava.levels
                 }
 
-                // cápsulas retráteis no topo (mídia / temperatura)
+                // cápsulas retráteis no topo (mídia / temperatura) — só no modo devil
                 TopCapsules {
                     modelData: unit.modelData
+                }
+
+                // barra flutuante do topo — só no modo draco (substitui bola/cristais/cápsulas)
+                DracoBar {
+                    modelData: unit.modelData
+                    niri: niriSvc
                 }
             }
         }

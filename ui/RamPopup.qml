@@ -9,7 +9,8 @@ import "root:/"           // Config (raiz)
 // mesma linguagem visual do TempPopup/CalendarPopup, para parecer uma extensão da cápsula.
 PopupWindow {
     id: root
-    property var ctx        // janela-âncora (TopCapsules -> bar)
+    property var ctx        // janela-âncora (TopCapsules -> bar, ou DracoBar)
+    property bool floating: false   // barra Draco: cartão solto abaixo da barra (folga, 4 cantos redondos, borda)
     property real px: 0     // centro-X/base da CÁPSULA (coord. de `ctx`)
     property real py: 0
     property bool revealed: false   // controla a animação de abrir/fechar (ver `card` abaixo)
@@ -37,7 +38,7 @@ PopupWindow {
     // centralizado com a cápsula, encostado embaixo dela sem vão (parece brotar dali)
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2
-    anchor.rect.y: py
+    anchor.rect.y: py + (floating ? Config.dracoPopupGap : 0)
     anchor.rect.width: 1
     anchor.rect.height: 1
 
@@ -60,11 +61,13 @@ PopupWindow {
         width: parent.width
         height: root.revealed ? root.implicitHeight : 0
         clip: true
-        color: Config.capsuleBg
-        topLeftRadius: 0
-        topRightRadius: 0
-        bottomLeftRadius: Config.capsuleRadius
-        bottomRightRadius: Config.capsuleRadius
+        color: root.floating ? Config.dracoBg : Config.capsuleBg
+        topLeftRadius: root.floating ? Config.dracoRadius : 0
+        topRightRadius: root.floating ? Config.dracoRadius : 0
+        bottomLeftRadius: root.floating ? Config.dracoRadius : Config.capsuleRadius
+        bottomRightRadius: root.floating ? Config.dracoRadius : Config.capsuleRadius
+        border.width: root.floating ? 1 : 0
+        border.color: Config.dracoBorder
         Behavior on height { NumberAnimation { duration: Config.capsuleAnim; easing.type: Easing.OutCubic } }
 
         Column {

@@ -9,7 +9,10 @@ import "root:/"   // Config (raiz)
 // escala) — para parecer uma extensão da cápsula, não uma janela solta.
 PopupWindow {
     id: root
-    property var ctx        // janela-âncora (TopCapsules -> bar)
+    property var ctx        // janela-âncora (TopCapsules -> bar, ou DracoBar)
+    // flutuante (barra Draco): cartão solto abaixo da barra, com folga (dracoPopupGap),
+    // TODOS os cantos arredondados e borda — em vez do canto gótico fundido à cápsula
+    property bool floating: false
     property real px: 0     // centro-X/base da cápsula (coord. de `ctx`)
     property real py: 0
     property var viewDate: new Date()   // dia 1 do mês mostrado
@@ -46,7 +49,7 @@ PopupWindow {
     // centralizado com a cápsula, encostado embaixo dela sem vão (parece brotar dali)
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2
-    anchor.rect.y: py
+    anchor.rect.y: py + (floating ? Config.dracoPopupGap : 0)
     anchor.rect.width: 1
     anchor.rect.height: 1
 
@@ -110,6 +113,10 @@ PopupWindow {
             width: root.implicitWidth
             height: root.implicitHeight
             antialiasing: true
+            property color bg: root.floating ? Config.dracoBg : Config.capsuleBg
+            property color edge: Config.dracoBorder
+            onBgChanged: requestPaint()
+            onEdgeChanged: requestPaint()
             onWidthChanged: requestPaint()
             onHeightChanged: requestPaint()
             Component.onCompleted: requestPaint()
@@ -118,6 +125,23 @@ PopupWindow {
                 const g = getContext("2d")
                 g.reset()
                 const w = width, h = height
+                // flutuante (Draco): retângulo arredondado nos 4 cantos + borda fina
+                if (root.floating) {
+                    const rr = Math.max(0, Math.min(Config.dracoRadius, w / 2, h / 2))
+                    g.beginPath()
+                    g.moveTo(rr, 0.5)
+                    g.arcTo(w - 0.5, 0.5, w - 0.5, h - 0.5, rr)
+                    g.arcTo(w - 0.5, h - 0.5, 0.5, h - 0.5, rr)
+                    g.arcTo(0.5, h - 0.5, 0.5, 0.5, rr)
+                    g.arcTo(0.5, 0.5, w - 0.5, 0.5, rr)
+                    g.closePath()
+                    g.fillStyle = bg
+                    g.fill()
+                    g.strokeStyle = edge
+                    g.lineWidth = 1
+                    g.stroke()
+                    return
+                }
                 // canto gótico = curva OGEE (S: primeiro arco convexo, depois côncavo — a
                 // mesma dupla curvatura de um arco/ogiva gótico), não um arredondamento
                 // simples. Profundidade D = metade da diferença de largura popup↔cápsula,
@@ -129,7 +153,7 @@ PopupWindow {
                 const leftC = w / 2 - Config.capsuleW / 2
                 const rightC = w / 2 + Config.capsuleW / 2
 
-                g.fillStyle = Config.capsuleBg
+                g.fillStyle = bg
                 g.beginPath()
                 g.moveTo(leftC, 0)
                 g.lineTo(rightC, 0)

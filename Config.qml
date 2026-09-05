@@ -248,6 +248,48 @@ Singleton {
     // ── Popups de temperatura e RAM (botões CPU/RAM da cápsula direita) ──
     readonly property real   tempPopupW: Settings.get("tempPopupW", 190)
 
+
+    // ── Modo do shell: "devil" (bola + cristais no rodapé) | "draco" (barra no topo) ──
+    // Alternado pelo ModeService (Mod+Ctrl+Return → `qs ipc call mode toggle`) e pela janela
+    // de configurações; persistido no Settings. Cada janela lê isDraco p/ decidir se aparece
+    // (ShellWindow/TopCapsules somem no draco; a DracoBar só existe nele).
+    readonly property string shellMode: Settings.get("shellMode", "devil")
+    readonly property bool   isDraco: shellMode === "draco"
+
+    // ── Barra Draco (modo draco; windows/DracoBar.qml + ui/DracoCapsule.qml) ──
+    // Barra FLUTUANTE no topo (estilo Noctalia): não encosta nas bordas (margens), cantos
+    // arredondados, widgets em cápsulas, e reserva espaço (exclusive zone) p/ as janelas do
+    // niri ficarem abaixo — o niri ainda soma os `gaps` dele entre a barra e a janela;
+    // dracoGap é folga EXTRA além disso.
+    readonly property real   dracoBarH: Settings.get("dracoBarH", 36)              // altura da barra
+    readonly property real   dracoMarginTop: Settings.get("dracoMarginTop", 6)     // folga do topo da tela
+    readonly property real   dracoMarginSide: Settings.get("dracoMarginSide", 10)  // folga das laterais (= gaps do niri alinha com as janelas)
+    readonly property real   dracoGap: Settings.get("dracoGap", 0)                 // folga extra barra → janelas (além dos gaps do niri)
+    readonly property real   dracoRadius: Settings.get("dracoRadius", 12)          // cantos da barra e dos popups flutuantes
+    readonly property real   dracoPad: Settings.get("dracoPad", 8)                 // recuo interno (laterais)
+    readonly property real   dracoSpacing: Settings.get("dracoSpacing", 6)         // espaço entre as cápsulas
+    readonly property real   dracoCapsuleH: Settings.get("dracoCapsuleH", 26)      // altura das cápsulas (widgets)
+    readonly property real   dracoCapsulePad: Settings.get("dracoCapsulePad", 10)  // recuo interno das cápsulas
+    readonly property int    dracoIconSize: Settings.get("dracoIconSize", 14)
+    readonly property int    dracoTextSize: Settings.get("dracoTextSize", 12)
+    readonly property real   dracoTitleMaxW: Settings.get("dracoTitleMaxW", 520)   // largura máx do título da janela (corta com …)
+    readonly property int    dracoWsMin: Settings.get("dracoWsMin", 3)             // mínimo de cápsulas de workspace (completa c/ fantasmas)
+    readonly property real   dracoPopupGap: Settings.get("dracoPopupGap", 8)       // folga barra → popups (calendário/sistema/temperatura/menus)
+    readonly property string dracoClockFormat: Settings.get("dracoClockFormat", "HH:mm")
+    readonly property int    dracoAnim: Settings.get("dracoAnim", 160)             // hover/troca de estado (ms)
+    readonly property real   dracoBgOpacity: Settings.get("dracoBgOpacity", 0.96)  // opacidade do fundo da barra (0–1)
+    readonly property color  dracoBg: Settings.get("dracoBg", Theme.crust)          // mesma cor da bola (Config.ball)
+    readonly property color  dracoBorder: Settings.get("dracoBorder", Theme.surface0)
+    readonly property color  dracoCapsuleBg: Settings.get("dracoCapsuleBg", Theme.surface0)
+    readonly property color  dracoCapsuleHover: Settings.get("dracoCapsuleHover", Theme.surface1)
+    readonly property color  dracoText: Settings.get("dracoText", Theme.text)
+    readonly property color  dracoSub: Settings.get("dracoSub", Theme.subtext0)      // texto apagado (fantasmas, mudo, janela sem foco)
+    readonly property color  dracoAccent: Settings.get("dracoAccent", Theme.mauve)   // workspace ativo / botão do lançador
+    readonly property color  dracoAccentText: Settings.get("dracoAccentText", Theme.crust)   // texto sobre o acento
+    readonly property string iconLauncher: Settings.get("iconLauncher", "")   // logo do Debian (nf-linux-debian) — botão do lançador
+    readonly property string iconClock: Settings.get("iconClock", "")         // relógio (nf-fa-clock_o)
+    readonly property string iconCpu: Settings.get("iconCpu", "󰘚")             // chip (nf-md-chip) — uso de CPU
+
     // ── Fontes (px) ─────────────────────────────────────
     readonly property int  crystalIconSize: Settings.get("crystalIconSize", 13)
     readonly property int  ballNumberSize: Settings.get("ballNumberSize", 18)

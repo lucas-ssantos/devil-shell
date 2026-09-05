@@ -15,6 +15,7 @@ PanelWindow {
     property var modelData
 
     screen: modelData
+    visible: !Config.isDraco   // no modo draco a barra ocupa o topo
     WlrLayershell.layer: WlrLayer.Top
     color: "transparent"
     anchors { top: true; left: true; right: true }

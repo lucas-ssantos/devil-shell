@@ -10,6 +10,9 @@ inferior de cada monitor com uma **escadaria de cristais** fincados no chão dos
 (sistema, gravação, áudio…) — hover/clique na bola faz todos "emergirem do chão"; hover num
 cristal ergue só ele —, mostra os workspaces como pontos dentro da bola e tem um visualizador
 de áudio **CAVA** ao fundo. Toda a configuração é hot-reloaded pelo Quickshell ao salvar.
+Esse é o modo **Devil**; há também o modo **Draco** (`Mod+Ctrl+Return` alterna), em que bola,
+cristais e cápsulas somem e entra uma **barra flutuante no topo** (estilo Noctalia) — ver
+"Modos Devil × Draco" abaixo.
 
 Não há build, lint ou testes — é QML interpretado. Os comentários do código são em **português**;
 mantenha esse padrão.
@@ -22,7 +25,10 @@ pkill quickshell; qs   # reinicia
 ```
 
 - **Hot reload:** salvar qualquer `.qml` recarrega automaticamente. Um erro de QML aborta o
-  carregamento inteiro (a tela some); cheque a saída do terminal.
+  carregamento inteiro (a tela some); cheque a saída do terminal. ⚠️ Copiar MUITOS arquivos de
+  uma vez (rsync/cp de uma pasta inteira) pode derrubar o qs num segfault do watcher
+  (`QFileSystemWatcher::files`, visto no 0.3.0) — ele reinicia sozinho, mas prefira sincronizar
+  arquivo a arquivo ou testar antes numa cópia com `qs -p` (ver smoke-test abaixo).
 - **Glifos Nerd Font em strings:** os ícones do `Config.qml` (`iconOutput`, `iconConfig`, `iconRecord`…)
   são caracteres da Área de Uso Privado (ex.: U+F028, U+F013). Editores/ferramentas (cat -v, alguns
   diffs) os mostram como vazios `""` — eles ESTÃO lá. Ao reescrever o `Config.qml`, NÃO apague o
@@ -95,12 +101,14 @@ settings.default.json "padrão de fábrica" lido pelo botão Restaurar padrão
 themes/               Theme (seletor) + paletas (CrimsonDevil, InfernalRose)
 services/             singletons/escopos não-visuais (niri, áudio, captura, mídia, clima,
                       notificações, PolkitService, StartupService, IdleService, LauncherService,
-                      WallpaperService (awww, modo /bg), Settings, ThemeExport) + session.sh
+                      WallpaperService (awww, modo /bg), Settings, ThemeExport,
+                      ModeService (modo devil/draco + IPC)) + session.sh
 cava/                 tudo do visualizador CAVA (serviço, janela, barras, anel) + cava.conf
 windows/              janelas interativas: ShellWindow, NotificationWindow, PolkitWindow,
-                      SettingsWindow, LauncherWindow (lançador próprio)
+                      SettingsWindow, LauncherWindow (lançador próprio), DracoBar (barra do modo draco)
 ui/                   componentes visuais "burros": MenuBall, Crystal, GothicCorners, AudioMenu,
-                      AudioDevices, TrayMenu, SettingsField, Capsule, TopCapsules
+                      AudioDevices, TrayMenu, SettingsField, Capsule, TopCapsules, DracoCapsule,
+                      CalendarPopup/TempPopup/RamPopup (popups das cápsulas do topo e da barra Draco)
 ```
 
 ⚠️ **A auto-descoberta do Quickshell por nome só vale para a PASTA RAIZ.** Um arquivo na raiz
@@ -148,6 +156,44 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    ver [PolkitService.qml](services/PolkitService.qml)), a
    [SettingsWindow.qml](windows/SettingsWindow.qml) (overlay modal de configurações) e a
    [LauncherWindow.qml](windows/LauncherWindow.qml) (lançador próprio).
+
+### Modos Devil × Draco (`Mod+Ctrl+Return`)
+`Config.shellMode` (`"devil"` | `"draco"`, persistido no Settings como `shellMode`) e o atalho
+`Config.isDraco`. [ModeService.qml](services/ModeService.qml) (singleton, `ModeService.init()` no
+`shell.qml`) faz `toggle()/setMode()` via `Settings.set` e expõe o IPC **`mode`**:
+`qs ipc call mode toggle|devil|draco|current`. O keybind do niri é
+`Mod+Ctrl+Return { spawn "qs" "ipc" "call" "mode" "toggle"; }` (config.kdl). O grupo "Modo do
+shell / Barra Draco" da SettingsWindow também troca.
+- Cada janela decide sozinha se existe: `ShellWindow` e `TopCapsules` têm `visible: !Config.isDraco`;
+  [DracoBar.qml](windows/DracoBar.qml) (uma por monitor, no mesmo `Variants` do `shell.qml`) tem
+  `visible: Config.isDraco`. O CAVA do rodapé fica nos dois modos. Trocar de modo NÃO recarrega o qs.
+- **DracoBar** = `PanelWindow` no topo com `margins` (flutuante, não encosta nas bordas), cantos
+  arredondados, `exclusionMode: Normal` + `exclusiveZone: dracoBarH + dracoGap` — o compositor soma
+  a margem do topo sozinho (protocolo layer-shell: "the exclusive zone includes the margin") e ainda
+  aplica os `gaps` do niri entre a barra e as janelas (por isso `dracoGap` padrão é 0 e
+  `dracoMarginSide` = 10 alinha a barra com as janelas). Três blocos: esquerda (lançador, relógio →
+  CalendarPopup, RAM+CPU → RamPopup, temperatura → TempPopup), centro (título da janela ATIVA deste
+  monitor com ícone do app via `DesktopEntries.heuristicLookup`; sem janela, cápsulas dos workspaces —
+  mín. `dracoWsMin`, fantasmas só visuais; clique troca) e direita (saída/mic: esquerdo mudo, scroll
+  volume, direito AudioDevices; gravação DESTE monitor; lâmpada do idle; engrenagem; bandeja: esquerdo
+  foca a janela, direito TrayMenu). Scroll no fundo da barra troca workspace (wrap 1↔N). Cada widget é
+  uma [DracoCapsule.qml](ui/DracoCapsule.qml) (ícone/imagem + texto, 2º par opcional, hover/ativo,
+  sinais clicked/rightClicked/wheel; sem `wheelEnabled` a roda passa p/ o fundo). Aqui a interação é por
+  MouseArea por widget (layout estático) — o hit-test geométrico é só da ShellWindow.
+- Os popups são REUTILIZADOS: `CalendarPopup/TempPopup/RamPopup` ganharam `floating: true` (cartão solto
+  abaixo da barra com `dracoPopupGap`, 4 cantos `dracoRadius`, borda, fundo `dracoBg`) e
+  `TrayMenu/AudioDevices` ganharam `below: true` (abrem ABAIXO do ponto em vez de acima). O anchor
+  fica alguns px fora da surface da barra (o gap) e o niri posiciona normalmente.
+- [NiriService.qml](services/NiriService.qml) agora guarda `title`/`appId`/`focused` por janela,
+  `focusedWindowId` (evento `WindowFocusChanged`) e `activeWinByOutput` (janela ativa do workspace ativo
+  de cada output, via `active_window_id` + evento `WorkspaceActiveWindowChanged`; recalculado SEM
+  reatribuir `monitors`, senão a bola repintaria a cada clique). Também concentra as ações compartilhadas
+  pelas duas UIs: `focusWorkspaceOn(output, idx)`, `focusWindow(id)`, `focusTrayApp(item)` (casa
+  app_id/título com o `windowInfo` em memória — não roda mais `niri msg --json windows`).
+- ⚠️ Surfaces layer-shell com `exclusiveZone: 0` (NotificationWindow, TopCapsules…) são EMPURRADAS pelo
+  niri p/ fora da zona exclusiva da barra (protocolo: zero = "quer ser movida p/ não cobrir zonas
+  exclusivas"). Logo os toasts já descem sozinhos abaixo da barra — não some offset manual (dobra).
+  Janela em fullscreen cobre a barra (camada Top), como qualquer barra.
 
 ### Inicialização da sessão centralizada no Quickshell
 Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms, proxy de tray XEmbed) rodam
@@ -370,4 +416,5 @@ disparado pelo StartupService; o awww-daemon do wallpaper sobe à parte, pelo Wa
 Gravação de tela usa `gpu-screen-recorder` (cristal de Sistema;
 setup único: `sudo setcap cap_sys_admin+ep /usr/bin/gsr-kms-server` — sem isso, e sem pkexec,
 a captura KMS falha; e `pgrep`/`pkill -x` usam o comm truncado `gpu-screen-reco`). Bootstrap da sessão: `spawn-at-startup` no `~/.config/niri/config.kdl`
-(lança o qs; garanta que nenhum swaync/mako suba junto).
+(lança o qs; garanta que nenhum swaync/mako suba junto). Keybinds do shell no config.kdl: `Mod+Space`
+(lançador, `qs ipc call launcher toggle`) e `Mod+Ctrl+Return` (modo devil/draco, `qs ipc call mode toggle`).

@@ -11,6 +11,7 @@ PopupWindow {
     property var trayItem            // SystemTrayItem (tem .menu)
     property real px: 0
     property real py: 0
+    property bool below: false       // barra Draco: abre ABAIXO do ponto (padrão: acima, cristais)
 
     // pilha de navegação de submenus; currentMenu alimenta o QsMenuOpener
     property var menuStack: []
@@ -55,7 +56,7 @@ PopupWindow {
     // base do menu logo acima do ponto clicado.
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2
-    anchor.rect.y: py - root.implicitHeight - Config.trayMenuGap
+    anchor.rect.y: below ? py + Config.dracoPopupGap : py - root.implicitHeight - Config.trayMenuGap
     anchor.rect.width: 1
     anchor.rect.height: 1
 
@@ -109,7 +110,7 @@ PopupWindow {
         // animação de entrada: aparece crescendo a partir da base (abre pra cima)
         opacity: root.visible ? 1 : 0
         scale: root.visible ? 1 : 0.9
-        transformOrigin: Item.Bottom
+        transformOrigin: root.below ? Item.Top : Item.Bottom
         Behavior on opacity { NumberAnimation { duration: Config.trayMenuAnim; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: Config.trayMenuAnim; easing.type: Easing.OutCubic } }
 

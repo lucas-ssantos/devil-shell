@@ -21,6 +21,7 @@ PanelWindow {
     property var levels: []         // níveis do cava
 
     screen: modelData
+    visible: !Config.isDraco   // modo draco: a barra do topo (DracoBar) substitui bola/cristais
     color: "transparent"
     anchors { bottom: true; left: true; right: true }   // largura total -> barra atravessa a tela
     exclusiveZone: 0
@@ -125,19 +126,9 @@ PanelWindow {
     // → caminho mais curto). Consumida pelo anel do MenuBall ao animar a viagem.
     property int wsTravelDir: 0
 
-    // Troca para o workspace `n` (idx do niri, 1-based) NESTE monitor. O
-    // `focus-workspace` do niri age no monitor FOCADO, então, se este monitor não
-    // estiver focado, focamos ele antes (`focus-monitor <nome>` aceita o nome direto).
-    function viewTagHere(n) {
-        const me = monData
-        if (!me) return
-        if (me.active) {                                   // já focado -> troca direto
-            proc.exec(["niri", "msg", "action", "focus-workspace", "" + n])
-            return
-        }
-        proc.exec(["sh", "-c",
-            "niri msg action focus-monitor '" + modelData.name + "'; niri msg action focus-workspace " + n])
-    }
+    // Troca para o workspace `n` (idx do niri, 1-based) NESTE monitor (focando o monitor
+    // antes, se preciso — lógica compartilhada com a barra Draco em NiriService).
+    function viewTagHere(n) { if (niri && monData) niri.focusWorkspaceOn(modelData.name, n) }
 
     // ── Cristais multi-botão (áudio/sistema) ─────────────
     // seção (0 = base/chão … n-1 = na ponta) sob o cursor, dividindo o cristal em n
@@ -236,47 +227,9 @@ PanelWindow {
     Process { id: proc }
 
     // ── Foco da janela do app a partir do tray (esquerdo) ──────────────
-    // O activate() do SNI é incoerente (alterna/não rouba foco). Em vez disso, achamos
-    // a janela do app (niri msg --json windows, casando por app_id/título) e focamos com
-    // `focus-window --id`, que foca qualquer janela incondicionalmente. Sem janela -> activate().
-    property var pendingFocusTray: null
-    function focusTrayApp(it) {
-        pendingFocusTray = it
-        clientsProc.exec(["niri", "msg", "--json", "windows"])
-    }
-    function matchTrayClient(clients, tray) {
-        function norm(s) { return (s || "").toString().toLowerCase() }
-        const fields = [norm(tray.id), norm(tray.title), norm(tray.tooltipTitle)].filter(s => s.length > 0)
-        // 1) por app_id (sinal mais confiável: ex. tray "steam" -> app_id "steam")
-        for (let i = 0; i < clients.length; i++) {
-            const a = norm(clients[i].app_id)
-            if (!a) continue
-            for (let j = 0; j < fields.length; j++)
-                if (a.indexOf(fields[j]) >= 0 || fields[j].indexOf(a) >= 0) return clients[i]
-        }
-        // 2) fallback por título
-        for (let i = 0; i < clients.length; i++) {
-            const t = norm(clients[i].title)
-            for (let j = 0; j < fields.length; j++)
-                if (fields[j].length >= 4 && t.indexOf(fields[j]) >= 0) return clients[i]
-        }
-        return null
-    }
-    Process {
-        id: clientsProc
-        stdout: SplitParser {
-            onRead: line => {
-                const it = win.pendingFocusTray
-                win.pendingFocusTray = null
-                if (!it) return
-                let clients
-                try { clients = JSON.parse(line) } catch (e) { it.activate(); return }
-                const c = win.matchTrayClient(clients ?? [], it)
-                if (c) proc.exec(["niri", "msg", "action", "focus-window", "--id", "" + c.id])
-                else it.activate()   // app sem janela aberta -> abre/ativa
-            }
-        }
-    }
+    // Lógica compartilhada com a barra Draco: NiriService.focusTrayApp casa o item da
+    // bandeja com uma janela (app_id/título) e foca com `focus-window --id`.
+    function focusTrayApp(it) { if (niri) niri.focusTrayApp(it) }
 
     // menu estilizado do item da bandeja (system tray), aberto no clique direito
     TrayMenu { id: trayMenu; ctx: win }

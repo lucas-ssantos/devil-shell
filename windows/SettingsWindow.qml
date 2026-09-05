@@ -93,6 +93,44 @@ PanelWindow {
                 { key: "pal_cavaTip", label: "cavaTip", ftype: "color" }
             ]}
         ]},
+        { title: "Modo do shell / Barra Draco", subs: [
+            { name: "", fields: [
+                { key: "shellMode", label: "Modo (Mod+Ctrl+Return alterna)", ftype: "select", options: ["devil", "draco"] }
+            ]},
+            { name: "Posicionamento", fields: [
+                { key: "dracoBarH", label: "Altura da barra", ftype: "real" },
+                { key: "dracoMarginTop", label: "Folga do topo", ftype: "real" },
+                { key: "dracoMarginSide", label: "Folga das laterais", ftype: "real" },
+                { key: "dracoGap", label: "Folga extra barra→janelas", ftype: "real" },
+                { key: "dracoRadius", label: "Raio dos cantos", ftype: "real" },
+                { key: "dracoPad", label: "Recuo interno", ftype: "real" },
+                { key: "dracoSpacing", label: "Espaço entre cápsulas", ftype: "real" },
+                { key: "dracoCapsuleH", label: "Altura das cápsulas", ftype: "real" },
+                { key: "dracoCapsulePad", label: "Recuo das cápsulas", ftype: "real" },
+                { key: "dracoIconSize", label: "Ícone", ftype: "int" },
+                { key: "dracoTextSize", label: "Texto", ftype: "int" },
+                { key: "dracoTitleMaxW", label: "Largura máx do título", ftype: "real" },
+                { key: "dracoWsMin", label: "Mínimo de workspaces", ftype: "int" },
+                { key: "dracoPopupGap", label: "Folga barra→popups", ftype: "real" }
+            ]},
+            { name: "Comportamento", fields: [
+                { key: "dracoClockFormat", label: "Formato do relógio", ftype: "string" }
+            ]},
+            { name: "Cores", fields: [
+                { key: "dracoBg", label: "Fundo da barra", ftype: "color" },
+                { key: "dracoBgOpacity", label: "Opacidade do fundo (0–1)", ftype: "real" },
+                { key: "dracoBorder", label: "Borda", ftype: "color" },
+                { key: "dracoCapsuleBg", label: "Cápsula", ftype: "color" },
+                { key: "dracoCapsuleHover", label: "Cápsula (hover/ativa)", ftype: "color" },
+                { key: "dracoText", label: "Texto (cor)", ftype: "color" },
+                { key: "dracoSub", label: "Texto apagado", ftype: "color" },
+                { key: "dracoAccent", label: "Acento (workspace ativo)", ftype: "color" },
+                { key: "dracoAccentText", label: "Texto sobre o acento", ftype: "color" }
+            ]},
+            { name: "Animações", fields: [
+                { key: "dracoAnim", label: "Hover/estado (ms)", ftype: "int" }
+            ]}
+        ]},
         { title: "Geral (janela e barra)", subs: [
             { name: "Posicionamento", fields: [
                 { key: "shellHeight", label: "Altura do shell", ftype: "int" },
@@ -402,6 +440,9 @@ PanelWindow {
                 { key: "iconCalendar", label: "Calendário", ftype: "string" },
                 { key: "iconGpu", label: "GPU", ftype: "string" },
                 { key: "iconRam", label: "RAM", ftype: "string" },
+                { key: "iconCpu", label: "CPU (barra Draco)", ftype: "string" },
+                { key: "iconClock", label: "Relógio (barra Draco)", ftype: "string" },
+                { key: "iconLauncher", label: "Lançador (barra Draco)", ftype: "string" },
                 { key: "iconPolkitLock", label: "Cadeado (polkit)", ftype: "string" }
             ]}
         ]}
