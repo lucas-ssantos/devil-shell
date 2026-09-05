@@ -104,7 +104,7 @@ PopupWindow {
     Rectangle {
         anchors.fill: parent
         color: Config.trayMenuBg
-        radius: Config.trayMenuRadius
+        radius: Config.windowRadius(Config.trayMenuRadius)   // no draco, casa com o raio da barra
         border.color: Config.trayMenuBorder
         border.width: 1
         // animação de entrada: aparece crescendo a partir da base (abre pra cima)

@@ -625,7 +625,7 @@ PanelWindow {
             NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
         }
         height: col.height + 24
-        radius: Config.launcherRadius
+        radius: Config.windowRadius(Config.launcherRadius)   // no draco, casa com o raio da barra
         color: Config.launcherBg
         border.color: Config.launcherBorder
         border.width: 1

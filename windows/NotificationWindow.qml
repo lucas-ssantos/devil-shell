@@ -96,7 +96,7 @@ PanelWindow {
                 implicitHeight: Math.max(iconImg.height, txt.implicitHeight) + 2 * Config.notifPad
                 height: implicitHeight
                 color: Config.notifBg
-                radius: Config.notifRadius
+                radius: Config.windowRadius(Config.notifRadius)   // no draco, casa com o raio da barra
                 border.color: Config.notifBorder
                 border.width: 1
 

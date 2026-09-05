@@ -37,6 +37,9 @@ e as janelas do niri ficam abaixo dela, com gap.
   **Direita:** saída e microfone (esquerdo = mudo, scroll = volume, direito = dispositivos) ·
   gravação de tela · lock/idle · configurações · bandeja (esquerdo foca, direito abre o menu).
   Scroll no fundo da barra troca o workspace. O modo fica salvo (`shellMode` no `settings.json`).
+  Nesse modo, as janelas do niri e as janelas do shell (lançador, configurações, notificações,
+  autenticação, menus) ganham cantos arredondados no mesmo raio da barra (`dracoRadius`); dá
+  pra desligar só o arredondamento das janelas do niri em "Arredondar também as janelas do niri".
 - **Notificações** (toast no topo-centro do monitor focado) — o Quickshell atua como servidor
   de notificações freedesktop.
 - **Tema centralizado** (Catppuccin Mocha) e **toda** a customização num só lugar, com janela de

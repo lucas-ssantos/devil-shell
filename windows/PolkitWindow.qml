@@ -67,7 +67,7 @@ PanelWindow {
         anchors.centerIn: parent
         width: Math.min(parent.width - 80, Config.polkitW)
         height: col.implicitHeight + 40
-        radius: Config.polkitRadius
+        radius: Config.windowRadius(Config.polkitRadius)   // no draco, casa com o raio da barra
         color: Config.polkitBg
         border.color: Config.polkitBorder
         border.width: 1

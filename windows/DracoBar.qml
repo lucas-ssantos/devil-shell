@@ -280,8 +280,8 @@ PanelWindow {
                 id: resCap
                 icon: Config.iconRam
                 label: SensorsService.ramUsage
-                icon2: Config.iconCpu
-                label2: SensorsService.cpuUsage
+                //icon2: Config.iconCpu
+                //label2: SensorsService.cpuUsage
                 active: ramPopup.visible
                 onClicked: bar.togglePopup(ramPopup, resCap)
             }

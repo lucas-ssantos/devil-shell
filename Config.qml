@@ -214,6 +214,9 @@ Singleton {
     readonly property color  polkitSub: Settings.get("polkitSub", Theme.subtext0)     // mensagem suplementar / dica
     readonly property color  polkitError: Settings.get("polkitError", Theme.red)      // falha de autenticação
 
+    // ── Janela de configurações (SettingsWindow; as cores vêm direto de Theme) ──
+    readonly property real   settingsRadius: Settings.get("settingsRadius", 16)   // cantos do painel (no draco vale dracoRadius, ver windowRadius)
+
     // ── Cápsulas do topo (mídia à esquerda, clima à direita) ──
     readonly property real   capsuleW: Settings.get("capsuleW", 230)         // largura da cápsula (a direita cabe 3 botões: RAM/calendário/CPU)
     readonly property real   capsuleH: Settings.get("capsuleH", 32)          // altura (quando estendida)
@@ -255,6 +258,13 @@ Singleton {
     // (ShellWindow/TopCapsules somem no draco; a DracoBar só existe nele).
     readonly property string shellMode: Settings.get("shellMode", "devil")
     readonly property bool   isDraco: shellMode === "draco"
+    // Raio dos cantos de uma janela do shell (lançador, configurações, notificações, polkit,
+    // menus da bandeja/áudio) conforme o modo: no draco TODAS usam o raio da barra
+    // (dracoRadius) — o mesmo que o niri aplica às janelas dos apps (window-rule gerada pelo
+    // ThemeExport.niriContent) — p/ tudo casar; no devil cada uma mantém o raio próprio (`own`).
+    // É função (e não N properties "efetivas") de propósito: o binding que a chama reavalia
+    // sozinho quando isDraco/dracoRadius mudam (o QML rastreia as properties lidas na função).
+    function windowRadius(own) { return isDraco ? dracoRadius : own }
 
     // ── Barra Draco (modo draco; windows/DracoBar.qml + ui/DracoCapsule.qml) ──
     // Barra COLADA no topo, ocupando uma fração da largura da tela (centralizada), cantos
@@ -266,7 +276,8 @@ Singleton {
     readonly property real   dracoWidthFrac: Settings.get("dracoWidthFrac", 0.8)   // fração da largura da tela (centralizada)
     readonly property real   dracoMarginTop: Settings.get("dracoMarginTop", 0)     // folga do topo (0 = colada; > 0 arredonda também em cima)
     readonly property real   dracoGap: Settings.get("dracoGap", 0)                 // folga extra barra → janelas (além dos gaps do niri)
-    readonly property real   dracoRadius: Settings.get("dracoRadius", 10)          // cantos (de baixo) da barra e dos popups flutuantes
+    readonly property real   dracoRadius: Settings.get("dracoRadius", 10)          // cantos (de baixo) da barra e dos popups flutuantes; no draco, também de TODAS as janelas (shell: windowRadius; niri: dracoRoundNiri)
+    readonly property bool   dracoRoundNiri: Settings.get("dracoRoundNiri", true)  // no draco, arredonda também as janelas do NIRI: window-rule `geometry-corner-radius <dracoRadius>` + `clip-to-geometry` no theme.kdl (ThemeExport.niriContent/exportNiri)
     readonly property real   dracoPad: Settings.get("dracoPad", 6)                 // recuo interno (laterais)
     readonly property real   dracoSpacing: Settings.get("dracoSpacing", 2)         // espaço entre widgets dentro de um chip
     readonly property real   dracoChipRadius: Settings.get("dracoChipRadius", 8)   // cantos dos chips (grupos) e do hover dos widgets

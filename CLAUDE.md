@@ -206,6 +206,28 @@ shell / Barra Draco" da SettingsWindow também troca.
   abaixo da barra com `dracoPopupGap`, 4 cantos `dracoRadius`, borda, fundo `dracoBg`) e
   `TrayMenu/AudioDevices` ganharam `below: true` (abrem ABAIXO do ponto em vez de acima). O anchor
   fica alguns px fora da surface da barra (o gap) e o niri posiciona normalmente.
+- **Cantos arredondados casando com a barra (`Config.dracoRadius`) no modo draco:** tanto as
+  janelas do SHELL quanto as janelas do NIRI seguem o mesmo raio da barra.
+  - Shell: `Config.windowRadius(own)` — no draco devolve `dracoRadius`, no devil devolve o
+    raio próprio do componente (`own`) — usado no painel do
+    [LauncherWindow.qml](windows/LauncherWindow.qml), da
+    [SettingsWindow.qml](windows/SettingsWindow.qml) (`settingsRadius`, novo — antes era um
+    `16` fixo), do [NotificationWindow.qml](windows/NotificationWindow.qml), do
+    [PolkitWindow.qml](windows/PolkitWindow.qml) e dos menus
+    [TrayMenu.qml](ui/TrayMenu.qml)/[AudioDevices.qml](ui/AudioDevices.qml) (usados também no
+    modo devil, pelos cristais — aí ficam com `trayMenuRadius`). `CalendarPopup`/`TempPopup`/
+    `RamPopup` já resolviam isso sozinhos via `floating` (ver bullet acima).
+  - Niri: `ThemeExport.niriContent()` acrescenta, SÓ com `Config.isDraco && Config.dracoRoundNiri`
+    (toggle na SettingsWindow, "on" por padrão), um `window-rule` sem `match` (vale p/ todas as
+    janelas) no `devil-shell/theme.kdl` com `geometry-corner-radius <dracoRadius>` +
+    `clip-to-geometry true` (o 2º é o que de fato corta o CONTEÚDO da janela no formato
+    arredondado, não só a borda — ver wiki `Configuration:-Window-Rules`). Quem aplica isso é
+    `ThemeExport.exportNiri()`, uma função DELIBERADAMENTE mais leve que `exportAll()` (só
+    reescreve o theme.kdl + `niri msg action load-config-file`, sem tocar kitty/vesktop/gtk nem
+    reiniciar os portais) — é ela (via `Connections { target: Config }`, debounced) que reage a
+    toda troca devil↔draco e a mudanças em `dracoRadius`/`dracoRoundNiri`, e também roda uma vez
+    no boot/reload (`ThemeExport.init()`). Fullscreen ignora isso sozinho (o niri zera o raio
+    nessa transição, ver `src/layout/tile.rs`).
 - [NiriService.qml](services/NiriService.qml) agora guarda `title`/`appId`/`focused` por janela,
   `focusedWindowId` (evento `WindowFocusChanged`) e `activeWinByOutput` (janela ativa do workspace ativo
   de cada output, via `active_window_id` + evento `WorkspaceActiveWindowChanged`; recalculado SEM

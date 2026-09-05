@@ -104,6 +104,7 @@ PanelWindow {
                 { key: "dracoMarginTop", label: "Folga do topo (0 = colada)", ftype: "real" },
                 { key: "dracoGap", label: "Folga extra barra→janelas", ftype: "real" },
                 { key: "dracoRadius", label: "Raio dos cantos de baixo", ftype: "real" },
+                { key: "dracoRoundNiri", label: "Arredondar também as janelas do niri", ftype: "bool" },
                 { key: "dracoPad", label: "Recuo interno", ftype: "real" },
                 { key: "dracoSpacing", label: "Espaço entre widgets", ftype: "real" },
                 { key: "dracoChipRadius", label: "Raio dos chips", ftype: "real" },
@@ -146,6 +147,7 @@ PanelWindow {
         { title: "Geral (janela e barra)", subs: [
             { name: "Posicionamento", fields: [
                 { key: "shellHeight", label: "Altura do shell", ftype: "int" },
+                { key: "settingsRadius", label: "Raio da janela de configurações", ftype: "real" },
                 { key: "barHeight", label: "Altura da barra", ftype: "int" },
                 { key: "gothicR", label: "Cantos góticos", ftype: "real" },
                 { key: "hitMargin", label: "Folga do hit-test", ftype: "real" },
@@ -481,7 +483,7 @@ PanelWindow {
         anchors.centerIn: parent
         width: Math.min(parent.width - 80, 740)
         height: Math.min(parent.height - 80, 720)
-        radius: 16
+        radius: Config.windowRadius(Config.settingsRadius)   // no draco, casa com o raio da barra
         color: Theme.base
         border.color: Theme.surface0
         border.width: 1
