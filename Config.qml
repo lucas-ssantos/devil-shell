@@ -68,6 +68,16 @@ Singleton {
     readonly property real cavaBarFactor: Settings.get("cavaBarFactor", 0.6)    // largura da barra (× slot)
     readonly property real cavaBarsOpacity: Settings.get("cavaBarsOpacity", 0.5)
     readonly property real cavaRingOpacity: Settings.get("cavaRingOpacity", 0.85)
+    // Saídas cujos monitores são SOMADOS p/ o visualizador. O `cava` (libpulse) só
+    // escuta UM monitor; o CavaService cria um null-sink `cava_mix` e liga um
+    // pw-loopback do monitor de cada sink abaixo nele, e o cava lê cava_mix.monitor
+    // (ver [input] em cava/cava.conf). Assim a onda reage a TODOS os dispositivos,
+    // não só ao sink padrão. Nomes = node.name do PipeWire (`pactl list short sinks`).
+    // Lista vazia -> usa só o sink padrão (comportamento antigo).
+    readonly property var cavaMixSinks: Settings.get("cavaMixSinks", [
+        "alsa_output.usb-Kingston_HyperX_Quadcast_4110-00.analog-stereo",   // HyperX QuadCast
+        "alsa_output.pci-0000_0a_00.4.analog-stereo"                        // onboard (Starship HD Audio)
+    ])
     // Visualizador CAVA usa o tema 'cava' do Theme.qml, de propósito diferente do resto
     // do shell. O espectro vem de Theme.cava* (interno → meio → pontas).
     readonly property color cavaColor1: Theme.cavaInner   // interno (base do espectro)
