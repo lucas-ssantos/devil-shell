@@ -15,7 +15,18 @@ PanelWindow {
     property var modelData
 
     screen: modelData
-    visible: !Config.isDraco   // no modo draco a barra ocupa o topo
+    // modo draco: some na hora (só o peek está visível); ao voltar ao devil, espera a barra
+    // Draco recolher (dracoSlideMs) — senão a surface nasceria empurrada pela zona exclusiva dela
+    visible: false
+    Component.onCompleted: visible = !Config.isDraco
+    Timer { id: modeShowTimer; interval: Config.dracoSlideMs + 40; onTriggered: bar.visible = true }
+    Connections {
+        target: Config
+        function onIsDracoChanged() {
+            if (Config.isDraco) { modeShowTimer.stop(); bar.visible = false }
+            else modeShowTimer.restart()
+        }
+    }
     WlrLayershell.layer: WlrLayer.Top
     color: "transparent"
     anchors { top: true; left: true; right: true }

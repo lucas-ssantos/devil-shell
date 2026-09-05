@@ -21,7 +21,9 @@ PanelWindow {
     property var levels: []         // níveis do cava
 
     screen: modelData
-    visible: !Config.isDraco   // modo draco: a barra do topo (DracoBar) substitui bola/cristais
+    // visibilidade gerida pela TRANSIÇÃO de modo (ver "Transição de modo" abaixo): nasce
+    // conforme o modo salvo; nas trocas só esconde depois de tudo afundar / mostra antes de emergir
+    visible: false
     color: "transparent"
     anchors { bottom: true; left: true; right: true }   // largura total -> barra atravessa a tela
     exclusiveZone: 0
@@ -35,8 +37,21 @@ PanelWindow {
     readonly property real ballPeek: Config.ballPeek
     readonly property real ballCYRest: height - ballPeek + ballRadius
     readonly property real ballCYOpen: height - ballRadius
-    property real ballCY: open ? ballCYOpen : ballCYRest
-    Behavior on ballCY { NumberAnimation { duration: Config.ballAnim; easing.type: Easing.OutCubic } }
+    // posição "normal" (aberta/recolhida) + deslocamento de AFUNDAR (transição de modo); cada
+    // parte tem a própria animação e ballCY é a soma — assim o afundar não briga com o abrir/fechar
+    property real ballBaseCY: open ? ballCYOpen : ballCYRest
+    Behavior on ballBaseCY { NumberAnimation { duration: Config.ballAnim; easing.type: Easing.OutCubic } }
+    property real ballSinkOffset: sunk ? Config.ballPeek + 12 : 0   // some inteira sob o chão (a partir do repouso)
+    Behavior on ballSinkOffset {
+        SequentialAnimation {
+            // afundando, a bola vai por ÚLTIMO (depois de todos os ranks); emergindo, vai PRIMEIRO.
+            // Lê `sinking` (não `sunk`): é setado ANTES de sunk mudar, senão o Behavior dispara
+            // com a pausa ainda do sentido anterior (visto ao vivo: ordem invertida)
+            PauseAnimation { duration: win.sinking ? win.ranksPerSide * Config.modeStaggerMs : 0 }
+            NumberAnimation { duration: Config.modeSinkMs; easing.type: win.sinking ? Easing.InCubic : Easing.OutCubic }
+        }
+    }
+    readonly property real ballCY: ballBaseCY + ballSinkOffset
     readonly property real crystalW: Config.crystalW
 
     // ── Fileira de cristais (escadaria ao lado da bola) ──
@@ -93,6 +108,37 @@ PanelWindow {
         return -1
     }
     onHoverOpenChanged: if (!hoverOpen) dismissed = false
+
+    // ── Transição de modo (Config.isDraco) ──────────────
+    // Draco liga -> fecha menus, tudo AFUNDA no chão (cristais de fora p/ dentro, bola por último;
+    // ver Crystal.sinkOffset e ballSinkOffset) e a janela é escondida ao fim. Devil volta -> espera
+    // a barra Draco recolher (dracoSlideMs), reaparece e tudo EMERGE (bola primeiro, cristais de
+    // dentro p/ fora). Enquanto afundado a máscara fica vazia (click-through).
+    property bool sunk: false
+    property bool sinking: false   // sentido da transição em curso (setado ANTES de `sunk`, ver pausas)
+    readonly property int sinkTotalMs: Config.modeSinkTotal(menuItems.length)
+    Component.onCompleted: { sinking = Config.isDraco; sunk = Config.isDraco; visible = !Config.isDraco }
+    Timer { id: sinkHideTimer; interval: win.sinkTotalMs + 40; onTriggered: win.visible = false }
+    // emergir: mostra a janela e só COMEÇA a animação quando a surface estiver mapeada de fato
+    // (backingWindowVisible) — senão ela roda no vazio e a bola já aparece quase no lugar
+    Timer { id: emergeTimer; interval: Config.dracoSlideMs; onTriggered: win.visible = true }
+    Timer { id: emergeStartTimer; interval: 40; onTriggered: { win.sinking = false; win.sunk = false } }
+    onBackingWindowVisibleChanged: if (backingWindowVisible && sunk && !Config.isDraco) emergeStartTimer.restart()
+    Connections {
+        target: Config
+        function onIsDracoChanged() {
+            if (Config.isDraco) {
+                emergeTimer.stop(); emergeStartTimer.stop()
+                win.closeAllMenus()
+                win.sinking = true; win.sunk = true
+                sinkHideTimer.restart()
+            } else {
+                sinkHideTimer.stop()
+                if (win.visible && win.backingWindowVisible) emergeStartTimer.restart()   // ainda mapeada (toggle rápido)
+                else emergeTimer.restart()
+            }
+        }
+    }
     onOpenChanged: if (!open) { selectedIndex = -1; audioMode = false }
 
     Timer { id: hoverCloseTimer; interval: Config.hoverCloseMs; onTriggered: win.hoverOpen = false }
@@ -252,15 +298,16 @@ PanelWindow {
         shape: win.open ? RegionShape.Rect : RegionShape.Ellipse
         x: win.open ? Math.round(win.ballCX - win.menuHalf) : Math.round(win.ballCX - win.ballRadius)
         y: win.open ? 0 : Math.round(win.ballCY - win.ballRadius)
-        width: win.open ? Math.round(win.menuHalf * 2) : Math.round(win.ballRadius * 2)
-        height: win.open ? win.height : Math.round(win.ballRadius * 2)
+        // afundado (transição de modo): tudo 0x0 = região vazia = click-through
+        width: win.sunk ? 0 : (win.open ? Math.round(win.menuHalf * 2) : Math.round(win.ballRadius * 2))
+        height: win.sunk ? 0 : (win.open ? win.height : Math.round(win.ballRadius * 2))
         regions: [
             Region {   // faixa dos cristais (união com a região acima)
                 shape: RegionShape.Rect
                 x: Math.round(win.ballCX - win.rowHalf)
                 y: Math.round(win.height - win.rowMaskH)
-                width: Math.round(win.rowHalf * 2)
-                height: Math.round(win.rowMaskH)
+                width: win.sunk ? 0 : Math.round(win.rowHalf * 2)
+                height: win.sunk ? 0 : Math.round(win.rowMaskH)
             }
         ]
     }
@@ -270,6 +317,9 @@ PanelWindow {
     // Top) e atrás de TODO o shell (z 0 < cristal z1 < barra/gótico z2 < bola z3 …).
     CavaRing {
         z: 0
+        // some junto com a bola na transição de modo (os espetos passariam do chão)
+        opacity: win.sunk ? 0 : 1
+        Behavior on opacity { NumberAnimation { duration: Config.modeSinkMs } }
         levels: win.levels
         cx: win.ballCX
         cy: win.ballCY
@@ -288,6 +338,7 @@ PanelWindow {
     Rectangle {
         z: 2
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+        anchors.bottomMargin: -win.ballSinkOffset   // afunda junto com a bola (transição de modo)
         height: Config.barHeight
         color: Config.ball
     }

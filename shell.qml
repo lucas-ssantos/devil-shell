@@ -86,6 +86,7 @@ Scope {
                 DracoBar {
                     modelData: unit.modelData
                     niri: niriSvc
+                    menuCount: root.menuItems.length   // p/ esperar os cristais afundarem antes de entrar
                 }
             }
         }

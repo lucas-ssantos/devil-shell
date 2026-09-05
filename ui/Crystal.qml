@@ -42,8 +42,25 @@ Item {
     // erguido); o resto do corpo fica abaixo da borda da janela (cortado pelo chão).
     // Easing SEM overshoot: OutBack passava de `height` e a base descolava do chão.
     property real rise: raised ? height : Config.crystalPeek
-    y: ctx.height - rise
     Behavior on rise { NumberAnimation { duration: Config.crystalRiseAnim; easing.type: Easing.OutCubic } }
+    // afundar/emergir na TROCA DE MODO (ctx.sunk): deslocamento extra p/ baixo do chão, separado
+    // do `rise` (hover) p/ cada um ter sua animação. Escalonado por rank: afundando, de fora p/
+    // dentro (a bola vai por último); emergindo, de dentro p/ fora (a bola vai primeiro).
+    readonly property real sinkDepth: Config.crystalPeek + gem.pad + 4   // some inteiro, glow incluso
+    property real sinkOffset: ctx.sunk ? sinkDepth : 0
+    Behavior on sinkOffset {
+        SequentialAnimation {
+            // lê ctx.sinking (setado ANTES de ctx.sunk mudar), não ctx.sunk: no mesmo sinal o
+            // Behavior disparava antes desta pausa atualizar e usava o sentido anterior
+            PauseAnimation {
+                duration: Config.modeStaggerMs * (crystal.ctx.sinking
+                    ? (crystal.ctx.ranksPerSide - 1 - crystal.ctx.crystalRank(crystal.index))
+                    : (crystal.ctx.crystalRank(crystal.index) + 1))
+            }
+            NumberAnimation { duration: Config.modeSinkMs; easing.type: crystal.ctx.sinking ? Easing.InCubic : Easing.OutCubic }
+        }
+    }
+    y: ctx.height - rise + sinkOffset
 
     // cresce no hover a partir da BASE (continua plantado no chão)
     transformOrigin: Item.Bottom

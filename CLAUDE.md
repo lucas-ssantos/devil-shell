@@ -164,9 +164,25 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
 `qs ipc call mode toggle|devil|draco|current`. O keybind do niri é
 `Mod+Ctrl+Return { spawn "qs" "ipc" "call" "mode" "toggle"; }` (config.kdl). O grupo "Modo do
 shell / Barra Draco" da SettingsWindow também troca.
-- Cada janela decide sozinha se existe: `ShellWindow` e `TopCapsules` têm `visible: !Config.isDraco`;
-  [DracoBar.qml](windows/DracoBar.qml) (uma por monitor, no mesmo `Variants` do `shell.qml`) tem
-  `visible: Config.isDraco`. O CAVA do rodapé fica nos dois modos. Trocar de modo NÃO recarrega o qs.
+- Cada janela decide sozinha se existe, com TRANSIÇÃO animada (`Connections { target: Config }` em
+  `onIsDracoChanged`, `visible` gerido por código + Timers; o valor inicial vem do modo salvo em
+  `Component.onCompleted`). Devil→Draco: `ShellWindow.sunk = true` → os cristais afundam no chão de
+  fora p/ dentro (`Crystal.sinkOffset`, `PauseAnimation` escalonada por rank × `modeStaggerMs`), a bola
+  por último (`ballSinkOffset`; `ballCY` = `ballBaseCY` + offset, cada um com seu Behavior), o anel do
+  CAVA faz fade (os espetos passariam do chão), a máscara fica 0x0 (click-through) e a janela esconde ao
+  fim (`Config.modeSinkTotal(n)`); só então a [DracoBar.qml](windows/DracoBar.qml) (uma por monitor,
+  no mesmo `Variants` do `shell.qml`) aparece deslizando da borda superior (`shown` → `panel.y`,
+  `dracoSlideMs`; a surface dela começa em y=0 SEM margem no topo justamente p/ o deslize sair da
+  borda — a folga `dracoMarginTop` é desenhada dentro). Draco→Devil: a barra sobe (a zona exclusiva cai
+  junto), depois bola e cristais emergem em ordem inversa; `TopCapsules` também só volta depois do
+  deslize. O CAVA do rodapé fica nos dois modos. Trocar de modo NÃO recarrega o qs.
+  ⚠️ Duas armadilhas vistas ao vivo nessa transição: (1) uma `PauseAnimation` dentro de `Behavior`
+  NÃO pode ler a mesma property que dispara o Behavior (`sunk`) — o Behavior disparava antes do
+  binding da pausa atualizar e usava o sentido ANTERIOR (ordem invertida); por isso existem os flags
+  `sinking` (ShellWindow) e `entering` (DracoBar), setados na linha ANTES de mudar `sunk`/`shown`.
+  (2) Animação de ENTRADA numa janela recém `visible = true` roda no vazio até a surface mapear —
+  espere `onBackingWindowVisibleChanged` (+40 ms) antes de mudar a property animada, senão a
+  bola/barra já aparecem quase no lugar final.
 - **DracoBar** = `PanelWindow` no topo com `margins` (flutuante, não encosta nas bordas), cantos
   arredondados, `exclusionMode: Normal` + `exclusiveZone: dracoBarH + dracoGap` — o compositor soma
   a margem do topo sozinho (protocolo layer-shell: "the exclusive zone includes the margin") e ainda

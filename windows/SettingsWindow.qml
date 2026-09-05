@@ -128,7 +128,10 @@ PanelWindow {
                 { key: "dracoAccentText", label: "Texto sobre o acento", ftype: "color" }
             ]},
             { name: "Animações", fields: [
-                { key: "dracoAnim", label: "Hover/estado (ms)", ftype: "int" }
+                { key: "dracoAnim", label: "Hover/estado (ms)", ftype: "int" },
+                { key: "dracoSlideMs", label: "Barra deslizando do topo (ms)", ftype: "int" },
+                { key: "modeSinkMs", label: "Cristais/bola afundando (ms)", ftype: "int" },
+                { key: "modeStaggerMs", label: "Escalonamento entre cristais (ms)", ftype: "int" }
             ]}
         ]},
         { title: "Geral (janela e barra)", subs: [

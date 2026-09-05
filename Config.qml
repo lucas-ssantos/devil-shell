@@ -290,6 +290,17 @@ Singleton {
     readonly property string iconClock: Settings.get("iconClock", "")         // relógio (nf-fa-clock_o)
     readonly property string iconCpu: Settings.get("iconCpu", "󰘚")             // chip (nf-md-chip) — uso de CPU
 
+    // ── Transição de modo (devil ↔ draco) ──
+    // Devil→Draco: cristais afundam no chão de fora p/ dentro (modeStaggerMs entre ranks), a bola
+    // por último, e só então a barra Draco desce da borda superior (dracoSlideMs). Draco→Devil: a
+    // barra sobe e some, depois a bola emerge e os cristais de dentro p/ fora. Ver ShellWindow
+    // (sunk/ballSinkOffset), Crystal (sinkOffset) e DracoBar (shown/panel.y).
+    readonly property int  modeSinkMs: Settings.get("modeSinkMs", 280)        // afundar/emergir de cada peça (ms)
+    readonly property int  modeStaggerMs: Settings.get("modeStaggerMs", 60)   // escalonamento entre ranks de cristais (ms)
+    readonly property int  dracoSlideMs: Settings.get("dracoSlideMs", 320)    // barra Draco deslizando do/para o topo (ms)
+    // duração total do afundar/emergir com n cristais: (ranks por lado + a bola) escalonados + a animação
+    function modeSinkTotal(n) { return (Math.ceil(n / 2) + 1) * modeStaggerMs + modeSinkMs }
+
     // ── Fontes (px) ─────────────────────────────────────
     readonly property int  crystalIconSize: Settings.get("crystalIconSize", 13)
     readonly property int  ballNumberSize: Settings.get("ballNumberSize", 18)

@@ -24,19 +24,52 @@ PanelWindow {
     id: bar
     property var modelData      // a screen (monitor)
     property var niri           // NiriService
+    property int menuCount: 0   // nº de cristais do modo devil (p/ esperar o afundar deles antes de entrar)
 
     screen: modelData
-    visible: Config.isDraco
+    // visibilidade gerida pela TRANSIÇÃO de modo (ver abaixo)
+    visible: false
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     color: "transparent"
     anchors { top: true; left: true; right: true }
-    margins { top: Config.dracoMarginTop; left: Config.dracoMarginSide; right: Config.dracoMarginSide }
-    implicitHeight: Config.dracoBarH
-    // reserva barra + folga extra; a margem do topo o compositor soma sozinho (protocolo
-    // layer-shell: "the exclusive zone includes the margin"). Escondida → não reserva nada.
+    // a surface começa na BORDA da tela (sem margem no topo) p/ a barra poder deslizar de lá;
+    // a folga do topo é desenhada dentro dela (panel.y = dracoMarginTop)
+    margins { left: Config.dracoMarginSide; right: Config.dracoMarginSide }
+    implicitHeight: Config.dracoMarginTop + Config.dracoBarH
+    // reserva folga do topo + barra + folga extra enquanto a barra está em cena (shown); a zona
+    // cai junto com o deslizar de saída → as janelas do niri voltam a subir. Escondida → nada.
     exclusionMode: ExclusionMode.Normal
-    exclusiveZone: Config.isDraco ? Math.round(Config.dracoBarH + Config.dracoGap) : 0
+    exclusiveZone: shown ? Math.round(Config.dracoMarginTop + Config.dracoBarH + Config.dracoGap) : 0
+
+    // ── Transição de modo (Config.isDraco) ──
+    // Draco liga -> espera a bola/cristais afundarem (Config.modeSinkTotal) e entra deslizando da
+    // borda superior (panel.y). Devil volta -> fecha popups, sai deslizando p/ cima e a janela é
+    // escondida ao fim (dracoSlideMs). Boot já no draco: aparece direto.
+    property bool shown: false
+    property bool entering: false   // sentido do deslize em curso (setado ANTES de `shown`, p/ o easing)
+    Component.onCompleted: if (Config.isDraco) visible = true   // boot já no draco: desliza assim que mapear
+    // entrar: mostra a janela e só COMEÇA o deslize quando a surface estiver mapeada de fato
+    // (backingWindowVisible) — senão a animação roda no vazio e a barra já aparece no lugar
+    Timer { id: enterTimer; interval: Config.modeSinkTotal(bar.menuCount) + 40; onTriggered: bar.visible = true }
+    Timer { id: enterStartTimer; interval: 40; onTriggered: { bar.entering = true; bar.shown = true } }
+    Timer { id: leaveTimer; interval: Config.dracoSlideMs + 40; onTriggered: bar.visible = false }
+    onBackingWindowVisibleChanged: if (backingWindowVisible && !shown && Config.isDraco) enterStartTimer.restart()
+    Connections {
+        target: Config
+        function onIsDracoChanged() {
+            if (Config.isDraco) {
+                leaveTimer.stop()
+                if (bar.visible && bar.backingWindowVisible) enterStartTimer.restart()   // ainda mapeada (toggle rápido)
+                else enterTimer.restart()
+            } else {
+                enterTimer.stop(); enterStartTimer.stop()
+                bar.closePopups(); trayMenu.visible = false; audioDevices.visible = false
+                bar.entering = false; bar.shown = false
+                leaveTimer.restart()
+            }
+        }
+    }
 
     // ── Estado do niri p/ ESTE monitor ──
     readonly property var monData: (niri && modelData) ? niri.monitorByName(modelData.name) : null
@@ -85,7 +118,7 @@ PanelWindow {
     // ponto de ancoragem: centro-X da cápsula (coord. da janela) + base da barra
     function anchorOf(item) {
         const p = item.mapToItem(null, item.width / 2, 0)
-        return { x: p.x, y: bar.height }
+        return { x: p.x, y: panel.y + panel.height }
     }
     function closePopups() { calendarPopup.close(); tempPopup.close(); ramPopup.close() }
     function togglePopup(popup, item) {
@@ -107,7 +140,11 @@ PanelWindow {
     // ── Corpo da barra ──
     Rectangle {
         id: panel
-        anchors.fill: parent
+        anchors { left: parent.left; right: parent.right }
+        height: Config.dracoBarH
+        // desliza da borda superior da tela: escondida, fica inteira acima da surface (recortada)
+        y: bar.shown ? Config.dracoMarginTop : -(Config.dracoBarH + 2)
+        Behavior on y { NumberAnimation { duration: Config.dracoSlideMs; easing.type: bar.entering ? Easing.OutCubic : Easing.InCubic } }
         radius: Config.dracoRadius
         color: Qt.rgba(Config.dracoBg.r, Config.dracoBg.g, Config.dracoBg.b, Config.dracoBgOpacity)
         border.color: Config.dracoBorder
