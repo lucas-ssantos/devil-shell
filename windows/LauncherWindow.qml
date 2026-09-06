@@ -50,7 +50,11 @@ PanelWindow {
     WlrLayershell.keyboardFocus: LauncherService.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
     anchors { top: true; bottom: true; left: true; right: true }
-    exclusiveZone: 0
+    // Ignore (não `exclusiveZone: 0`): com zona 0 o niri EMPURRA a surface p/ fora da zona
+    // exclusiva da barra Draco — o escurecido não cobria a faixa do topo (barra + laterais).
+    // Ignore = ocupa o output inteiro, passando por baixo da barra. No devil não há zona a
+    // ignorar, então não muda nada.
+    exclusionMode: ExclusionMode.Ignore
 
     // ── Modo derivado do texto ──────────────────────────
     readonly property string query: input.text
