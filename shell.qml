@@ -4,10 +4,11 @@
 //   quickshell (pkill quickshell; qs) — hot-reload não basta.
 import Quickshell
 import QtQuick
-import "root:/services"   // NiriService, StartupService
-import "root:/cava"       // CavaService, CavaWindow
-import "root:/windows"    // ShellWindow, NotificationWindow, DracoBar
-import "root:/ui"         // TopCapsules
+import "root:/services"       // NiriService, StartupService
+import "root:/cava"           // CavaService, CavaWindow
+import "root:/windows"        // NotificationWindow, PolkitWindow, SettingsWindow, LauncherWindow (compartilhadas)
+import "root:/windows/devil"  // ShellWindow, TopCapsules (só modo devil)
+import "root:/windows/draco"  // DracoBar (só modo draco)
 
 // Ponto de entrada: só liga os serviços, os dados e as janelas por monitor.
 // A lógica/visual fica nos componentes (ShellWindow, MenuBall, Crystal,

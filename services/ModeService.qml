@@ -5,7 +5,7 @@ import "root:/"   // Config (shellMode/isDraco efetivos)
 
 // Modo do shell (singleton): "devil" (bola + escadaria de cristais no rodapé, o visual
 // clássico) ou "draco" (só uma barra flutuante no topo, estilo Noctalia — ver
-// windows/DracoBar.qml). O modo fica persistido no Settings ("shellMode") — sobrevive a
+// windows/draco/DracoBar.qml). O modo fica persistido no Settings ("shellMode") — sobrevive a
 // reload/reboot — e cada janela decide sozinha se aparece lendo Config.isDraco
 // (ShellWindow/TopCapsules somem no draco; a DracoBar só existe nele).
 //

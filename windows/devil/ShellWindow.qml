@@ -3,10 +3,10 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.SystemTray
 import QtQuick
-import "root:/ui"         // MenuBall, Crystal, GothicCorners, AudioMenu, AudioDevices, TrayMenu
-import "root:/cava"       // CavaRing
-import "root:/services"   // AudioService, CaptureService
-import "root:/"           // Config (raiz)
+import "root:/widgets/devil"   // MenuBall, Crystal, GothicCorners, AudioMenu, CavaRing
+import "root:/menus"           // AudioDevices, TrayMenu
+import "root:/services"        // AudioService, CaptureService
+import "root:/"                // Config (raiz)
 
 // Janela do shell (camada de cima): bola/menu, cristais, cava radial, barra e TODA a
 // lógica de interação (hover/clique/scroll).

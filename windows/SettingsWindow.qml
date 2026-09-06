@@ -1,7 +1,7 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
-import "root:/ui"         // SettingsField
+import "root:/fields"     // SettingsField
 import "root:/themes"     // Theme
 import "root:/services"   // Settings, ThemeExport
 import "root:/"           // Config

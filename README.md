@@ -196,15 +196,22 @@ singletons). Detalhes no [CLAUDE.md](CLAUDE.md).
 ```
 shell.qml        ponto de entrada (liga serviços, dados e janelas por monitor)
 Config.qml       config central (singleton) — todos os valores ajustáveis
-themes/          Theme (seletor) + paletas CrimsonDevil e InfernalRose (os hex)
+themes/          Theme (seletor) + paletas CrimsonDevil, DragonBlanc, InfernalRose (os hex)
 services/        NiriService, AudioService, CaptureService, MediaService, WeatherService,
-                 NotificationService, StartupService, IdleService, LauncherService,
+                 SensorsService, NotificationService, PolkitService, PortalService,
+                 StartupService, IdleService, LauncherService, WallpaperService,
                  Settings, ThemeExport, ModeService (devil/draco) + session.sh
-cava/            CavaService, CavaWindow, CavaBars, CavaRing + cava.conf
-windows/         ShellWindow (UI interativa), NotificationWindow (toasts), SettingsWindow,
-                 LauncherWindow (lançador), DracoBar (barra do modo draco)
-ui/              MenuBall, Crystal, GothicCorners, AudioMenu, AudioDevices, TrayMenu,
-                 SettingsField, Capsule, TopCapsules, DracoCapsule, CalendarPopup/TempPopup/RamPopup
+cava/            CavaService, CavaWindow, CavaBars + cava.conf   (rodapé, nos dois modos)
+windows/         janelas compartilhadas: NotificationWindow (toasts), PolkitWindow,
+                 SettingsWindow, LauncherWindow (lançador)
+  windows/devil/   ShellWindow (bola/cristais + controlador), TopCapsules (cápsulas do topo)
+  windows/draco/   DracoBar (barra do modo draco)
+widgets/devil/   MenuBall, Crystal, GothicCorners, AudioMenu, CavaRing (anel em volta da bola)
+widgets/draco/   DracoCava (visualizador embutido na barra)
+capsules/devil/  Capsule, ClockCapsule            capsules/draco/  DracoCapsule
+popups/          CalendarPopup, TempPopup, RamPopup   (compartilhados; TopCapsules e DracoBar)
+menus/           TrayMenu, AudioDevices               (compartilhados)
+fields/          SettingsField (linha editável da SettingsWindow)
 ```
 
 - **Por monitor** (`Variants`): `CavaWindow` (camada de baixo) + `ShellWindow` (camada de cima) +

@@ -276,7 +276,7 @@ Singleton {
     // sozinho quando isDraco/dracoRadius mudam (o QML rastreia as properties lidas na função).
     function windowRadius(own) { return isDraco ? dracoRadius : own }
 
-    // ── Barra Draco (modo draco; windows/DracoBar.qml + ui/DracoCapsule.qml) ──
+    // ── Barra Draco (modo draco; windows/draco/DracoBar.qml + capsules/draco/DracoCapsule.qml) ──
     // Barra COLADA no topo, ocupando uma fração da largura da tela (centralizada), cantos
     // arredondados só embaixo, fundo translúcido e SOMBRA difusa por trás (Canvas). Os widgets
     // são "chapados" (sem pílula própria) dentro de três chips discretos (esquerda / centro /
@@ -316,7 +316,7 @@ Singleton {
     readonly property color  dracoSub: Settings.get("dracoSub", Theme.subtext0)      // texto apagado (fantasmas, mudo, janela sem foco)
     readonly property color  dracoAccent: Settings.get("dracoAccent", Theme.mauve)   // workspace ativo / botão do lançador
     readonly property color  dracoAccentText: Settings.get("dracoAccentText", Theme.crust)   // texto sobre o acento
-    // Visualizador CAVA da barra Draco (ui/DracoCava.qml): forma de onda estilo editor de
+    // Visualizador CAVA da barra Draco (widgets/draco/DracoCava.qml): forma de onda estilo editor de
     // áudio — barras finas de cantos redondos ESPELHADAS no eixo horizontal, com a COR
     // variando pela amplitude (grave/baixo = frio; pico = quente). Diferente do rodapé
     // (CavaBars, área suave de uma cor só). Fica APENAS nos vãos entre o chip central e os

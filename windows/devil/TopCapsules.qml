@@ -1,8 +1,10 @@
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
-import "root:/services"   // MediaService
-import "root:/"           // Config (raiz); Capsule/ClockCapsule/CalendarPopup/TempPopup/RamPopup na mesma pasta (ui)
+import "root:/capsules/devil"   // Capsule, ClockCapsule
+import "root:/popups"           // CalendarPopup, TempPopup, RamPopup
+import "root:/services"         // MediaService
+import "root:/"                 // Config (raiz)
 
 // Janela do topo: duas cápsulas retráteis, MESMA largura (Config.capsuleW). Esquerda
 // (10% da margem esq.) = mídia (MPRIS, texto rolando quando não cabe); direita (10% da

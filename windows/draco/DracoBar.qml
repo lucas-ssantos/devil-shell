@@ -2,9 +2,12 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.SystemTray
 import QtQuick
-import "root:/ui"         // DracoCapsule, CalendarPopup, TempPopup, RamPopup, TrayMenu, AudioDevices
-import "root:/services"   // AudioService, CaptureService, IdleService, LauncherService, SensorsService, Settings
-import "root:/"           // Config (raiz)
+import "root:/capsules/draco"   // DracoCapsule
+import "root:/widgets/draco"    // DracoCava
+import "root:/popups"           // CalendarPopup, TempPopup, RamPopup
+import "root:/menus"            // TrayMenu, AudioDevices
+import "root:/services"         // AudioService, CaptureService, IdleService, LauncherService, SensorsService, Settings
+import "root:/"                 // Config (raiz)
 
 // Barra do modo DRACO (uma por monitor): substitui bola/cristais/cápsulas por uma barra
 // COLADA no topo, estilo Noctalia — ocupa uma fração da largura da tela (centralizada),

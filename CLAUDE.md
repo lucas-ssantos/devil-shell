@@ -92,24 +92,35 @@ que dependem deles travam silenciosamente. Por isso o `spawn()` do `CaptureServi
 
 ## Estrutura de pastas e o import `root:/` (leia antes de mover arquivos)
 
-Os `.qml` ficam organizados em subpastas por papel:
+Os `.qml` ficam organizados **por tipo** (janela / widget / cápsula / popup / menu / campo) e,
+dentro dos tipos que têm partes exclusivas de um modo, **por modo** (`devil/` vs `draco/`):
 
 ```
 shell.qml             ponto de entrada (raiz)
 Config.qml            config central, singleton (raiz) — lê overrides do Settings
 settings.json         overrides do usuário (gerado/atualizado em runtime pela SettingsWindow)
 settings.default.json "padrão de fábrica" lido pelo botão Restaurar padrão
-themes/               Theme (seletor) + paletas (CrimsonDevil, InfernalRose)
+themes/               Theme (seletor) + paletas (CrimsonDevil, DragonBlanc, InfernalRose)
 services/             singletons/escopos não-visuais (niri, áudio, captura, mídia, clima,
-                      notificações, PolkitService, StartupService, IdleService, LauncherService,
-                      WallpaperService (awww, modo /bg), Settings, ThemeExport,
-                      ModeService (modo devil/draco + IPC)) + session.sh
-cava/                 tudo do visualizador CAVA (serviço, janela, barras, anel) + cava.conf
-windows/              janelas interativas: ShellWindow, NotificationWindow, PolkitWindow,
-                      SettingsWindow, LauncherWindow (lançador próprio), DracoBar (barra do modo draco)
-ui/                   componentes visuais "burros": MenuBall, Crystal, GothicCorners, AudioMenu,
-                      AudioDevices, TrayMenu, SettingsField, Capsule, TopCapsules, DracoCapsule,
-                      CalendarPopup/TempPopup/RamPopup (popups das cápsulas do topo e da barra Draco)
+                      sensores, notificações, PolkitService, PortalService, StartupService,
+                      IdleService, LauncherService, WallpaperService (awww, modo /bg), Settings,
+                      ThemeExport, ModeService (modo devil/draco + IPC)) + session.sh
+cava/                 infra compartilhada do CAVA: CavaService, CavaBars, CavaWindow
+                      (rodapé, presente nos DOIS modos) + cava.conf
+windows/              janelas COMPARTILHADAS pelos dois modos: NotificationWindow, PolkitWindow,
+                      SettingsWindow, LauncherWindow
+windows/devil/          janelas só do modo Devil: ShellWindow (bola/cristais + o "controlador"),
+                        TopCapsules (cápsulas de mídia/temperatura no topo)
+windows/draco/          janelas só do modo Draco: DracoBar (barra do topo)
+widgets/devil/        visuais "burros" só do Devil: MenuBall, Crystal, GothicCorners,
+                      AudioMenu (sliders), CavaRing (anel radial em volta da bola)
+widgets/draco/        visuais "burros" só do Draco: DracoCava (visualizador embutido na barra)
+capsules/devil/       Capsule (cápsula retrátil do topo), ClockCapsule (relógio/RAM/CPU)
+capsules/draco/       DracoCapsule (widget "chapado" dos chips da DracoBar)
+popups/               popups flutuantes COMPARTILHADOS (TopCapsules no Devil, DracoBar no
+                      Draco): CalendarPopup, TempPopup, RamPopup
+menus/                menus de clique-direito COMPARTILHADOS: TrayMenu, AudioDevices
+fields/               SettingsField (uma linha editável da SettingsWindow)
 ```
 
 ⚠️ **A auto-descoberta do Quickshell por nome só vale para a PASTA RAIZ.** Um arquivo na raiz
@@ -118,12 +129,18 @@ componentes, nem singletons. Para usar um tipo de outra pasta, **importe a pasta
 `root:/` (a raiz da config):
 
 - `import "root:/services"` → expõe `NiriService`, `AudioService`, `CaptureService`, `StartupService`, …
-- `import "root:/ui"`, `import "root:/cava"`, `import "root:/windows"`, `import "root:/themes"`
+- `import "root:/cava"`, `import "root:/themes"`, `import "root:/windows"`, `import "root:/popups"`,
+  `import "root:/menus"`, `import "root:/fields"`
+- Pastas ANINHADAS também funcionam como import: `import "root:/windows/devil"`,
+  `import "root:/widgets/devil"`, `import "root:/widgets/draco"`, `import "root:/capsules/devil"`,
+  `import "root:/capsules/draco"` (cada nível é uma pasta separada — importar `root:/widgets` NÃO
+  traz `root:/widgets/devil`).
 - `import "root:/"` → expõe os tipos da **raiz** (na prática, `Config`).
 - Arquivos na **mesma pasta** se enxergam sem import (regra normal do QML).
 
 Sintaxe verificada no Quickshell 0.3.0: tanto componentes quanto `pragma Singleton` resolvem por
-`import "root:/<pasta>"`. **Sem o import, um singleton de subpasta dá `ReferenceError: X is not defined`.**
+`import "root:/<pasta>"`, inclusive em subpastas aninhadas (`root:/windows/devil`). **Sem o import,
+um singleton/componente de subpasta dá `ReferenceError: X is not defined` ou `X is not a type`.**
 Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
 
 ## Arquitetura
@@ -150,8 +167,8 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    a onda some conforme as janelas do workspace ativo — `Config.cavaVisibility`:
    `sempre`/`vazio`/`adaptativo` — lendo `NiriService.winsByOutput`; o CavaService descarta
    frames repetidos do cava p/ não repintar nada no silêncio), uma
-   [ShellWindow.qml](windows/ShellWindow.qml) (camada **Top**, a UI interativa) e uma
-   [TopCapsules.qml](ui/TopCapsules.qml) (cápsulas de mídia/temperatura no topo). As janelas únicas
+   [ShellWindow.qml](windows/devil/ShellWindow.qml) (camada **Top**, a UI interativa) e uma
+   [TopCapsules.qml](windows/devil/TopCapsules.qml) (cápsulas de mídia/temperatura no topo). As janelas únicas
    (monitor focado) são a [NotificationWindow.qml](windows/NotificationWindow.qml), a
    [PolkitWindow.qml](windows/PolkitWindow.qml) (diálogo de autenticação, dispara sozinha —
    ver [PolkitService.qml](services/PolkitService.qml)), a
@@ -171,7 +188,7 @@ shell / Barra Draco" da SettingsWindow também troca.
   fora p/ dentro (`Crystal.sinkOffset`, `PauseAnimation` escalonada por rank × `modeStaggerMs`), a bola
   por último (`ballSinkOffset`; `ballCY` = `ballBaseCY` + offset, cada um com seu Behavior), o anel do
   CAVA faz fade (os espetos passariam do chão), a máscara fica 0x0 (click-through) e a janela esconde ao
-  fim (`Config.modeSinkTotal(n)`); só então a [DracoBar.qml](windows/DracoBar.qml) (uma por monitor,
+  fim (`Config.modeSinkTotal(n)`); só então a [DracoBar.qml](windows/draco/DracoBar.qml) (uma por monitor,
   no mesmo `Variants` do `shell.qml`) aparece deslizando da borda superior (`shown` → `panel.y`,
   `dracoSlideMs`; a surface dela começa em y=0 SEM margem no topo justamente p/ o deslize sair da
   borda — a folga `dracoMarginTop` é desenhada dentro). Draco→Devil: a barra sobe (a zona exclusiva cai
@@ -191,7 +208,7 @@ shell / Barra Draco" da SettingsWindow também troca.
   forma é recortada com `destination-out` p/ a sombra não escurecer o fundo translúcido por baixo).
   A `mask` cobre só a barra (laterais e faixa da sombra são click-through). `exclusionMode: Normal` +
   `exclusiveZone: marginTop + barH + dracoGap`; o niri ainda aplica os `gaps` dele entre a barra e as
-  janelas (`dracoGap` padrão 0). Widgets "chapados" ([DracoCapsule.qml](ui/DracoCapsule.qml) só ganha
+  janelas (`dracoGap` padrão 0). Widgets "chapados" ([DracoCapsule.qml](capsules/draco/DracoCapsule.qml) só ganha
   fundo no hover/popup aberto) dentro de três chips (`dracoCapsuleBg` @ `dracoChipOpacity`,
   `component Chip` inline na DracoBar). Três blocos: esquerda (lançador, relógio →
   CalendarPopup, RAM+CPU → RamPopup, temperatura → TempPopup), centro (título da janela ATIVA deste
@@ -214,7 +231,7 @@ shell / Barra Draco" da SettingsWindow também troca.
     [SettingsWindow.qml](windows/SettingsWindow.qml) (`settingsRadius`, novo — antes era um
     `16` fixo), do [NotificationWindow.qml](windows/NotificationWindow.qml), do
     [PolkitWindow.qml](windows/PolkitWindow.qml) e dos menus
-    [TrayMenu.qml](ui/TrayMenu.qml)/[AudioDevices.qml](ui/AudioDevices.qml) (usados também no
+    [TrayMenu.qml](menus/TrayMenu.qml)/[AudioDevices.qml](menus/AudioDevices.qml) (usados também no
     modo devil, pelos cristais — aí ficam com `trayMenuRadius`). `CalendarPopup`/`TempPopup`/
     `RamPopup` já resolviam isso sozinhos via `floating` (ver bullet acima).
   - Niri: `ThemeExport.niriContent()` acrescenta, SÓ com `Config.isDraco && Config.dracoRoundNiri`
@@ -308,17 +325,17 @@ recebem o controlador na propriedade `ctx`. Pontos-chave:
   para gravar um monitor específico (`gpu-screen-recorder -w <name>`).
 
 ### Componentes visuais (recebem `ctx`)
-[MenuBall.qml](ui/MenuBall.qml) (bola: sigilo/pentáculo gravado, nº do workspace e o anel
+[MenuBall.qml](widgets/devil/MenuBall.qml) (bola: sigilo/pentáculo gravado, nº do workspace e o anel
 TRACEJADO de workspaces — um arco por workspace, desenhado em `Canvas` casando com o `dotAt`),
-[Crystal.qml](ui/Crystal.qml) (um cristal/runa desenhado em `Canvas` — borda
+[Crystal.qml](widgets/devil/Crystal.qml) (um cristal/runa desenhado em `Canvas` — borda
 escura, núcleo e entalhes finos; renderiza ícone único, ou painel multi-seção conforme as flags
 do item: áudio 3 seções, sistema 3 seções, bandeja N seções — as divisórias são os entalhes),
-[AudioMenu.qml](ui/AudioMenu.qml) (sliders), [AudioDevices.qml](ui/AudioDevices.qml)
-(seletor de dispositivo), [TrayMenu.qml](ui/TrayMenu.qml) (menu do item da bandeja),
-[SettingsField.qml](ui/SettingsField.qml) (uma linha editável da janela de configurações: cor/número/texto/seletor/toggle),
-[GothicCorners.qml](ui/GothicCorners.qml) (filetes côncavos `Canvas` que fundem a bola na barra fina),
-[Capsule.qml](ui/Capsule.qml)/[TopCapsules.qml](ui/TopCapsules.qml) (cápsulas retráteis do topo),
-[CavaRing.qml](cava/CavaRing.qml)/[CavaBars.qml](cava/CavaBars.qml) (visualizador radial/linear).
+[AudioMenu.qml](widgets/devil/AudioMenu.qml) (sliders), [AudioDevices.qml](menus/AudioDevices.qml)
+(seletor de dispositivo), [TrayMenu.qml](menus/TrayMenu.qml) (menu do item da bandeja),
+[SettingsField.qml](fields/SettingsField.qml) (uma linha editável da janela de configurações: cor/número/texto/seletor/toggle),
+[GothicCorners.qml](widgets/devil/GothicCorners.qml) (filetes côncavos `Canvas` que fundem a bola na barra fina),
+[Capsule.qml](capsules/devil/Capsule.qml)/[TopCapsules.qml](windows/devil/TopCapsules.qml) (cápsulas retráteis do topo),
+[CavaRing.qml](widgets/devil/CavaRing.qml)/[CavaBars.qml](cava/CavaBars.qml) (visualizador radial/linear).
 
 ### Config centralizada + Tema + overrides em runtime
 **[Config.qml](Config.qml)** é um singleton (na raiz) com TODOS os valores ajustáveis (geometria,
@@ -365,7 +382,7 @@ opções no grupo "Papel de parede" das configurações), `/reload` (`Quickshell
 
 ### Configurações em runtime + export de temas (cristal "Sistema")
 O cristal de Sistema tem 2 seções: **engrenagem** (cima) abre a [SettingsWindow.qml](windows/SettingsWindow.qml)
-(overlay modal central com TODAS as opções por grupo, via schema → [SettingsField.qml](ui/SettingsField.qml));
+(overlay modal central com TODAS as opções por grupo, via schema → [SettingsField.qml](fields/SettingsField.qml));
 **lâmpada** (baixo) inibe/reativa o lock/idle ([IdleService.qml](services/IdleService.qml)).
 - **[Settings.qml](services/Settings.qml)** (singleton) guarda só os overrides num JSON
   (`~/.config/quickshell/settings.json`, via `FileView`). `get/set/unset/reset`; reatribui o mapa inteiro a
