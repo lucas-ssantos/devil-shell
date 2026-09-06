@@ -7,10 +7,12 @@ import "root:/"           // Config (raiz)
 // temperatura do local (clima). Emerge CENTRALIZADO com a cápsula (mesma cor, sem
 // borda, cantos de cima retos) e "desenrola" de cima pra baixo (altura, não escala) —
 // mesma linguagem visual do CalendarPopup, para parecer uma extensão da cápsula.
+// No modo Draco (`floating`) vale o mesmo: COLADO na base da barra (sem folga), topo
+// reto e base no raio da barra — "brota" da barra em vez de flutuar solto abaixo dela.
 PopupWindow {
     id: root
     property var ctx        // janela-âncora (TopCapsules -> bar, ou DracoBar)
-    property bool floating: false   // barra Draco: cartão solto abaixo da barra (folga, 4 cantos redondos, borda)
+    property bool floating: false   // barra Draco: painel COLADO na barra (topo reto, base no raio da barra)
     property real px: 0     // centro-X/base da CÁPSULA (coord. de `ctx`)
     property real py: 0
     property bool revealed: false   // controla a animação de abrir/fechar (ver `card` abaixo)
@@ -35,7 +37,8 @@ PopupWindow {
     // deixa o close() de verdade tocar a animação de saída antes de esconder.
     onVisibleChanged: if (!visible && revealed) { visible = true; close() }
 
-    // centralizado com a cápsula, encostado embaixo dela sem vão (parece brotar dali)
+    // centralizado com a cápsula/widget, encostado embaixo sem vão (parece brotar dali);
+    // no draco o usuário pode empurrar pra baixo com Config.dracoPopupGap (padrão 0)
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2
     anchor.rect.y: py + (floating ? Config.dracoPopupGap : 0)
@@ -54,6 +57,14 @@ PopupWindow {
     visible: false
     grabFocus: true   // clique fora do popup fecha sozinho (dispara onVisibleChanged acima)
 
+    // ESC fecha (o clique fora já fecha via grabFocus). Enquanto o popup está aberto o
+    // grabFocus traz o teclado pra cá; este Item focável recebe o Escape.
+    Item {
+        anchors.fill: parent
+        focus: root.visible
+        Keys.onEscapePressed: root.close()
+    }
+
     // "desenrola" a partir do topo: a altura visível cresce (0 -> cheia), revelando o
     // conteúdo (que fica em posição fixa) por baixo de um clip.
     Rectangle {
@@ -61,13 +72,13 @@ PopupWindow {
         width: parent.width
         height: root.revealed ? root.implicitHeight : 0
         clip: true
+        // draco: mesma cor da barra, topo RETO (funde na base da barra) e base no raio
+        // dela; devil: extensão da cápsula
         color: root.floating ? Config.dracoBg : Config.capsuleBg
-        topLeftRadius: root.floating ? Config.dracoRadius : 0
-        topRightRadius: root.floating ? Config.dracoRadius : 0
+        topLeftRadius: 0
+        topRightRadius: 0
         bottomLeftRadius: root.floating ? Config.dracoRadius : Config.capsuleRadius
         bottomRightRadius: root.floating ? Config.dracoRadius : Config.capsuleRadius
-        border.width: root.floating ? 1 : 0
-        border.color: Config.dracoBorder
         Behavior on height { NumberAnimation { duration: Config.capsuleAnim; easing.type: Easing.OutCubic } }
 
         Column {

@@ -25,6 +25,7 @@ PanelWindow {
     id: bar
     property var modelData      // a screen (monitor)
     property var niri           // NiriService
+    property var levels: []     // níveis do CavaService (mini-visualizador nos vãos da barra)
     property int menuCount: 0   // nº de cristais do modo devil (p/ esperar o afundar deles antes de entrar)
 
     screen: modelData
@@ -135,8 +136,25 @@ PanelWindow {
         closePopups()
         if (!wasOpen) { const a = anchorOf(item); popup.openAt(a.x, a.y) }
     }
+    // O clique-direito que fecha o popup de dispositivos QUEBRA o grabFocus dele (o niri
+    // some com a superfície) e ainda é reentregue ao widget — sem guarda, esse 2º evento
+    // cairia aqui de novo com `audioDevices.visible` já falso e REABRIRIA o popup. Guardamos
+    // quando/qual dispositivo fechou por último: um novo toggle do MESMO tipo logo em
+    // seguida (mesma ação de clique) apenas mantém fechado; de outro tipo ainda troca.
+    property double audioClosedAt: 0
+    property string audioClosedKind: ""
+    Connections {
+        target: audioDevices
+        function onVisibleChanged() {
+            if (!audioDevices.visible) { bar.audioClosedAt = Date.now(); bar.audioClosedKind = audioDevices.kind }
+        }
+    }
     function toggleDevices(kind, item) {
-        if (audioDevices.visible && audioDevices.kind === kind) { audioDevices.visible = false; return }
+        const justClosedSame = bar.audioClosedKind === kind && (Date.now() - bar.audioClosedAt) < 250
+        if ((audioDevices.visible && audioDevices.kind === kind) || justClosedSame) {
+            audioDevices.visible = false
+            return
+        }
         const a = anchorOf(item)
         audioDevices.openAt(kind, a.x, a.y)
     }
@@ -256,6 +274,35 @@ PanelWindow {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
             onWheel: (w) => bar.switchWorkspace(w.angleDelta.y > 0 ? -1 : 1)   // cima = anterior
+        }
+
+        // ══ Visualizador CAVA: forma de onda APENAS nos vãos (chip central ↔ chips laterais) ══
+        // Não passa por trás dos widgets. Metade do espectro em cada vão; o chip central
+        // fica no lugar da quebra do meio. Puramente visual (o scroll segue p/ o MouseArea
+        // acima). Some se o vão ficar estreito demais (título de janela longo no centro).
+        DracoCava {
+            id: cavaLeft
+            visible: Config.dracoCavaEnabled && bar.shown && width >= Config.dracoCavaMinW
+            levels: bar.levels
+            segment: "left"
+            height: parent.height
+            anchors {
+                left: leftChip.right; right: centerChip.left
+                leftMargin: Config.dracoPad; rightMargin: Config.dracoPad
+                verticalCenter: parent.verticalCenter
+            }
+        }
+        DracoCava {
+            id: cavaRight
+            visible: Config.dracoCavaEnabled && bar.shown && width >= Config.dracoCavaMinW
+            levels: bar.levels
+            segment: "right"
+            height: parent.height
+            anchors {
+                left: centerChip.right; right: rightChip.left
+                leftMargin: Config.dracoPad; rightMargin: Config.dracoPad
+                verticalCenter: parent.verticalCenter
+            }
         }
 
         // ══ Esquerda ══

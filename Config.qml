@@ -299,7 +299,7 @@ Singleton {
     readonly property int    dracoTextSize: Settings.get("dracoTextSize", 12)
     readonly property real   dracoTitleMaxW: Settings.get("dracoTitleMaxW", 520)   // largura máx do título da janela (corta com …)
     readonly property int    dracoWsMin: Settings.get("dracoWsMin", 3)             // mínimo de cápsulas de workspace (completa c/ fantasmas)
-    readonly property real   dracoPopupGap: Settings.get("dracoPopupGap", 8)       // folga barra → popups (calendário/sistema/temperatura/menus)
+    readonly property real   dracoPopupGap: Settings.get("dracoPopupGap", 0)       // folga barra → popups (calendário/sistema/temperatura/menus); 0 = colados na barra, "brotando" dela como no modo devil
     readonly property string dracoClockFormat: Settings.get("dracoClockFormat", "HH:mm")
     readonly property int    dracoAnim: Settings.get("dracoAnim", 160)             // hover/troca de estado (ms)
     readonly property real   dracoBgOpacity: Settings.get("dracoBgOpacity", 0.85)  // opacidade do fundo da barra (0–1)
@@ -316,6 +316,24 @@ Singleton {
     readonly property color  dracoSub: Settings.get("dracoSub", Theme.subtext0)      // texto apagado (fantasmas, mudo, janela sem foco)
     readonly property color  dracoAccent: Settings.get("dracoAccent", Theme.mauve)   // workspace ativo / botão do lançador
     readonly property color  dracoAccentText: Settings.get("dracoAccentText", Theme.crust)   // texto sobre o acento
+    // Visualizador CAVA da barra Draco (ui/DracoCava.qml): forma de onda estilo editor de
+    // áudio — barras finas de cantos redondos ESPELHADAS no eixo horizontal, com a COR
+    // variando pela amplitude (grave/baixo = frio; pico = quente). Diferente do rodapé
+    // (CavaBars, área suave de uma cor só). Fica APENAS nos vãos entre o chip central e os
+    // laterais (não passa por trás dos widgets): o espectro (espelhado, grave nas pontas /
+    // agudo no centro) é partido ao meio — metade em cada vão, com o chip central no lugar
+    // da quebra do meio.
+    readonly property bool   dracoCavaEnabled: Settings.get("dracoCavaEnabled", true)
+    readonly property real   dracoCavaBarFrac: Settings.get("dracoCavaBarFrac", 0.5)  // largura da barra (× slot); resto vira vão
+    readonly property real   dracoCavaOpacity: Settings.get("dracoCavaOpacity", 0.9)
+    readonly property real   dracoCavaFloor: Settings.get("dracoCavaFloor", 0.05)     // altura mín. (fração) — linha "viva" mesmo no silêncio
+    readonly property real   dracoCavaMinW: Settings.get("dracoCavaMinW", 40)         // largura mín. do vão p/ desenhar
+    // paradas do gradiente por amplitude (frio → quente); do tema do shell, sobrescrevíveis
+    readonly property color  dracoCavaC0: Settings.get("dracoCavaC0", Theme.sky)      // silêncio / base
+    readonly property color  dracoCavaC1: Settings.get("dracoCavaC1", Theme.blue)
+    readonly property color  dracoCavaC2: Settings.get("dracoCavaC2", Theme.mauve)
+    readonly property color  dracoCavaC3: Settings.get("dracoCavaC3", Theme.red)
+    readonly property color  dracoCavaC4: Settings.get("dracoCavaC4", Theme.peach)    // pico
     readonly property string iconLauncher: Settings.get("iconLauncher", "")   // logo do Debian (nf-linux-debian) — botão do lançador
     readonly property string iconClock: Settings.get("iconClock", "")         // relógio (nf-fa-clock_o)
     readonly property string iconCpu: Settings.get("iconCpu", "󰘚")             // chip (nf-md-chip) — uso de CPU

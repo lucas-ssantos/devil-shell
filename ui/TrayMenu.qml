@@ -11,7 +11,7 @@ PopupWindow {
     property var trayItem            // SystemTrayItem (tem .menu)
     property real px: 0
     property real py: 0
-    property bool below: false       // barra Draco: abre ABAIXO do ponto (padrão: acima, cristais)
+    property bool below: false       // barra Draco: abre ABAIXO do ponto, COLADO na barra (topo reto); padrão: acima, cristais
 
     // pilha de navegação de submenus; currentMenu alimenta o QsMenuOpener
     property var menuStack: []
@@ -52,8 +52,8 @@ PopupWindow {
         showFallback.restart()
     }
 
-    // abre ACIMA do clique (não sobre o cristal): centrado no x do clique e com a
-    // base do menu logo acima do ponto clicado.
+    // devil: ACIMA do clique (não sobre o cristal), base do menu logo acima do ponto.
+    // draco (below): ABAIXO, colado na base da barra (Config.dracoPopupGap, padrão 0).
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2
     anchor.rect.y: below ? py + Config.dracoPopupGap : py - root.implicitHeight - Config.trayMenuGap
@@ -101,13 +101,25 @@ PopupWindow {
         onTriggered: if (root.pendingOpen) { root.pendingOpen = false; root.visible = true }
     }
 
+    // ESC fecha (o clique fora já fecha via grabFocus). Enquanto o menu está aberto o
+    // grabFocus traz o teclado pra cá; este Item focável recebe o Escape.
+    Item {
+        anchors.fill: parent
+        focus: root.visible
+        Keys.onEscapePressed: root.visible = false
+    }
+
     Rectangle {
         anchors.fill: parent
         color: Config.trayMenuBg
         radius: Config.windowRadius(Config.trayMenuRadius)   // no draco, casa com o raio da barra
+        // draco (below): topo RETO p/ fundir na base da barra; só a base arredonda
+        topLeftRadius: root.below ? 0 : radius
+        topRightRadius: root.below ? 0 : radius
         border.color: Config.trayMenuBorder
         border.width: 1
-        // animação de entrada: aparece crescendo a partir da base (abre pra cima)
+        // animação de entrada: aparece crescendo a partir da base (abre pra cima) ou,
+        // no draco, a partir do topo — "brotando" da barra
         opacity: root.visible ? 1 : 0
         scale: root.visible ? 1 : 0.9
         transformOrigin: root.below ? Item.Top : Item.Bottom

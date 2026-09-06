@@ -12,7 +12,7 @@ PopupWindow {
     property string kind: "sink"     // "sink" = saídas | "source" = entradas
     property real px: 0
     property real py: 0
-    property bool below: false       // barra Draco: abre ABAIXO do ponto (padrão: acima, cristais)
+    property bool below: false       // barra Draco: abre ABAIXO do ponto, COLADO na barra (topo reto); padrão: acima, cristais
 
     // dispositivos do tipo atual (exclui streams de apps; e monitores nas entradas)
     readonly property var devices: {
@@ -31,7 +31,8 @@ PopupWindow {
     function openAt(k, x, y) { kind = k; px = x; py = y; visible = true }
     function devLabel(n) { return n.description || n.nickname || n.name || "?" }
 
-    // abre ACIMA do clique, centrado (igual ao menu do tray)
+    // devil: ACIMA do clique, centrado (igual ao menu do tray). draco (below): ABAIXO,
+    // colado na base da barra (Config.dracoPopupGap, padrão 0).
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2
     anchor.rect.y: below ? py + Config.dracoPopupGap : py - root.implicitHeight - Config.trayMenuGap
@@ -45,13 +46,24 @@ PopupWindow {
     visible: false
     grabFocus: true   // clique fora do popup fecha sozinho (mesmo padrão do TrayMenu)
 
+    // ESC fecha (o clique fora já fecha via grabFocus). Enquanto o popup está aberto o
+    // grabFocus traz o teclado pra cá; este Item focável recebe o Escape.
+    Item {
+        anchors.fill: parent
+        focus: root.visible
+        Keys.onEscapePressed: root.visible = false
+    }
+
     Rectangle {
         anchors.fill: parent
         color: Config.trayMenuBg
         radius: Config.windowRadius(Config.trayMenuRadius)   // no draco, casa com o raio da barra
+        // draco (below): topo RETO p/ fundir na base da barra; só a base arredonda
+        topLeftRadius: root.below ? 0 : radius
+        topRightRadius: root.below ? 0 : radius
         border.color: Config.trayMenuBorder
         border.width: 1
-        // animação de entrada (cresce da base)
+        // animação de entrada (cresce da base ou, no draco, do topo — "brota" da barra)
         opacity: root.visible ? 1 : 0
         scale: root.visible ? 1 : 0.9
         transformOrigin: root.below ? Item.Top : Item.Bottom

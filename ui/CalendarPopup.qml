@@ -10,8 +10,9 @@ import "root:/"   // Config (raiz)
 PopupWindow {
     id: root
     property var ctx        // janela-âncora (TopCapsules -> bar, ou DracoBar)
-    // flutuante (barra Draco): cartão solto abaixo da barra, com folga (dracoPopupGap),
-    // TODOS os cantos arredondados e borda — em vez do canto gótico fundido à cápsula
+    // barra Draco: painel COLADO na base da barra (topo RETO, base no raio da barra,
+    // mesma cor da barra) — "brota" dela, como o popup brota da cápsula no modo devil
+    // (lá com canto gótico). Config.dracoPopupGap (padrão 0) pode soltá-lo da barra.
     property bool floating: false
     property real px: 0     // centro-X/base da cápsula (coord. de `ctx`)
     property real py: 0
@@ -93,6 +94,14 @@ PopupWindow {
         return out
     }
 
+    // ESC fecha (o clique fora já fecha via grabFocus). Enquanto o popup está aberto o
+    // grabFocus traz o teclado pra cá; este Item focável recebe o Escape.
+    Item {
+        anchors.fill: parent
+        focus: root.visible
+        Keys.onEscapePressed: root.close()
+    }
+
     // "desenrola" a partir do topo: a altura visível cresce (0 -> cheia), revelando o
     // conteúdo (que fica em posição fixa) por baixo de um clip — mesma linguagem visual
     // da própria cápsula "descendo" no hover, não um fade/scale de janela solta.
@@ -114,9 +123,7 @@ PopupWindow {
             height: root.implicitHeight
             antialiasing: true
             property color bg: root.floating ? Config.dracoBg : Config.capsuleBg
-            property color edge: Config.dracoBorder
             onBgChanged: requestPaint()
-            onEdgeChanged: requestPaint()
             onWidthChanged: requestPaint()
             onHeightChanged: requestPaint()
             Component.onCompleted: requestPaint()
@@ -125,21 +132,20 @@ PopupWindow {
                 const g = getContext("2d")
                 g.reset()
                 const w = width, h = height
-                // flutuante (Draco): retângulo arredondado nos 4 cantos + borda fina
+                // Draco: painel colado na barra — topo RETO (funde na base da barra),
+                // só a base arredonda (raio da barra), mesma cor da barra
                 if (root.floating) {
                     const rr = Math.max(0, Math.min(Config.dracoRadius, w / 2, h / 2))
                     g.beginPath()
-                    g.moveTo(rr, 0.5)
-                    g.arcTo(w - 0.5, 0.5, w - 0.5, h - 0.5, rr)
-                    g.arcTo(w - 0.5, h - 0.5, 0.5, h - 0.5, rr)
-                    g.arcTo(0.5, h - 0.5, 0.5, 0.5, rr)
-                    g.arcTo(0.5, 0.5, w - 0.5, 0.5, rr)
+                    g.moveTo(0, 0)
+                    g.lineTo(w, 0)
+                    g.lineTo(w, h - rr)
+                    g.arcTo(w, h, w - rr, h, rr)
+                    g.lineTo(rr, h)
+                    g.arcTo(0, h, 0, h - rr, rr)
                     g.closePath()
                     g.fillStyle = bg
                     g.fill()
-                    g.strokeStyle = edge
-                    g.lineWidth = 1
-                    g.stroke()
                     return
                 }
                 // canto gótico = curva OGEE (S: primeiro arco convexo, depois côncavo — a
