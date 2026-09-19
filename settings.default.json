@@ -1,8 +1,8 @@
 {
-  "wallpaperAll": "/home/luke/Themes/arknights/nian/nian_led.jpg",
+  "wallpaperAll": "/home/luke/Themes/wallpapers/photo_2026-08-14_15-24-23.jpg",
   "wallpaperByOutput": {},
   "dotTravelMs": 1000,
-  "wallpaperDir": "/home/luke/Themes/arknights/nian",
+  "wallpaperDir": "/home/luke/Themes/wallpapers",
   "notifTimeout": 3000,
   "notifAnim": 1000,
   "wallpaperTransition": "grow",
@@ -10,5 +10,6 @@
   "themeWallpaper_CrimsonDevil": "/home/luke/Themes/vigna/wallpapers/vigna2.jpg",
   "themeWallpaper_DragonBlanc": "/home/luke/Themes/arknights/wallpapers/nian_led.jpg",
   "sensorsInterval": 1000,
-  "idleLockTimeout": 30000
+  "idleLockTimeout": 30000,
+  "shellMode": "draco"
 }

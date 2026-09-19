@@ -7,9 +7,9 @@ import QtQuick
 // formato que a bola/anel de pontos consome:
 //   { name, active, tags: [{ index, id, is_active, is_urgent, client_count }] }
 // `active` = monitor focado; `index` = idx do workspace (1-based, por monitor).
-// Também acompanha a janela ATIVA de cada monitor (título/app_id — o centro da barra
-// Draco) e concentra as AÇÕES de foco usadas pelas duas UIs (workspace de um monitor,
-// janela de um app da bandeja).
+// Também acompanha a janela com o foco da SESSÃO (título/app_id — o centro da barra Draco,
+// igual nos dois monitores) e concentra as AÇÕES de foco usadas pelas duas UIs (workspace de
+// um monitor, janela de um app da bandeja).
 Scope {
     id: root
 
@@ -32,12 +32,13 @@ Scope {
     // redimensionamentos, e só o cava (cobertura da onda) precisa reavaliar nesses casos.
     property var winsByOutput: ({})
 
-    // Janela ATIVA do workspace ativo de cada output (a que tem/teria o foco lá):
-    // { "DP-2": { id, title, appId, focused } | null, … } — `focused` = é a focada global.
-    // Alimenta o título no centro da barra Draco. Atualizado por rebuild() e pelos eventos
-    // WindowFocusChanged / WorkspaceActiveWindowChanged (sem reatribuir `monitors`, que
-    // faria a bola/anel repintarem a cada clique).
-    property var activeWinByOutput: ({})
+    // Janela com o foco do TECLADO na sessão inteira ({ id, title, appId } | null) — a MESMA
+    // nos dois monitores, alimenta o título no centro da barra Draco. Cópia rasa reatribuída
+    // (não só mutada) p/ o binding disparar mesmo quando só o TÍTULO da janela focada muda
+    // (windowInfo, por sua vez, costuma ser mutado in-place em WindowOpenedOrChanged, o que
+    // sozinho não notifica os bindings). Atualizado por rebuild() e por WindowFocusChanged
+    // (sem reatribuir `monitors`, que faria a bola/anel repintarem a cada clique).
+    property var focusedWin: null
 
     // converte a janela do IPC p/ o registro interno (ver formato em windowInfo)
     function winFromIpc(w) {
@@ -76,20 +77,10 @@ Scope {
         root.winsByOutput = m
     }
 
-    // Reconstrói `activeWinByOutput` (janela ativa do workspace ativo de cada output).
-    function rebuildActive() {
-        const list = workspaces ?? []
-        const m = {}
-        for (let i = 0; i < list.length; i++) {
-            const w = list[i]
-            if (!w.is_active) continue
-            const aid = w.active_window_id
-            const wi = (aid !== null && aid !== undefined) ? windowInfo[aid] : undefined
-            m[w.output ?? "?"] = wi
-                ? { id: wi.id, title: wi.title, appId: wi.appId, focused: wi.id === focusedWindowId }
-                : null
-        }
-        root.activeWinByOutput = m
+    // Reconstrói `focusedWin` a partir de `focusedWindowId` (ver comentário na property).
+    function rebuildFocusedWin() {
+        const wi = (focusedWindowId !== -1) ? windowInfo[focusedWindowId] : undefined
+        root.focusedWin = wi ? { id: wi.id, title: wi.title, appId: wi.appId } : null
     }
 
     // Procura os dados de um monitor pelo nome (ex: "DP-2"); retorna null se não achar.
@@ -100,7 +91,7 @@ Scope {
         return null
     }
 
-    // Reconstrói `monitors` (e `winsByOutput`/`activeWinByOutput`) a partir de workspaces + windowInfo.
+    // Reconstrói `monitors` (e `winsByOutput`/`focusedWin`) a partir de workspaces + windowInfo.
     function rebuild() {
         const counts = {}
         for (const wid in windowInfo) {
@@ -129,8 +120,8 @@ Scope {
         }
         mons.sort((a, b) => a.name < b.name ? -1 : (a.name > b.name ? 1 : 0))
         root.monitors = mons
-        rebuildWins()     // o workspace ativo pode ter mudado -> as janelas visíveis também
-        rebuildActive()   // … e a janela ativa de cada monitor
+        rebuildWins()        // o workspace ativo pode ter mudado -> as janelas visíveis também
+        rebuildFocusedWin()  // … e possivelmente o título/app da janela focada
     }
 
     // workspace `id` virou o ativo do seu monitor; se `focused`, o foco global foi p/ ele
@@ -217,13 +208,6 @@ Scope {
                         if (list[i].id === ev.WorkspaceUrgencyChanged.id)
                             list[i].is_urgent = ev.WorkspaceUrgencyChanged.urgent === true
                     root.rebuild()
-                } else if (ev.WorkspaceActiveWindowChanged) {
-                    // a janela "ativa" de um workspace mudou (foco dentro dele / fechou)
-                    const e = ev.WorkspaceActiveWindowChanged
-                    const list = root.workspaces ?? []
-                    for (let i = 0; i < list.length; i++)
-                        if (list[i].id === e.workspace_id) list[i].active_window_id = e.active_window_id ?? null
-                    root.rebuildActive()
                 } else if (ev.WindowsChanged) {
                     const m = {}
                     let focused = -1
@@ -253,7 +237,7 @@ Scope {
                     root.focusedWindowId = (id === null || id === undefined) ? -1 : id
                     for (const wid in root.windowInfo)
                         root.windowInfo[wid].focused = (root.windowInfo[wid].id === root.focusedWindowId)
-                    root.rebuildActive()
+                    root.rebuildFocusedWin()
                 } else if (ev.WindowLayoutsChanged) {
                     // rajadas durante resize/scroll: atualiza SÓ winsByOutput (não `monitors`,
                     // senão a bola/anel repintam à toa a cada frame de animação)

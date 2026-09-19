@@ -17,8 +17,9 @@ import "root:/"                 // Config (raiz)
 // Os widgets são "chapados" (sem pílula própria) dentro de três chips discretos:
 //   Esquerda: lançador · relógio (popup do calendário) · recursos RAM/CPU (popup do
 //             sistema) · temperatura da CPU (popup de temperaturas)
-//   Centro:   título da janela ATIVA deste monitor (com o ícone do app); sem janela no
-//             workspace, as pílulas dos workspaces (clique troca; mín. Config.dracoWsMin)
+//   Centro:   título da janela FOCADA da sessão (igual nos dois monitores, com o ícone do
+//             app); sem nenhuma janela focada, as pílulas dos workspaces DESTE monitor
+//             (clique troca; mín. Config.dracoWsMin)
 //   Direita:  saída/microfone (esquerdo = mudo, scroll = volume, direito = dispositivos) ·
 //             gravação de tela DESTE monitor · lock/idle (lâmpada) · configurações · bandeja
 //             (esquerdo = foca a janela do app, direito = menu do app)
@@ -99,12 +100,9 @@ PanelWindow {
             out.push({ index: i + 1, id: -1, is_active: false, is_urgent: false, client_count: 0, ghost: true })
         return out
     }
-    // janela ativa do workspace ativo deste monitor (NiriService.activeWinByOutput)
-    readonly property var activeWin: {
-        if (!niri || !modelData) return null
-        const m = niri.activeWinByOutput
-        return (m && m[modelData.name]) ? m[modelData.name] : null
-    }
+    // janela com o foco da SESSÃO (NiriService.focusedWin) — a mesma nos dois monitores, não
+    // a janela ativa do workspace deste monitor especificamente
+    readonly property var activeWin: niri ? niri.focusedWin : null
     readonly property bool hasWin: activeWin !== null
     // ícone do app pela .desktop (heurística do Quickshell); "" se não achar
     readonly property string appIcon: {
@@ -344,7 +342,7 @@ PanelWindow {
             }
         }
 
-        // ══ Centro: título da janela ativa OU pílulas de workspaces ══
+        // ══ Centro: título da janela FOCADA (igual nos 2 monitores) OU pílulas de workspaces ══
         Chip {
             id: centerChip
             anchors.centerIn: parent
@@ -358,8 +356,7 @@ PanelWindow {
                 image: bar.appIcon
                 label: bar.activeWin ? (bar.activeWin.title || bar.activeWin.appId || "") : ""
                 labelMaxW: centerChip.titleMaxW
-                // apagado quando a janela ativa deste monitor não é a focada da sessão
-                textColor: (bar.activeWin && bar.activeWin.focused) ? Config.dracoText : Config.dracoSub
+                textColor: Config.dracoText
                 onClicked: if (bar.activeWin && bar.niri) bar.niri.focusWindow(bar.activeWin.id)
             }
             Row {
