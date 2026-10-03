@@ -17,8 +17,8 @@ Singleton {
     id: theme
 
     // ── Registro de paletas disponíveis (nome -> singleton) ──
-    readonly property var palettes: ({ "CrimsonDevil": CrimsonDevil, "InfernalRose": InfernalRose, "DragonBlanc": DragonBlanc })
-    readonly property var paletteNames: ["CrimsonDevil", "InfernalRose", "DragonBlanc"]
+    readonly property var palettes: ({ "CrimsonDevil": CrimsonDevil, "InfernalRose": InfernalRose, "DragonBlanc": DragonBlanc, "GoldenCaprine": GoldenCaprine })
+    readonly property var paletteNames: ["CrimsonDevil", "InfernalRose", "DragonBlanc", "GoldenCaprine"]
 
     // ── Escolha das paletas (persistida pelo Settings; padrão = visual atual) ──
     readonly property string shellName: Settings.get("themeShell", "CrimsonDevil")
