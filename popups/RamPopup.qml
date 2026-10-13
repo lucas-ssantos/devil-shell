@@ -55,7 +55,7 @@ PopupWindow {
     implicitHeight: root.rows.length * Config.trayMenuRowH + 2 * Config.trayMenuPad
     color: "transparent"
     visible: false
-    grabFocus: true   // clique fora do popup fecha sozinho (dispara onVisibleChanged acima)
+    grabFocus: root.visible && root.revealed   // libera o foco assim que começa a fechar
 
     // ESC fecha (o clique fora já fecha via grabFocus). Enquanto o popup está aberto o
     // grabFocus traz o teclado pra cá; este Item focável recebe o Escape.

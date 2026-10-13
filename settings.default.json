@@ -1,16 +1,18 @@
 {
-  "wallpaperAll": "/home/luke/Themes/arknights/nian/Nian.(Arknights).full.3548965.jpg",
+  "wallpaperAll": "/home/luke/Themes/arknights/wallpapers/nian_led.jpg",
   "wallpaperByOutput": {},
   "dotTravelMs": 1000,
-  "wallpaperDir": "/home/luke/Themes/arknights/nian/desktop",
+  "wallpaperDir": "/home/luke/Themes/zani/wallpapers/desktop",
   "notifTimeout": 3000,
   "notifAnim": 1000,
   "wallpaperTransition": "grow",
-  "themeShell": "DragonBlanc",
+  "themeShell": "GoldenCaprine",
   "themeWallpaper_CrimsonDevil": "/home/luke/Themes/vigna/wallpapers/vigna2.jpg",
   "themeWallpaper_DragonBlanc": "/home/luke/Themes/arknights/wallpapers/nian_led.jpg",
   "sensorsInterval": 1000,
   "idleLockTimeout": 30000,
   "shellMode": "draco",
-  "wallpaperCarousel": false
+  "wallpaperCarousel": true,
+  "themeCava": "GoldenCaprine",
+  "themeWallpaper_GoldenCaprine": "/home/luke/Themes/zani/wallpapers/desktop/wallhaven-gwjdzd.jpg"
 }

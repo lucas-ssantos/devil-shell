@@ -44,7 +44,7 @@ PopupWindow {
     implicitHeight: (root.devices.length + 1) * Config.trayMenuRowH + 2 * Config.trayMenuPad
     color: "transparent"
     visible: false
-    grabFocus: true   // clique fora do popup fecha sozinho (mesmo padrão do TrayMenu)
+    grabFocus: root.visible   // clique fora do popup fecha sozinho (mesmo padrão do TrayMenu)
 
     // ESC fecha (o clique fora já fecha via grabFocus). Enquanto o popup está aberto o
     // grabFocus traz o teclado pra cá; este Item focável recebe o Escape.
@@ -56,7 +56,7 @@ PopupWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: Config.trayMenuBg
+        color: root.below ? Config.dracoBg : Config.trayMenuBg
         radius: Config.windowRadius(Config.trayMenuRadius)   // no draco, casa com o raio da barra
         // draco (below): topo RETO p/ fundir na base da barra; só a base arredonda
         topLeftRadius: root.below ? 0 : radius

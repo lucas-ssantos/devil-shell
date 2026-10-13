@@ -126,16 +126,43 @@ PanelWindow {
     }
 
     // ── Popups (brotam abaixo do widget que os abre, centralizados nele) ──
-    // ponto de ancoragem: centro-X do widget (coord. da janela) + base da barra
-    function anchorOf(item) {
-        const p = item.mapToItem(null, item.width / 2, 0)
-        return { x: p.x, y: panel.y + panel.height }
+    // ponto de ancoragem: centro da cápsula principal, limitado à largura da barra
+    // para que popups largos não ultrapassem suas bordas.
+    function anchorOf(capsule, popup) {
+        const p = capsule.mapToItem(panel, capsule.width / 2, 0)
+        const halfPopup = popup.implicitWidth / 2
+        const fits = popup.implicitWidth <= panel.width
+        const minX = fits ? panel.x + halfPopup : panel.x + panel.width / 2
+        const maxX = fits ? panel.x + panel.width - halfPopup : minX
+        return {
+            x: Math.max(minX, Math.min(maxX, panel.x + p.x)),
+            y: panel.y + panel.height
+        }
     }
-    function closePopups() { calendarPopup.close(); tempPopup.close(); ramPopup.close() }
-    function togglePopup(popup, item) {
+    function popupTouchesEdge(side) {
+        const popups = [calendarPopup, tempPopup, ramPopup, trayMenu, audioDevices]
+        for (let i = 0; i < popups.length; i++) {
+            const popup = popups[i]
+            if (!popup.visible) continue
+            const left = popup.px - popup.implicitWidth / 2
+            const right = left + popup.implicitWidth
+            if (side === "left" && left <= panel.x + 1) return true
+            if (side === "right" && right >= panel.x + panel.width - 1) return true
+        }
+        return false
+    }
+    function closePopups(exceptPopup) {
+        if (calendarPopup !== exceptPopup) calendarPopup.close()
+        if (tempPopup !== exceptPopup) tempPopup.close()
+        if (ramPopup !== exceptPopup) ramPopup.close()
+        if (trayMenu !== exceptPopup) trayMenu.close()
+        if (audioDevices !== exceptPopup) audioDevices.visible = false
+    }
+    function togglePopup(popup) {
         const wasOpen = popup.visible
-        closePopups()
-        if (!wasOpen) { const a = anchorOf(item); popup.openAt(a.x, a.y) }
+        closePopups(popup)
+        if (!wasOpen) { const a = anchorOf(leftChip, popup); popup.openAt(a.x, a.y) }
+        else popup.close()
     }
     // O clique-direito que fecha o popup de dispositivos QUEBRA o grabFocus dele (o niri
     // some com a superfície) e ainda é reentregue ao widget — sem guarda, esse 2º evento
@@ -150,13 +177,14 @@ PanelWindow {
             if (!audioDevices.visible) { bar.audioClosedAt = Date.now(); bar.audioClosedKind = audioDevices.kind }
         }
     }
-    function toggleDevices(kind, item) {
+    function toggleDevices(kind) {
         const justClosedSame = bar.audioClosedKind === kind && (Date.now() - bar.audioClosedAt) < 250
         if ((audioDevices.visible && audioDevices.kind === kind) || justClosedSame) {
             audioDevices.visible = false
             return
         }
-        const a = anchorOf(item)
+        closePopups(audioDevices)
+        const a = anchorOf(rightChip, audioDevices)
         audioDevices.openAt(kind, a.x, a.y)
     }
     CalendarPopup { id: calendarPopup; ctx: bar; floating: true }
@@ -203,6 +231,8 @@ PanelWindow {
             property real  offY: Config.dracoShadowOffsetY
             property real  rad: Config.dracoRadius
             property real  topRad: Config.dracoMarginTop > 0 ? Config.dracoRadius : 0
+            property bool popupLeft: bar.popupTouchesEdge("left")
+            property bool popupRight: bar.popupTouchesEdge("right")
             property color edge: Config.dracoBorder
             property real  edgeW: Config.dracoBorderW
             onBgChanged: requestPaint()
@@ -213,22 +243,26 @@ PanelWindow {
             onOffYChanged: requestPaint()
             onRadChanged: requestPaint()
             onTopRadChanged: requestPaint()
+            onPopupLeftChanged: requestPaint()
+            onPopupRightChanged: requestPaint()
             onEdgeChanged: requestPaint()
             onEdgeWChanged: requestPaint()
             onWidthChanged: requestPaint()
             onHeightChanged: requestPaint()
             Component.onCompleted: requestPaint()
 
-            // caminho da barra: retângulo com cantos de cima `rt` e de baixo `rb`
-            function shape(g, x, y, w, h, rt, rb) {
+            // caminho da barra: cantos superiores `rt` e inferiores independentes
+            function shape(g, x, y, w, h, rt, rbL, rbR) {
                 g.beginPath()
                 g.moveTo(x + rt, y)
                 g.lineTo(x + w - rt, y)
                 if (rt > 0) g.arcTo(x + w, y, x + w, y + rt, rt)
-                g.lineTo(x + w, y + h - rb)
-                g.arcTo(x + w, y + h, x + w - rb, y + h, rb)
-                g.lineTo(x + rb, y + h)
-                g.arcTo(x, y + h, x, y + h - rb, rb)
+                g.lineTo(x + w, y + h - rbR)
+                if (rbR > 0) g.arcTo(x + w, y + h, x + w - rbR, y + h, rbR)
+                else g.lineTo(x + w, y + h)
+                g.lineTo(x + rbL, y + h)
+                if (rbL > 0) g.arcTo(x, y + h, x, y + h - rbL, rbL)
+                else g.lineTo(x, y + h)
                 g.lineTo(x, y + rt)
                 if (rt > 0) g.arcTo(x, y, x + rt, y, rt)
                 g.closePath()
@@ -239,7 +273,8 @@ PanelWindow {
                 const p = bar.shadowPad
                 const x = p, y = p, w = width - 2 * p, h = height - 2 * p
                 if (w <= 0 || h <= 0) return
-                const rb = Math.max(0, Math.min(rad, w / 2, h / 2))
+                const rbL = popupLeft ? 0 : Math.max(0, Math.min(rad, w / 2, h / 2))
+                const rbR = popupRight ? 0 : Math.max(0, Math.min(rad, w / 2, h / 2))
                 const rt = Math.max(0, Math.min(topRad, w / 2, h / 2))
                 // 1) sombra: forma opaca com shadow; depois a forma é recortada -> sobra só o halo
                 if (blur > 0 && shA > 0) {
@@ -248,23 +283,23 @@ PanelWindow {
                     g.shadowBlur = blur
                     g.shadowOffsetY = offY
                     g.fillStyle = "#000000"   // qualquer cor opaca: só a sombra sobrevive ao recorte
-                    shape(g, x, y, w, h, rt, rb)
+                    shape(g, x, y, w, h, rt, rbL, rbR)
                     g.fill()
                     g.restore()
                     g.globalCompositeOperation = "destination-out"
-                    shape(g, x, y, w, h, rt, rb)
+                    shape(g, x, y, w, h, rt, rbL, rbR)
                     g.fill()
                     g.globalCompositeOperation = "source-over"
                 }
                 // 2) corpo translúcido
                 g.fillStyle = Qt.rgba(bg.r, bg.g, bg.b, bgA)
-                shape(g, x, y, w, h, rt, rb)
+                shape(g, x, y, w, h, rt, rbL, rbR)
                 g.fill()
                 // 3) borda opcional (dentro da forma)
                 if (edgeW > 0) {
                     g.strokeStyle = edge
                     g.lineWidth = edgeW
-                    shape(g, x + edgeW / 2, y + edgeW / 2, w - edgeW, h - edgeW, rt, rb)
+                    shape(g, x + edgeW / 2, y + edgeW / 2, w - edgeW, h - edgeW, rt, rbL, rbR)
                     g.stroke()
                 }
             }
@@ -322,7 +357,7 @@ PanelWindow {
                 icon: Config.iconClock
                 label: Qt.formatDateTime(sysClock.date, Config.dracoClockFormat)
                 active: calendarPopup.visible
-                onClicked: bar.togglePopup(calendarPopup, clockCap)
+                onClicked: bar.togglePopup(calendarPopup)
             }
             DracoCapsule {                                   // recursos: RAM + CPU → popup do sistema
                 id: resCap
@@ -331,14 +366,14 @@ PanelWindow {
                 //icon2: Config.iconCpu
                 //label2: SensorsService.cpuUsage
                 active: ramPopup.visible
-                onClicked: bar.togglePopup(ramPopup, resCap)
+                onClicked: bar.togglePopup(ramPopup)
             }
             DracoCapsule {                                   // temperatura da CPU → popup de temperaturas
                 id: tempCap
                 icon: Config.iconWeather
                 label: SensorsService.cpuTemp
                 active: tempPopup.visible
-                onClicked: bar.togglePopup(tempPopup, tempCap)
+                onClicked: bar.togglePopup(tempPopup)
             }
         }
 
@@ -420,7 +455,7 @@ PanelWindow {
                 active: audioDevices.visible && audioDevices.kind === "sink"
                 onClicked: AudioService.toggleSinkMute()
                 onWheel: (dir) => AudioService.addSinkVolume(dir * Config.volStep)
-                onRightClicked: bar.toggleDevices("sink", sinkCap)
+                onRightClicked: bar.toggleDevices("sink")
             }
             DracoCapsule {                                   // microfone
                 id: sourceCap
@@ -432,7 +467,7 @@ PanelWindow {
                 active: audioDevices.visible && audioDevices.kind === "source"
                 onClicked: AudioService.toggleSourceMute()
                 onWheel: (dir) => AudioService.addSourceVolume(dir * Config.volStep)
-                onRightClicked: bar.toggleDevices("source", sourceCap)
+                onRightClicked: bar.toggleDevices("source")
             }
             DracoCapsule {                                   // gravação de tela DESTE monitor
                 icon: CaptureService.recording ? Config.iconRecording : Config.iconRecord
@@ -489,9 +524,10 @@ PanelWindow {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: (mouse) => {
                                 if (mouse.button === Qt.RightButton) {
-                                    if (trayMenu.visible) { trayMenu.visible = false; return }   // direito de novo fecha
+                                    if (trayMenu.visible || trayMenu.pendingOpen) { trayMenu.close(); return }   // direito de novo fecha
                                     if (trayCell.modelData.menu) {
-                                        const a = bar.anchorOf(trayCell)
+                                        bar.closePopups(trayMenu)
+                                        const a = bar.anchorOf(rightChip, trayMenu)
                                         trayMenu.openAt(trayCell.modelData, a.x, a.y)
                                     }
                                 } else if (bar.niri) {

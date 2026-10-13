@@ -36,6 +36,11 @@ PopupWindow {
             showFallback.restart()               // segurança: mostra mesmo se nada chegar
         }
     }
+    function close() {
+        pendingOpen = false
+        showFallback.stop()
+        visible = false
+    }
     function openSubmenu(entry) {
         menuStack = menuStack.concat([currentMenu])
         visible = false                          // recarrega no tamanho certo (ver openAt)
@@ -76,7 +81,7 @@ PopupWindow {
     // clique fora do popup fecha sozinho (grab do compositor); os fechamentos explícitos
     // (clique na bola, ESC, direito no tray de novo) continuam funcionando igual, já que
     // só setam `visible = false` também.
-    grabFocus: true
+    grabFocus: root.visible
 
     QsMenuOpener {
         id: opener
@@ -111,7 +116,7 @@ PopupWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: Config.trayMenuBg
+        color: root.below ? Config.dracoBg : Config.trayMenuBg
         radius: Config.windowRadius(Config.trayMenuRadius)   // no draco, casa com o raio da barra
         // draco (below): topo RETO p/ fundir na base da barra; só a base arredonda
         topLeftRadius: root.below ? 0 : radius

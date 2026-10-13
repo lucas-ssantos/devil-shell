@@ -60,7 +60,7 @@ PopupWindow {
                     + 2 * Config.trayMenuPad + 8   // 8 = 2 espaçamentos da Column
     color: "transparent"
     visible: false
-    grabFocus: true   // clique fora do popup fecha sozinho (dispara onVisibleChanged acima)
+    grabFocus: root.visible && root.revealed   // libera o foco assim que começa a fechar
 
     readonly property var monthNames: ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
                                         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
