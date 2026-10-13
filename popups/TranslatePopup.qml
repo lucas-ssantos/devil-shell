@@ -1,9 +1,10 @@
 import Quickshell
 import Quickshell.Io
+import Quickshell.Wayland
 import QtQuick
 import "root:/"
 
-PopupWindow {
+PanelWindow {
     id: root
 
     property var ctx
@@ -20,17 +21,25 @@ PopupWindow {
     readonly property string sourceCode: reversed ? "pt" : "en"
     readonly property string targetLanguage: reversed ? "English" : "Portuguese"
     readonly property string targetCode: reversed ? "en" : "pt"
+    readonly property real popupWidth: 500
+    readonly property real popupHeight: 454
+    readonly property real anchorY: below ? py : (screen ? screen.height : height) - ctx.height + py
+    readonly property real popupX: Math.max(12, Math.min(width - popupWidth - 12, px - popupWidth / 2))
+    readonly property real popupY: Math.max(12, Math.min(height - popupHeight - 12,
+        below ? anchorY + Config.dracoPopupGap
+              : anchorY - popupHeight - Config.trayMenuGap))
 
     function openAt(x, y) {
         hideTimer.stop()
         px = x
         py = y
+        revealed = false
         visible = true
-        revealed = true
-        focusTimer.restart()
+        if (backingWindowVisible) showTimer.restart()
     }
 
     function close() {
+        showTimer.stop()
         revealed = false
         hideTimer.restart()
     }
@@ -55,17 +64,24 @@ PopupWindow {
         translationProcess.exec(["ollama", "run", "translategemma:4b", promptFor(text)])
     }
 
-    anchor.window: ctx
-    anchor.rect.x: px - root.implicitWidth / 2
-    anchor.rect.y: below ? py + Config.dracoPopupGap : py - root.implicitHeight - Config.trayMenuGap
-    anchor.rect.width: 1
-    anchor.rect.height: 1
-
-    implicitWidth: 500
-    implicitHeight: 454
+    screen: ctx ? (ctx.screen ?? ctx.modelData) : null
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: visible && revealed
+        ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    anchors { top: true; bottom: true; left: true; right: true }
+    exclusionMode: ExclusionMode.Ignore
+    exclusiveZone: 0
     color: "transparent"
     visible: false
-    grabFocus: visible && revealed
+    implicitWidth: screen ? screen.width : popupWidth
+    implicitHeight: screen ? screen.height : popupHeight
+
+    mask: Region {
+        x: 0
+        y: 0
+        width: root.width
+        height: root.height
+    }
 
     Timer {
         id: hideTimer
@@ -74,17 +90,27 @@ PopupWindow {
     }
 
     Timer {
+        id: showTimer
+        interval: 40
+        onTriggered: {
+            if (!root.visible) return
+            root.revealed = true
+            focusTimer.restart()
+        }
+    }
+
+    Timer {
         id: focusTimer
         interval: 40
         onTriggered: if (root.visible && root.revealed) editor.forceActiveFocus()
     }
 
-    // O grab do PopupWindow pode esconder a surface diretamente no clique fora.
-    // Mantemos a surface durante o fechamento para tocar a animação de volta à barra.
     onVisibleChanged: if (!visible && revealed) {
         visible = true
         close()
     }
+
+    onBackingWindowVisibleChanged: if (backingWindowVisible && visible && !revealed) showTimer.restart()
 
     Process {
         id: translationProcess
@@ -110,13 +136,17 @@ PopupWindow {
         anchors.fill: parent
         clip: true
 
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.close()
+        }
+
         Rectangle {
             id: card
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: root.below ? parent.top : undefined
-            anchors.bottom: root.below ? undefined : parent.bottom
-            height: root.revealed ? parent.height : 0
+            x: root.popupX
+            y: root.popupY + (root.revealed || root.below ? 0 : root.popupHeight)
+            width: root.popupWidth
+            height: root.revealed ? root.popupHeight : 0
             clip: true
             color: Config.trayMenuBg
             radius: Config.windowRadius(Config.trayMenuRadius)
@@ -130,21 +160,18 @@ PopupWindow {
                     easing.type: Easing.OutCubic
                 }
             }
-
-            MouseArea {
-                anchors.fill: parent
-                z: -1
-                onClicked: editor.forceActiveFocus()
+            Behavior on y {
+                NumberAnimation {
+                    duration: Config.trayMenuAnim
+                    easing.type: Easing.OutCubic
+                }
             }
 
             Column {
                 width: parent.width - 28
                 height: implicitHeight
                 anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: root.below ? parent.top : undefined
-                anchors.bottom: root.below ? undefined : parent.bottom
-                anchors.topMargin: 14
-                anchors.bottomMargin: 14
+                y: 14
                 spacing: 8
 
             Text {

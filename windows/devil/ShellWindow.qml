@@ -94,8 +94,8 @@ PanelWindow {
     // recolher sozinha) — os cristais agora são alcançáveis mesmo com a bola fechada,
     // então o audioMode também precisa segurar a bola aberta
     readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || translatePopup.visible || audioMode)
-    // algum menu/popup aberto? (tray, dispositivos de áudio, tradutor ou sliders de áudio)
-    readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || translatePopup.visible || audioMode
+    // Menus que usam o foco de teclado da ShellWindow; o tradutor captura o foco na própria surface.
+    readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || audioMode
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
         return -1
