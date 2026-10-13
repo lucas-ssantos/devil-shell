@@ -11,6 +11,7 @@ PopupWindow {
     property real py: 0
     property bool below: false
     property bool reversed: false
+    property bool revealed: false
     property bool working: false
     property string resultText: ""
     property string errorText: ""
@@ -21,10 +22,17 @@ PopupWindow {
     readonly property string targetCode: reversed ? "en" : "pt"
 
     function openAt(x, y) {
+        hideTimer.stop()
         px = x
         py = y
         visible = true
-        Qt.callLater(() => editor.forceActiveFocus())
+        revealed = true
+        focusTimer.restart()
+    }
+
+    function close() {
+        revealed = false
+        hideTimer.restart()
     }
 
     function promptFor(text) {
@@ -57,7 +65,26 @@ PopupWindow {
     implicitHeight: 454
     color: "transparent"
     visible: false
-    grabFocus: visible
+    grabFocus: visible && revealed
+
+    Timer {
+        id: hideTimer
+        interval: Config.trayMenuAnim
+        onTriggered: root.visible = false
+    }
+
+    Timer {
+        id: focusTimer
+        interval: 40
+        onTriggered: if (root.visible && root.revealed) editor.forceActiveFocus()
+    }
+
+    // O grab do PopupWindow pode esconder a surface diretamente no clique fora.
+    // Mantemos a surface durante o fechamento para tocar a animação de volta à barra.
+    onVisibleChanged: if (!visible && revealed) {
+        visible = true
+        close()
+    }
 
     Process {
         id: translationProcess
@@ -81,15 +108,44 @@ PopupWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: Config.trayMenuBg
-        radius: Config.windowRadius(Config.trayMenuRadius)
-        border.color: Config.trayMenuBorder
-        border.width: 1
+        clip: true
 
-        Column {
-            anchors.fill: parent
-            anchors.margins: 14
-            spacing: 8
+        Rectangle {
+            id: card
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: root.below ? parent.top : undefined
+            anchors.bottom: root.below ? undefined : parent.bottom
+            height: root.revealed ? parent.height : 0
+            clip: true
+            color: Config.trayMenuBg
+            radius: Config.windowRadius(Config.trayMenuRadius)
+            topLeftRadius: 0
+            topRightRadius: 0
+            border.color: Config.trayMenuBorder
+            border.width: 1
+            Behavior on height {
+                NumberAnimation {
+                    duration: Config.trayMenuAnim
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                z: -1
+                onClicked: editor.forceActiveFocus()
+            }
+
+            Column {
+                width: parent.width - 28
+                height: implicitHeight
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: root.below ? parent.top : undefined
+                anchors.bottom: root.below ? undefined : parent.bottom
+                anchors.topMargin: 14
+                anchors.bottomMargin: 14
+                spacing: 8
 
             Text {
                 width: parent.width
@@ -185,9 +241,10 @@ PopupWindow {
                         textFormat: TextEdit.PlainText
                         wrapMode: TextEdit.Wrap
                         selectByMouse: true
+                        activeFocusOnPress: true
                         color: Config.trayMenuText
                         font.pixelSize: Config.trayMenuTextSize
-                        focus: root.visible
+                        focus: root.visible && root.revealed
                         Keys.onReturnPressed: (event) => {
                             if (event.modifiers & Qt.ShiftModifier) return
                             event.accepted = true
@@ -200,7 +257,7 @@ PopupWindow {
                         }
                         Keys.onEscapePressed: {
                             event.accepted = true
-                            root.visible = false
+                            root.close()
                         }
                     }
                     Text {
@@ -298,6 +355,7 @@ PopupWindow {
                         onClicked: root.translateText()
                     }
                 }
+            }
             }
         }
     }
