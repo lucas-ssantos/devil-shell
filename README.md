@@ -24,7 +24,7 @@ e as janelas do niri ficam abaixo dela, com gap.
 - **Menu radial de cristais** (data-driven, reorganiza sozinho). Configuração atual (1º → 4º):
   - **1ª — Sistema:** configurações gerais do shell (janela modal), gravação de tela
     (monitor inteiro) e toggle de inibição do lock/idle. **Clique direito na engrenagem**
-    abre o tradutor local do Ollama (padrão: English → Português; o botão central inverte).
+    abre o tradutor online (padrão: English → Português; o botão central inverte).
   - **2ª — Lançador:** lançador **próprio**, também acessível por `Mod+D`
     (`qs ipc call launcher toggle`). Além de buscar apps, tem modos por prefixo (ver abaixo).
   - **3ª — Áudio:** mudo de saída/entrada + sliders de volume (scroll ajusta);
@@ -95,7 +95,7 @@ o resto do shell (cada `Process` falha isolado, só aquele recurso fica inerte).
 | **Bandeja (system tray)** | apps que exponham **StatusNotifierItem** (Discord/Vesktop, Steam…); para tray icons **XEmbed puro** (ex.: launchers de jogos via Proton/Wine) é preciso o proxy **xembedsniproxy** rodando (subido pelo `session.sh`). |
 | **Sensores** (`SensorsService` → popups de RAM/temperatura/CPU/VRAM) | nada além de coreutils/awk — lê direto `/sys/class/hwmon` (drivers de kernel `k10temp`/`amdgpu`; ajuste o `case` se a CPU/GPU for outra), `/proc/stat`, `/proc/meminfo` e `/sys/class/drm/card0/device/mem_info_vram_*` (exclusivo do driver `amdgpu`). |
 | **Clima** (`WeatherService`, cápsula do topo) | **curl** + rede até `wttr.in`. |
-| **Tradução** (clique direito na engrenagem do cristal Sistema) | **Ollama** com o modelo `translategemma:4b`. O comando `ollama run` carrega o modelo automaticamente; para baixá-lo antes, execute `ollama pull translategemma:4b`. |
+| **Tradução** (clique direito na engrenagem do cristal Sistema) | **DeepL API Free** (até 500 mil caracteres/mês). Requer uma chave em `DeepLAPI=...` no `.env` ao lado de `shell.qml`, Python 3 e internet; o texto enviado é processado pelo DeepL. O `.env` é ignorado pelo Git. |
 | **Gravação de tela** | **gpu-screen-recorder** (setup único de capability, ver abaixo) + **procps** (`pgrep`/`pkill`, para detectar/parar gravação ativa). |
 | **Papel de parede** (`WallpaperService`) | **awww** + **awww-daemon** ([codeberg.org/LGFae/awww](https://codeberg.org/LGFae/awww); não está no `apt`, compile com `cargo`). |
 | **Fundo do lock** (blur do wallpaper atual) | **ffmpeg** (filtro `gblur`, além de `scale`/`crop`/`pad` pro enquadramento). |
@@ -133,9 +133,6 @@ flatpak install --user flathub app.zen_browser.zen
 
 # adw-gtk3-dark (corrige o diálogo nativo do xdg-desktop-portal-gtk sob paleta escura — opcional):
 flatpak install --user flathub org.gtk.Gtk3theme.adw-gtk3-dark
-
-# tradução local (opcional; o Ollama baixa o modelo no primeiro uso se necessário):
-ollama pull translategemma:4b
 
 # Quickshell normalmente é compilado / vem de repositório próprio (não do apt).
 # Nerd Font: baixe a de sua preferência em https://www.nerdfonts.com/ e instale em

@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
+import "root:/services"   // LauncherService.copyColor (wl-copy via o compositor)
 import "root:/"
 
 PanelWindow {
@@ -14,13 +15,17 @@ PanelWindow {
     property bool reversed: false
     property bool revealed: false
     property bool working: false
+    property bool processStarted: false
+    property bool copied: false
     property string resultText: ""
     property string errorText: ""
 
     readonly property string sourceLanguage: reversed ? "Portuguese" : "English"
-    readonly property string sourceCode: reversed ? "pt" : "en"
     readonly property string targetLanguage: reversed ? "English" : "Portuguese"
-    readonly property string targetCode: reversed ? "en" : "pt"
+    readonly property string sourceCode: reversed ? "PT-BR" : "EN"
+    readonly property string targetCode: reversed ? "EN-US" : "PT-BR"
+    readonly property string envPath: decodeURIComponent(
+        Qt.resolvedUrl("../.env").toString().replace(/^file:\/\//, ""))
     readonly property real popupWidth: 500
     readonly property real popupHeight: 454
     readonly property real anchorY: below ? py : (screen ? screen.height : height) - ctx.height + py
@@ -44,16 +49,6 @@ PanelWindow {
         hideTimer.restart()
     }
 
-    function promptFor(text) {
-        return "You are a professional " + sourceLanguage + " (" + sourceCode + ") to "
-            + targetLanguage + " (" + targetCode + ") translator. Your goal is to accurately convey "
-            + "the meaning and nuances of the original " + sourceLanguage + " text while adhering to "
-            + targetLanguage + " grammar, vocabulary, and cultural sensitivities.\n"
-            + "Produce only the " + targetLanguage + " translation, without any additional "
-            + "explanations or commentary. Please translate the following " + sourceLanguage
-            + " text into " + targetLanguage + ":\n\n" + text
-    }
-
     function translateText() {
         const text = editor.text.trim()
         if (working || text.length === 0) return
@@ -61,8 +56,70 @@ PanelWindow {
         resultText = ""
         errorText = ""
         working = true
-        translationProcess.exec(["ollama", "run", "translategemma:4b", promptFor(text)])
+        processStarted = false
+        translationProcess.exec(["python3", "-c", deeplRequestScript,
+                                 envPath, sourceCode, targetCode, text])
     }
+
+    readonly property string deeplRequestScript: `
+import json
+import sys
+import urllib.error
+import urllib.request
+
+env_path, source_lang, target_lang, text = sys.argv[1:]
+api_key = ""
+try:
+    with open(env_path, encoding="utf-8") as env_file:
+        for line in env_file:
+            entry = line.strip()
+            if entry.startswith("export "):
+                entry = entry[7:].lstrip()
+            name, separator, value = entry.partition("=")
+            if not separator or name.strip() != "DeepLAPI":
+                continue
+            api_key = value.strip()
+            if len(api_key) >= 2 and api_key[0] == api_key[-1] and api_key[0] in (chr(34), chr(39)):
+                api_key = api_key[1:-1]
+            break
+except OSError as error:
+    print("Não foi possível ler o arquivo .env: " + str(error), file=sys.stderr)
+    sys.exit(1)
+
+if not api_key:
+    print("A chave DeepLAPI não foi encontrada no arquivo .env.", file=sys.stderr)
+    sys.exit(1)
+
+payload = json.dumps({
+    "text": [text],
+    "source_lang": source_lang,
+    "target_lang": target_lang
+}, ensure_ascii=False).encode("utf-8")
+request = urllib.request.Request(
+    "https://api-free.deepl.com/v2/translate",
+    data=payload,
+    headers={
+        "Authorization": "DeepL-Auth-Key " + api_key,
+        "Content-Type": "application/json",
+        "User-Agent": "Devil-Shell"
+    },
+    method="POST"
+)
+try:
+    with urllib.request.urlopen(request, timeout=30) as response:
+        sys.stdout.write(response.read().decode("utf-8"))
+except urllib.error.HTTPError as error:
+    try:
+        response_body = json.loads(error.read().decode("utf-8"))
+        message = response_body.get("message", "erro sem detalhes")
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        message = "resposta de erro sem detalhes"
+    print("DeepL API HTTP " + str(error.code) + ": " + message, file=sys.stderr)
+    sys.exit(1)
+except (urllib.error.URLError, TimeoutError, OSError) as error:
+    print("Falha de conexão com a API DeepL: " + str(error), file=sys.stderr)
+    sys.exit(1)
+`
 
     screen: ctx ? (ctx.screen ?? ctx.modelData) : null
     WlrLayershell.layer: WlrLayer.Overlay
@@ -105,6 +162,12 @@ PanelWindow {
         onTriggered: if (root.visible && root.revealed) editor.forceActiveFocus()
     }
 
+    Timer {
+        id: copiedTimer
+        interval: 1800
+        onTriggered: root.copied = false
+    }
+
     onVisibleChanged: if (!visible && revealed) {
         visible = true
         close()
@@ -118,27 +181,50 @@ PanelWindow {
         stdout: StdioCollector { id: translationOutput }
         stderr: StdioCollector { id: translationError }
 
+        onStarted: {
+            root.processStarted = true
+            console.log("TranslatePopup: solicitação enviada ao DeepL")
+        }
+
         onExited: (exitCode, exitStatus) => {
             root.working = false
             const output = translationOutput.text.trim()
             const error = translationError.text.trim()
-            if (exitCode === 0 && output !== "") {
-                root.resultText = output
-            } else {
-                root.errorText = error !== "" ? error
-                    : exitCode === 0 ? "Ollama não retornou uma tradução."
-                    : "Falha ao executar Ollama (código " + exitCode + "). Verifique se o Ollama está instalado e ativo."
+            if (exitCode !== 0) {
+                root.errorText = error.indexOf("HTTP 456") >= 0
+                    ? "A cota mensal gratuita do DeepL foi esgotada."
+                    : error !== "" ? error
+                    : "Falha ao consultar a API DeepL (código " + exitCode + ")."
+                console.warn("TranslatePopup: falha na API DeepL (código " + exitCode + "): " + error)
+                return
+            }
+
+            try {
+                const response = JSON.parse(output)
+                const translatedText = response.translations?.[0]?.text ?? ""
+                if (translatedText.trim() === "")
+                    throw new Error("A resposta não continha texto traduzido.")
+                root.resultText = translatedText
+                console.log("TranslatePopup: tradução concluída pelo DeepL")
+            } catch (e) {
+                root.errorText = "Não foi possível interpretar a resposta do DeepL: " + e
+                console.warn("TranslatePopup: resposta inválida da API: " + e)
             }
         }
     }
 
     Rectangle {
         anchors.fill: parent
+        color: "transparent"
         clip: true
 
         MouseArea {
             anchors.fill: parent
-            onClicked: root.close()
+            onClicked: {
+                const insideCard = mouse.x >= root.popupX && mouse.x <= root.popupX + root.popupWidth
+                    && mouse.y >= root.popupY && mouse.y <= root.popupY + root.popupHeight
+                if (!insideCard) root.close()
+            }
         }
 
         Rectangle {
@@ -177,7 +263,7 @@ PanelWindow {
             Text {
                 width: parent.width
                 height: 24
-                text: "Tradutor Ollama"
+                text: "DeepL"
                 color: Config.trayMenuText
                 font.pixelSize: Config.trayMenuTextSize + 3
                 font.bold: true
@@ -243,6 +329,15 @@ PanelWindow {
 
             Text {
                 width: parent.width
+                height: 14
+                text: "DeepL API Free · texto enviado ao DeepL"
+                color: Config.trayMenuTextDisabled
+                font.pixelSize: Config.trayMenuTextSize - 3
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            Text {
+                width: parent.width
                 height: 18
                 text: "Texto para traduzir"
                 color: Config.trayMenuText
@@ -299,12 +394,48 @@ PanelWindow {
                 }
             }
 
-            Text {
+            Row {
                 width: parent.width
                 height: 18
-                text: "Tradução"
-                color: Config.trayMenuText
-                font.pixelSize: Config.trayMenuTextSize - 1
+                spacing: 8
+
+                Text {
+                    width: parent.width - copyButton.width - parent.spacing
+                    height: parent.height
+                    text: "Tradução"
+                    color: Config.trayMenuText
+                    font.pixelSize: Config.trayMenuTextSize - 1
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                Rectangle {
+                    id: copyButton
+                    width: 72
+                    height: parent.height
+                    radius: Config.trayMenuRowRadius
+                    color: copyMouse.containsMouse ? Config.trayMenuHover : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.copied ? "Copiado!" : "Copiar"
+                        color: root.copied ? Config.accent
+                            : root.resultText.length > 0 ? Config.accent : Config.trayMenuTextDisabled
+                        font.pixelSize: Config.trayMenuTextSize - 2
+                    }
+
+                    MouseArea {
+                        id: copyMouse
+                        anchors.fill: parent
+                        enabled: root.resultText.length > 0
+                        hoverEnabled: true
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: {
+                            LauncherService.copyColor(root.resultText)
+                            root.copied = true
+                            copiedTimer.restart()
+                        }
+                    }
+                }
             }
 
             Rectangle {
@@ -337,7 +468,9 @@ PanelWindow {
                         anchors.left: parent.left
                         width: parent.width
                         text: root.errorText !== "" ? root.errorText
-                            : root.working ? "Carregando translategemma:4b e traduzindo…"
+                            : root.working
+                                ? (root.processStarted ? "Consultando o DeepL…"
+                                    : "Iniciando solicitação…")
                             : "A tradução aparecerá aqui."
                         color: root.errorText !== "" ? Config.polkitError : Config.trayMenuTextDisabled
                         font.pixelSize: Config.trayMenuTextSize
@@ -355,7 +488,9 @@ PanelWindow {
                 Text {
                     width: parent.width - translateButton.width - parent.spacing
                     height: parent.height
-                    text: root.working ? "Aguarde o modelo…" : "Enter traduz · Shift+Enter nova linha"
+                    text: root.working
+                        ? (root.processStarted ? "Tradução online em andamento…" : "Iniciando solicitação…")
+                        : "Enter traduz · Shift+Enter nova linha"
                     color: Config.trayMenuTextDisabled
                     font.pixelSize: Config.trayMenuTextSize - 2
                     verticalAlignment: Text.AlignVCenter
