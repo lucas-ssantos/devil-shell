@@ -4,7 +4,7 @@ import Quickshell.Services.SystemTray
 import QtQuick
 import "root:/capsules/draco"   // DracoCapsule
 import "root:/widgets/draco"    // DracoCava
-import "root:/popups"           // CalendarPopup, TempPopup, RamPopup
+import "root:/popups"           // CalendarPopup, TempPopup, RamPopup, TranslatePopup
 import "root:/menus"            // TrayMenu, AudioDevices
 import "root:/services"         // AudioService, CaptureService, IdleService, LauncherService, SensorsService, Settings
 import "root:/"                 // Config (raiz)
@@ -140,7 +140,7 @@ PanelWindow {
         }
     }
     function popupTouchesEdge(side) {
-        const popups = [calendarPopup, tempPopup, ramPopup, trayMenu, audioDevices]
+        const popups = [calendarPopup, tempPopup, ramPopup, trayMenu, audioDevices, translatePopup]
         for (let i = 0; i < popups.length; i++) {
             const popup = popups[i]
             if (!popup.visible) continue
@@ -157,6 +157,7 @@ PanelWindow {
         if (ramPopup !== exceptPopup) ramPopup.close()
         if (trayMenu !== exceptPopup) trayMenu.close()
         if (audioDevices !== exceptPopup) audioDevices.visible = false
+        if (translatePopup !== exceptPopup) translatePopup.visible = false
     }
     function togglePopup(popup) {
         const wasOpen = popup.visible
@@ -187,11 +188,29 @@ PanelWindow {
         const a = anchorOf(rightChip, audioDevices)
         audioDevices.openAt(kind, a.x, a.y)
     }
+    function toggleTranslation() {
+        if (Date.now() - bar.translationClosedAt < 250) {
+            translatePopup.visible = false
+            return
+        }
+        const wasOpen = translatePopup.visible
+        closePopups(translatePopup)
+        if (wasOpen) translatePopup.visible = false
+        else { const a = anchorOf(settingsCap, translatePopup); translatePopup.openAt(a.x, a.y) }
+    }
+    property double translationClosedAt: 0
+    Connections {
+        target: translatePopup
+        function onVisibleChanged() {
+            if (!translatePopup.visible) bar.translationClosedAt = Date.now()
+        }
+    }
     CalendarPopup { id: calendarPopup; ctx: bar; floating: true }
     TempPopup     { id: tempPopup;     ctx: bar; floating: true }
     RamPopup      { id: ramPopup;      ctx: bar; floating: true }
     TrayMenu      { id: trayMenu;      ctx: bar; below: true }
     AudioDevices  { id: audioDevices;  ctx: bar; below: true }
+    TranslatePopup { id: translatePopup; ctx: bar; below: true }
 
     // chip: fundo discreto de um GRUPO de widgets (esquerda / centro / direita); os filhos
     // declarados dentro dele caem na Row interna
@@ -481,9 +500,11 @@ PanelWindow {
                 onClicked: IdleService.toggle()
             }
             DracoCapsule {                                   // configurações do shell
+                id: settingsCap
                 icon: Config.iconConfig
                 active: Settings.open
                 onClicked: Settings.open = true
+                onRightClicked: bar.toggleTranslation()
             }
             Row {                                            // bandeja (system tray): ícones chapados
                 visible: SystemTray.items.values.length > 0

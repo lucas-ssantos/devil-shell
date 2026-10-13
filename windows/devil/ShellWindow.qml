@@ -5,6 +5,7 @@ import Quickshell.Services.SystemTray
 import QtQuick
 import "root:/widgets/devil"   // MenuBall, Crystal, GothicCorners, AudioMenu, CavaRing
 import "root:/menus"           // AudioDevices, TrayMenu
+import "root:/popups"          // TranslatePopup
 import "root:/services"        // AudioService, CaptureService
 import "root:/"                // Config (raiz)
 
@@ -92,8 +93,8 @@ PanelWindow {
     // a bola fica aberta tb enquanto um popup (tray/áudio/sliders) estiver visível (não
     // recolher sozinha) — os cristais agora são alcançáveis mesmo com a bola fechada,
     // então o audioMode também precisa segurar a bola aberta
-    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || audioMode)
-    // algum menu/popup aberto? (tray, dispositivos de áudio, ou sliders de áudio)
+    readonly property bool open: !dismissed && (pinned || hoverOpen || trayMenu.visible || audioDevices.visible || translatePopup.visible || audioMode)
+    // Menus que usam o foco de teclado da ShellWindow; o tradutor captura o foco na própria surface.
     readonly property bool anyPopup: trayMenu.visible || audioDevices.visible || audioMode
     readonly property int audioIndex: {
         for (let i = 0; i < menuItems.length; i++) if (menuItems[i].audio) return i
@@ -242,6 +243,7 @@ PanelWindow {
     function closeAllMenus() {
         trayMenu.visible = false
         audioDevices.visible = false
+        translatePopup.visible = false
         audioMode = false
         pinned = false
         dismissed = true
@@ -282,6 +284,16 @@ PanelWindow {
 
     // seletor de dispositivo de áudio (direito no headphone/mic do cristal de áudio)
     AudioDevices { id: audioDevices; ctx: win }
+
+    // tradutor Ollama (direito na engrenagem do cristal de Sistema)
+    TranslatePopup { id: translatePopup; ctx: win }
+    property double translationClosedAt: 0
+    Connections {
+        target: translatePopup
+        function onVisibleChanged() {
+            if (!translatePopup.visible) win.translationClosedAt = Date.now()
+        }
+    }
 
     // ESC fecha todos os menus (a janela só recebe o teclado quando há um menu aberto)
     Item {
@@ -389,8 +401,14 @@ PanelWindow {
                     if (s === 2)      audioDevices.openAt("sink",   Math.round(mouseX), Math.round(mouseY))  // headphone -> saídas
                     else if (s === 1) audioDevices.openAt("source", Math.round(mouseX), Math.round(mouseY))  // mic -> entradas
                 } else if (rpi === win.settingsIndex) {
-                    // cristal de Sistema: sobre a lâmpada (seção 0) o direito também faz o toggle
-                    if (win.crystalSectionAt(mouseX, mouseY, 3) === 0) {
+                    const s = win.crystalSectionAt(mouseX, mouseY, 3)
+                    if (s === 2) {
+                        if (translatePopup.visible) { translatePopup.visible = false; return }
+                        if (Date.now() - win.translationClosedAt < 250) return
+                        win.dismissed = false
+                        translatePopup.openAt(Math.round(mouseX), Math.round(mouseY))
+                    } else if (s === 0) {
+                        // sobre a lâmpada (seção 0) o direito também faz o toggle
                         IdleService.toggle()
                     }
                 }
@@ -406,8 +424,8 @@ PanelWindow {
             }
             // 2) bola?
             if (win.overBallAt(mouseX, mouseY)) {
-                if (trayMenu.visible || audioDevices.visible) {   // fecha popup + bola
-                    trayMenu.visible = false; audioDevices.visible = false
+                if (trayMenu.visible || audioDevices.visible || translatePopup.visible) {   // fecha popup + bola
+                    trayMenu.visible = false; audioDevices.visible = false; translatePopup.visible = false
                     win.pinned = false; win.dismissed = true; return
                 }
                 if (win.audioMode)  { win.audioMode = false; return }   // volta ao menu principal
@@ -471,6 +489,7 @@ PanelWindow {
             // 5) fora -> recolhe (e fecha os popups, se abertos)
             trayMenu.visible = false
             audioDevices.visible = false
+            translatePopup.visible = false
             win.pinned = false
         }
     }
