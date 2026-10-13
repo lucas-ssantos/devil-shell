@@ -23,7 +23,8 @@ e as janelas do niri ficam abaixo dela, com gap.
   (clique troca; scroll sobre a bola troca com wrap 1↔N — no monitor certo).
 - **Menu radial de cristais** (data-driven, reorganiza sozinho). Configuração atual (1º → 4º):
   - **1ª — Sistema:** configurações gerais do shell (janela modal), gravação de tela
-    (monitor inteiro) e toggle de inibição do lock/idle. **Clique direito na engrenagem**
+    (monitor inteiro) e toggle de inibição do lock/idle (inicia inibido ao carregar o shell).
+    **Clique direito na engrenagem**
     abre o tradutor online (padrão: English → Português; o botão central inverte).
   - **2ª — Lançador:** lançador **próprio**, também acessível por `Mod+D`
     (`qs ipc call launcher toggle`). Além de buscar apps, tem modos por prefixo (ver abaixo).

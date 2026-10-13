@@ -8,8 +8,8 @@ import "root:/"   // Config (timeout/dpms/before-sleep configuráveis pela janel
 // gtklock (bloqueio) e o dpms (desligar as telas por ociosidade). Serve ao toggle da
 // cristal de Sistema ("lâmpada") e ao próprio bootstrap do StartupService.
 //
-// Estado inicial: `inhibited=false` → swayidle RODANDO → lockscreen/hibernação ATIVOS
-// (o toggle começa "desligado", habilitando o bloqueio).
+// Estado inicial: `inhibited=true` → swayidle PARADO → lock/idle inibidos
+// (a lâmpada começa acesa; o usuário pode reativar o bloqueio pelo toggle).
 //
 // COMO: para INIBIR, basta matar o swayidle (`pkill` roda bem pelo Process do quickshell).
 // Para REATIVAR, pedimos ao COMPOSITOR p/ subir o swayidle de novo via session.sh (guardas
@@ -25,15 +25,16 @@ import "root:/"   // Config (timeout/dpms/before-sleep configuráveis pela janel
 Singleton {
     id: svc
 
-    property bool inhibited: false   // false = lock/idle ATIVO (padrão); true = inibido (swayidle morto)
+    property bool inhibited: true    // true = lock/idle inibidos (swayidle parado)
 
     // argv do spawn-sh que sobe o session.sh com os valores ATUAIS de idle (env vars).
     // Compartilhado com o StartupService (bootstrap da sessão) p/ não duplicar a lógica.
-    function sessionArgv() {
+    function sessionArgv(inhibitIdle) {
         return ["niri", "msg", "action", "spawn-sh", "--",
             "IDLE_LOCK_TIMEOUT=" + Config.idleLockTimeout +
             " IDLE_DPMS_TIMEOUT=" + Config.idleDpmsTimeout +
             " IDLE_LOCK_ON_SLEEP=" + (Config.idleLockOnSleep ? 1 : 0) +
+            " IDLE_INHIBITED=" + (inhibitIdle ? 1 : 0) +
             " \"$HOME/.config/quickshell/services/session.sh\""]
     }
 
@@ -45,7 +46,7 @@ Singleton {
     }
     // reativa: relança o swayidle pelo compositor (via session.sh, com guardas pgrep)
     function enableLock() {
-        proc.exec(sessionArgv())
+        proc.exec(sessionArgv(false))
         notifyProc.exec(["notify-send", "-a", "Quickshell", "-r", "9110",
             "Bloqueio ativado", "A tela volta a bloquear/hibernar por ociosidade."])
         inhibited = false
@@ -71,5 +72,5 @@ Singleton {
 
     Process { id: proc }
     Process { id: notifyProc }
-    Process { id: idleKillProc; onExited: proc.exec(svc.sessionArgv()) }
+    Process { id: idleKillProc; onExited: proc.exec(svc.sessionArgv(false)) }
 }

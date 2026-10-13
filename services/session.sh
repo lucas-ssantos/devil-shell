@@ -34,14 +34,21 @@ pgrep -x xembedsniproxy >/dev/null || setsid xembedsniproxy &
 IDLE_LOCK_TIMEOUT="${IDLE_LOCK_TIMEOUT:-300}"
 IDLE_DPMS_TIMEOUT="${IDLE_DPMS_TIMEOUT:-0}"
 IDLE_LOCK_ON_SLEEP="${IDLE_LOCK_ON_SLEEP:-1}"
+IDLE_INHIBITED="${IDLE_INHIBITED:-0}"
 
-pgrep -x swayidle >/dev/null || {
-    set -- timeout "$IDLE_LOCK_TIMEOUT" 'pidof gtklock || gtklock'
-    if [ "$IDLE_DPMS_TIMEOUT" -gt 0 ] 2>/dev/null; then
-        set -- "$@" timeout "$IDLE_DPMS_TIMEOUT" 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors'
-    fi
-    if [ "$IDLE_LOCK_ON_SLEEP" = "1" ]; then
-        set -- "$@" before-sleep 'pidof gtklock || gtklock'
-    fi
-    setsid swayidle -w "$@" &
-}
+if [ "$IDLE_INHIBITED" = "1" ]; then
+    # Ao iniciar/recarregar o shell, aplica o estado inicial mesmo se swayidle
+    # tiver sido deixado rodando por uma instância anterior.
+    pkill -x swayidle >/dev/null 2>&1 || true
+else
+    pgrep -x swayidle >/dev/null || {
+        set -- timeout "$IDLE_LOCK_TIMEOUT" 'pidof gtklock || gtklock'
+        if [ "$IDLE_DPMS_TIMEOUT" -gt 0 ] 2>/dev/null; then
+            set -- "$@" timeout "$IDLE_DPMS_TIMEOUT" 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors'
+        fi
+        if [ "$IDLE_LOCK_ON_SLEEP" = "1" ]; then
+            set -- "$@" before-sleep 'pidof gtklock || gtklock'
+        fi
+        setsid swayidle -w "$@" &
+    }
+fi

@@ -22,7 +22,7 @@ Singleton {
     // Em hot-reload o singleton é recriado e isto roda de novo — as guardas pgrep do
     // session.sh impedem duplicação, então é seguro.
     function start() {
-        proc.exec(IdleService.sessionArgv())
+        proc.exec(IdleService.sessionArgv(IdleService.inhibited))
     }
 
     Process { id: proc }

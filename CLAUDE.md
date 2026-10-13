@@ -384,6 +384,9 @@ opções no grupo "Papel de parede" das configurações), `/reload` (`Quickshell
 O cristal de Sistema tem 2 seções: **engrenagem** (cima) abre a [SettingsWindow.qml](windows/SettingsWindow.qml)
 (overlay modal central com TODAS as opções por grupo, via schema → [SettingsField.qml](fields/SettingsField.qml));
 **lâmpada** (baixo) inibe/reativa o lock/idle ([IdleService.qml](services/IdleService.qml)).
+- A lâmpada começa **acesa** ao carregar o shell: o bootstrap passa `IDLE_INHIBITED=1` ao
+  [session.sh](services/session.sh), que para qualquer `swayidle` anterior e não inicia outro.
+  Clicar na lâmpada reativa o lock/idle e os timeouts configurados.
 - **[Settings.qml](services/Settings.qml)** (singleton) guarda só os overrides num JSON
   (`~/.config/quickshell/settings.json`, via `FileView`). `get/set/unset/reset`; reatribui o mapa inteiro a
   cada `set` para os bindings de `Config`/`Theme` (que leem `get()`) reavaliarem. `reset()` recarrega
