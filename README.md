@@ -1,4 +1,4 @@
-# Devil Shell — shell Quickshell para Niri
+# LK's Shell — shell Quickshell para Niri
 
 Uma "barra" não-convencional para o compositor Wayland **[Niri](https://github.com/YaLTeR/niri)**
 (tiling rolável), escrita em **QML** sobre o **[Quickshell](https://quickshell.org)**.
