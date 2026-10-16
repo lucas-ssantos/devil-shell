@@ -64,7 +64,7 @@ PopupWindow {
 
     readonly property var monthNames: ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
                                         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
-    readonly property var weekDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+    readonly property var weekDays: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
 
     // "hoje" reativo (não fixo na criação): sem isso, o destaque do dia atual ficava
     // preso na data de quando o qs foi iniciado, já que este popup é criado uma vez
@@ -79,7 +79,7 @@ PopupWindow {
     // 42 células (6 semanas): dias do mês anterior/seguinte entram apagados p/ a grade ficar cheia
     readonly property var cells: {
         const year = root.viewDate.getFullYear(), month = root.viewDate.getMonth()
-        const startOffset = new Date(year, month, 1).getDay()          // 0 = domingo
+        const startOffset = (new Date(year, month, 1).getDay() + 6) % 7 // segunda = 0
         const lastDay = new Date(year, month + 1, 0).getDate()
         const prevLastDay = new Date(year, month, 0).getDate()
         const out = []
