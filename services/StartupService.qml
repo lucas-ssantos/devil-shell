@@ -3,10 +3,10 @@ import Quickshell
 import Quickshell.Io
 
 // Serviço de INICIALIZAÇÃO da sessão (singleton). Centraliza no quickshell subir os
-// daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms).
+// daemons da sessão (applet do bluetooth, idle/lock/dpms).
 //
-// COMO: esses daemons são apps GRÁFICOS Wayland (awww-daemon = layer-shell; blueman = GTK;
-// swayidle fala o protocolo idle e dispara o gtklock). Para garantir um ambiente
+// COMO: esses daemons são apps GRÁFICOS Wayland (blueman = GTK; swayidle fala o
+// protocolo idle e dispara o gtklock). Para garantir um ambiente
 // Wayland correto, pedimos ao COMPOSITOR para lançá-los, via `niri msg action
 // spawn-sh`, apontando para o script services/session.sh (guardas pgrep + setsid lá
 // dentro). Chamado uma vez pelo shell.qml em Component.onCompleted.

@@ -66,11 +66,7 @@ Singleton {
         saveTimer.restart()
         // mudou cor da paleta, tema ou a pasta de screenshots -> regenera os temas
         // externos (kitty/vesktop/niri…) — screenshotDir vai pro screenshot-path do niri
-        // (checagem exata p/ não pegar "themeWallpaper_<nome>", que também começa com "theme")
         if (key.indexOf("pal_") === 0 || key === "themeShell" || key === "themeCava" || key === "screenshotDir") exportTimer.restart()
-        // trocou a paleta do shell -> aplica o wallpaper padrão configurado pra ela (se houver;
-        // ver "themeWallpaper_<nome>" na SettingsWindow e WallpaperService.applyThemeDefault)
-        if (key === "themeShell") WallpaperService.applyThemeDefault(value)
     }
 
     // remove um override (volta essa chave ao padrão)

@@ -50,12 +50,6 @@ PanelWindow {
                 { key: "themeShell", label: "Paleta do shell", ftype: "select", options: Theme.paletteNames },
                 { key: "themeCava",  label: "Paleta do CAVA",  ftype: "select", options: Theme.paletteNames }
             ]},
-            // um campo de imagem por paleta cadastrada em Theme.paletteNames — ao trocar a
-            // "Paleta do shell" acima, o WallpaperService aplica (em todos os monitores) o
-            // wallpaper aqui configurado para o novo tema, se houver (ver Settings.set()).
-            { name: "Wallpaper padrão por tema", fields: Theme.paletteNames.map(n => ({
-                key: "themeWallpaper_" + n, label: "Wallpaper — " + n, ftype: "image"
-            })) },
             { name: "Base e superfícies", fields: [
                 { key: "pal_crust", label: "crust (bola/fundo)", ftype: "color" },
                 { key: "pal_mantle", label: "mantle", ftype: "color" },
@@ -405,16 +399,6 @@ PanelWindow {
                 { key: "idleLockTimeout", label: "Tempo até bloquear (s)", ftype: "int" },
                 { key: "idleDpmsTimeout", label: "Tempo até desligar monitores (s, 0=off)", ftype: "int" },
                 { key: "idleLockOnSleep", label: "Bloquear ao suspender", ftype: "bool" }
-            ]}
-        ]},
-        { title: "Papel de parede", subs: [
-            { name: "", fields: [
-                { key: "wallpaperDir", label: "Pasta dos wallpapers", ftype: "dir" },
-                { key: "wallpaperMode", label: "Ajuste (awww)", ftype: "select", options: ["fill","fit","stretch","center"] },
-                { key: "wallpaperTransition", label: "Transição (awww)", ftype: "select", options: ["none","simple","fade","left","right","top","bottom","wipe","wave","grow","center","any","outer","random"] },
-                { key: "wallpaperCarousel", label: "Carrossel automático", ftype: "bool" },
-                { key: "wallpaperCarouselMin", label: "Intervalo do carrossel (min)", ftype: "int" },
-                { key: "wallpaperLockBlur", label: "Blur da tela de bloqueio (gtklock)", ftype: "int" }
             ]}
         ]},
         { title: "Clima", subs: [

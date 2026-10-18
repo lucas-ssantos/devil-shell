@@ -58,6 +58,7 @@ O **modo** é derivado do que se digita:
 | `=5+5` | **calculadora** (mostra `10` na hora; `sqrt`, `sin`, `pi`, `^`, `2pi`…; Enter encadeia a conta) |
 | `/dir` | **navegador de arquivos** (pastas + imagens/vídeos, com miniaturas) — Enter abre no **VLC**, Backspace sobe |
 | `/proc` | **processos** com PID/CPU/RAM — ordena por nome, PID, RAM ou CPU (chips ou Tab); Enter finaliza (TERM), Shift+Enter mata (KILL) |
+| `/bg` | abre o seletor **Skwd-wall v2**; seleção por monitor, restauração e agendamentos ficam no gerenciador |
 | `/config` | abre a janela de configurações do shell |
 | `/reload` | recarrega o Quickshell |
 | `/` | paleta com os comandos acima |
@@ -98,8 +99,7 @@ o resto do shell (cada `Process` falha isolado, só aquele recurso fica inerte).
 | **Clima** (`WeatherService`, cápsula do topo) | **curl** + rede até `wttr.in`. |
 | **Tradução** (clique direito na engrenagem do cristal Sistema) | **DeepL API Free** (até 500 mil caracteres/mês). Requer uma chave em `DeepLAPI=...` no `.env` ao lado de `shell.qml`, Python 3 e internet; o texto enviado é processado pelo DeepL. O `.env` é ignorado pelo Git. |
 | **Gravação de tela** | **gpu-screen-recorder** (setup único de capability, ver abaixo) + **procps** (`pgrep`/`pkill`, para detectar/parar gravação ativa). |
-| **Papel de parede** (`WallpaperService`) | **awww** + **awww-daemon** ([codeberg.org/LGFae/awww](https://codeberg.org/LGFae/awww); não está no `apt`, compile com `cargo`). |
-| **Fundo do lock** (blur do wallpaper atual) | **ffmpeg** (filtro `gblur`, além de `scale`/`crop`/`pad` pro enquadramento). |
+| **Papel de parede** (`/bg`) | **[Skwd-wall v2](https://github.com/liixini/skwd-wall)** (`skwd-wall-v2` + daemon `skwd-walld`). O upstream marca Debian como WIP; siga as instruções de instalação e dependências do projeto (incluindo `ffmpeg` para miniaturas de vídeo). |
 | **Lançador — modo `/dir`** | **VLC** (abre imagens/vídeos/áudio) e, para PDF, **Zen Browser via Flatpak** (`flatpak run --file-forwarding app.zen_browser.zen`, `flatpak` precisa estar instalado e com o app.zen_browser.zen instalado). |
 | **Lançador — modo `/color-picker`** | **grim** (screenshot Wayland) + **slurp** (seleção de ponto na tela) + **ImageMagick** (`magick`/`convert`, lê o pixel) + **wl-clipboard** (`wl-copy`, para copiar o hex/rgb salvo). |
 | **Lançador — `Terminal=true`** nos `.desktop` | um terminal (padrão `Config.launcherTerminal` = **kitty**, chamado como `kitty -e <argv>`; trocável no `settings.json`). |
@@ -123,8 +123,9 @@ sudo apt install niri cava vlc gpu-screen-recorder pipewire wireplumber \
 # gpu-screen-recorder: setup único (o gsr-kms-server precisa de CAP_SYS_ADMIN p/ capturar via KMS):
 sudo setcap cap_sys_admin+ep /usr/bin/gsr-kms-server
 
-# awww/awww-daemon (https://codeberg.org/LGFae/awww): NÃO estão no apt, compile com
-# `cargo build --release` e instale os dois binários (target/release/{awww,awww-daemon}) no PATH.
+# Skwd-wall v2 (https://github.com/liixini/skwd-wall): instale skwd-wall-v2 e skwd-walld
+# seguindo as instruções do upstream (Debian está marcado como WIP) e habilite o daemon:
+systemctl --user enable --now skwd-walld.service
 
 # xembedsniproxy: costuma vir no pacote do plasma-workspace (ou lxqt-*/kde) — se não estiver
 # no apt como pacote próprio, procure em `apt-file search xembedsniproxy`.
@@ -162,7 +163,7 @@ Keybinds no `config.kdl` do niri: `Mod+Space` abre o lançador e `Mod+Ctrl+Retur
 Devil/Draco (`spawn "qs" "ipc" "call" "mode" "toggle"`).
 
 Em uso normal o `qs` é lançado pelo niri (`spawn-at-startup "qs"` no `~/.config/niri/config.kdl`);
-ao subir, o próprio `qs` sobe os daemons da sessão (wallpaper, bluetooth, idle-lock) via
+ao subir, o próprio `qs` sobe os daemons da sessão (bluetooth, idle-lock) via
 `services/session.sh`. Os `console.log` só aparecem se o `qs` for iniciado por um terminal
 (ou via `qs log`).
 
@@ -202,7 +203,7 @@ Config.qml       config central (singleton) — todos os valores ajustáveis
 themes/          Theme (seletor) + paletas CrimsonDevil, DragonBlanc, InfernalRose (os hex)
 services/        NiriService, AudioService, CaptureService, MediaService, WeatherService,
                  SensorsService, NotificationService, PolkitService, PortalService,
-                 StartupService, IdleService, LauncherService, WallpaperService,
+                 StartupService, IdleService, LauncherService,
                  Settings, ThemeExport, ModeService (devil/draco) + session.sh
 cava/            CavaService, CavaWindow, CavaBars + cava.conf   (rodapé, nos dois modos)
 windows/         janelas compartilhadas: NotificationWindow (toasts), PolkitWindow,
@@ -221,8 +222,11 @@ fields/          SettingsField (linha editável da SettingsWindow)
   `TopCapsules` (cápsulas do topo) no modo devil; `DracoBar` no modo draco. `NotificationWindow`,
   `SettingsWindow` e `LauncherWindow` são únicas (monitor focado).
 - **Inicialização da sessão centralizada no qs:** `StartupService` (chamado pelo `shell.qml`) sobe
-  wallpaper / bluetooth / idle-lock via `services/session.sh` (pedido ao compositor por
+  bluetooth / idle-lock via `services/session.sh` (pedido ao compositor por
   `niri msg action spawn-sh`).
+- **Wallpapers:** `/bg` abre o Skwd-wall v2 pelo compositor; o app e o daemon `skwd-walld`
+  gerenciam seleção, monitores, agendamentos e restauração no boot. O shell não tem mais
+  seletor, carrossel ou fundo borrado próprios para o gtklock.
 
 Detalhes de arquitetura e as **peculiaridades de Niri + Quickshell** (IPC, `spawn-sh`, processos,
 armadilhas de QML, imports `root:/`) estão no **[CLAUDE.md](CLAUDE.md)**.

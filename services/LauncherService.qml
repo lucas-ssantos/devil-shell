@@ -20,6 +20,7 @@ import "root:/"           // Config (launcherTerminal)
 //   • a calculadora do modo "=" (parser próprio — SEM eval, p/ não expor o escopo QML);
 //   • as ações /reload (Quickshell.reload), /config (Settings.open) e /reboot,
 //     /poweroff (rodam reboot/poweroff no terminal configurado);
+//   • /bg abre o seletor do Skwd-wall v2 pelo compositor (ambiente Wayland correto);
 //   • o IpcHandler "launcher" p/ keybind do niri: `qs ipc call launcher toggle`.
 Singleton {
     id: svc
@@ -88,6 +89,13 @@ Singleton {
         if (entry.runInTerminal) line = shq(Config.launcherTerminal) + " -e " + line
         spawn("exec " + line)
         bumpUsage(entry.id)
+        hide()
+    }
+
+    function launchWallpaperManager() {
+        spawn("if command -v skwd-wall-v2 >/dev/null 2>&1; then exec skwd-wall-v2; "
+              + "else notify-send -a \"LK's Shell\" \"Skwd-wall v2 não encontrado\" "
+              + "\"Instale skwd-wall-v2 e habilite o serviço skwd-walld.\"; fi")
         hide()
     }
 
@@ -255,7 +263,7 @@ Singleton {
     Timer { id: killRefresh; interval: 350; onTriggered: svc.refreshProcs() }
 
     // ═════════════════════════ /color-picker — captura de cor da tela ═════════════════════════
-    // Sem ferramenta pronta equivalente ao awww/gpu-screen-recorder pra "escolher 1 pixel";
+    // Sem ferramenta pronta equivalente ao grim+slurp/imagemagick pra "escolher 1 pixel";
     // compõe grim (screenshot) + slurp -p (seleciona 1 PONTO — geometria "X,Y 1x1", já pronta
     // pro -g do grim) + imagemagick (lê o pixel do PNG de 1x1 e devolve "srgb(r,g,b)"). Roda
     // pelo compositor (spawn(), apps gráficos Wayland — ver CLAUDE.md); como o spawn-sh só

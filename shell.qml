@@ -23,12 +23,11 @@ Scope {
     CavaService  { id: cava }    // níveis de áudio do cava
 
     // Sobe os daemons da sessão (blueman, idle/lock) centralizados no qs — ver
-    // services/StartupService.qml e services/session.sh. O wallpaper (awww) sobe
-    // pelo WallpaperService (última escolha persistida; modo /bg do lançador).
+    // services/StartupService.qml e services/session.sh. O Skwd-wall v2 é iniciado
+    // sob demanda pelo /bg; seu daemon é gerenciado pela instalação do próprio Skwd-wall.
     // ThemeExport.init()/ModeService.init() só instanciam os singletons p/ registrar os IPCs.
     Component.onCompleted: {
         StartupService.start()
-        WallpaperService.init()
         ThemeExport.init()
         ModeService.init()
     }

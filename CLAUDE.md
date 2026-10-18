@@ -69,7 +69,7 @@ pkill quickshell; qs   # reinicia
 - Workspaces do niri são **dinâmicos por monitor** (sempre há um vazio no fim); o anel tracejado
   da bola reflete isso (o nº de arcos varia).
 
-### Lançar ferramentas Wayland (awww-daemon/blueman/swayidle/gpu-screen-recorder): use `niri msg action spawn-sh`
+### Lançar ferramentas Wayland (Skwd-wall/blueman/swayidle/gpu-screen-recorder): use `niri msg action spawn-sh`
 Apps gráficos Wayland lançados como filhos do `Process` do Quickshell podem não receber um
 ambiente Wayland utilizável. A solução do projeto é fazer o **próprio compositor** lançar o
 comando via `niri msg action spawn-sh` (igual a um keybind) — aí o ambiente está correto. O
@@ -103,7 +103,7 @@ settings.default.json "padrão de fábrica" lido pelo botão Restaurar padrão
 themes/               Theme (seletor) + paletas (CrimsonDevil, DragonBlanc, InfernalRose)
 services/             singletons/escopos não-visuais (niri, áudio, captura, mídia, clima,
                       sensores, notificações, PolkitService, PortalService, StartupService,
-                      IdleService, LauncherService, WallpaperService (awww, modo /bg), Settings,
+                      IdleService, LauncherService, Settings,
                       ThemeExport, ModeService (modo devil/draco + IPC)) + session.sh
 cava/                 infra compartilhada do CAVA: CavaService, CavaBars, CavaWindow
                       (rodapé, presente nos DOIS modos) + cava.conf
@@ -257,7 +257,7 @@ shell / Barra Draco" da SettingsWindow também troca.
   Janela em fullscreen cobre a barra (camada Top), como qualquer barra.
 
 ### Inicialização da sessão centralizada no Quickshell
-Os daemons da sessão (wallpaper, applet do bluetooth, idle/lock/dpms, proxy de tray XEmbed) rodam
+Os daemons da sessão (applet do bluetooth, idle/lock/dpms, proxy de tray XEmbed) rodam
 de **dentro do quickshell**:
 - [StartupService.qml](services/StartupService.qml) (singleton) é chamado uma vez por `shell.qml`
   (`Component.onCompleted: StartupService.start()`). Ele pede ao compositor (via `niri msg action
@@ -265,29 +265,14 @@ de **dentro do quickshell**:
   e `xembedsniproxy` (proxy StatusNotifierItem → XEmbed, p/ tray icons XEmbed puro — ex.: launchers de
   jogos via Proton/Wine — aparecerem na bandeja SNI do shell) (com guardas `pgrep` para não
   duplicar a cada reload, e `setsid` para sobreviverem).
-- O **awww-daemon** sobe pelo [WallpaperService.qml](services/WallpaperService.qml)
-  (`WallpaperService.init()` no `shell.qml`, no boot e a cada reload; guarda `pgrep` via
-  `niri msg action spawn-sh`, igual ao session.sh, pois é um app gráfico Wayland/layer-shell).
-  Diferente do swaybg (que era relançado a cada troca), o awww-daemon é um daemon PERSISTENTE:
-  trocar wallpaper só manda um comando `awww img` pro socket dele (sem matar/relançar processo,
-  sem frame preto). `init()` confere (`awww query --json`) se a imagem exibida em cada output bate
-  com a seleção persistida do modo `/bg` do lançador e só reaplica se divergir (evita reacender a
-  transição do awww a cada reload em dev). Todos os monitores = `awww img` sem `-o`; por monitor =
-  `-o <output>` (aplicado DEPOIS da base, senão a base sobrescreveria o override). O cliente
-  `awww img`/`awww query` não precisa de `spawn-sh` (não é um cliente Wayland gráfico, só fala com
-  o socket do daemon) — roda direto via `Process.exec` normal. A cada troca (`apply()`/
-  `carouselTick()`), o `WallpaperService` também gera (via ffmpeg) uma cópia borrada do
-  wallpaper atual em `Config.lockBackgroundPath` (`~/.cache/quickshell/gtklock-background.png`) —
-  é o fundo que o `gtklock` mostra (`background=` no `config.ini`, escrito por
-  `ThemeExport.gtklockContent()`); tampouco precisa de `spawn-sh` (ffmpeg não é cliente Wayland).
-  ⚠️ o gtklock **não tem opção de enquadramento**: o CSS embutido no binário é fixo
-  (`strings /usr/bin/gtklock` mostra `background-size: 100% 100%`) — ele sempre ESTICA a
-  imagem pra cobrir a janela, ignorando a proporção original. Por isso `updateLockBackground()`
-  já entrega a imagem PRÉ-enquadrada (via `-vf scale/crop/pad`, `lockResizeFilter()`) no mesmo
-  modo configurado pro awww (`Config.wallpaperMode`: fill/fit/stretch/center, mapeado por
-  `resizeMode()`) e já no tamanho do maior monitor conectado (`lockTargetSize()`, um fundo só
-  serve todos os outputs) — senão o fundo do lock fica sempre espremido, não importa o wallpaper.
-  Depois entra o `gblur=sigma=<wallpaperLockBlur>`.
+- Wallpapers são gerenciados pelo **Skwd-wall v2**, fora do ciclo de vida do Quickshell. O comando
+  `/bg` no lançador abre `skwd-wall-v2` via [LauncherService.qml](services/LauncherService.qml)
+  e `niri msg action spawn-sh` para herdar o ambiente Wayland correto. O daemon `skwd-walld`
+  deve ser habilitado conforme a instalação do Skwd-wall (normalmente
+  `systemctl --user enable --now skwd-walld.service`); o próprio gerenciador restaura a seleção
+  no boot e controla wallpapers por monitor e agendamentos. A instalação Debian está marcada como
+  WIP pelo upstream. O shell não mantém mais o seletor `/bg`, o carrossel, wallpapers associados
+  a temas nem a cópia borrada do wallpaper no gtklock.
 - O próprio `qs` é lançado pelo niri: `spawn-at-startup "qs"` no `~/.config/niri/config.kdl`.
   Certifique-se de que nenhum outro daemon de notificação (swaync/mako/dunst) suba antes do qs,
   senão o qs não registra o servidor de notificações.
@@ -297,7 +282,7 @@ de **dentro do quickshell**:
   `Quickshell.Services.Polkit`) se registra sozinho ao ser referenciado (é lazy; a
   [PolkitWindow.qml](windows/PolkitWindow.qml) já o referencia). Se outro agente já estiver rodando,
   o registro falha silenciosamente (`PolkitService.isRegistered` fica `false`, sem erro fatal).
-- **Acoplamento aceito:** se o qs não carregar, o `StartupService` não roda → sem wallpaper/idle nessa
+- **Acoplamento aceito:** se o qs não carregar, o `StartupService` não roda → sem idle nessa
   sessão. (Trade-off escolhido em prol da centralização.) Um futuro caminho 100% QML seria
   `IdleMonitor` + `WlSessionLock` no lugar do swayidle/gtklock.
 
@@ -367,9 +352,7 @@ nunca salva) como `saved:false`. Escrita: `printf '%s' '<conteúdo>'` num `sh -c
 UTF-8 e `\n` preservados; **não** usar `Qt.btoa`, que é Latin-1). Delete/Shift+Enter apaga a nota.
 Estado do editor: properties `editorOpen/editorPath/editorLoaded/editorInitial/sketchReview*` no
 `LauncherService`, observadas pela `LauncherWindow`.
-`/bg` escolhedor de wallpaper ([WallpaperService.qml](services/WallpaperService.qml); chips de alvo
-"Ambos"/por monitor — Tab alterna, Shift+Enter aplica sem fechar — + chip do carrossel; pasta e
-opções no grupo "Papel de parede" das configurações), `/reload` (`Quickshell.reload(false)`),
+`/bg` abre o seletor Skwd-wall v2, `/reload` (`Quickshell.reload(false)`),
 `/config` (`Settings.open`). Pontos de atenção:
 - Apps vêm de `DesktopEntries.applications.values` (API do Quickshell); o lançamento usa
   `entry.command` (argv sem field codes) via **`niri msg action spawn-sh`** — NÃO usar
@@ -399,8 +382,8 @@ O cristal de Sistema tem 2 seções: **engrenagem** (cima) abre a [SettingsWindo
   **niri** (`devil-shell/theme.kdl`, `include` no config.kdl — o niri faz merge de blocos `layout`
   duplicados; as cores de fábrica do focus-ring/border ficam COMENTADAS no config.kdl p/ não competirem
   → reload via `niri msg action load-config-file`), **vesktop** (`themes/devil-shell.css`, habilitar 1x),
-  **gtklock** (`config.ini`, só o `background=` — o wallpaper atual borrado, ver `WallpaperService`
-  acima; cores vêm de graça do tema GTK3 nomeado abaixo, já que o gtklock é GTK3 puro) e
+  **gtklock** (`config.ini`, sem imagem de fundo; cores vêm de graça do tema GTK3 nomeado abaixo,
+  já que o gtklock é GTK3 puro) e
   **GTK3/GTK4** (`gtk-3.0/devil-shell.css` e `gtk-4.0/devil-shell.css` — nomes
   `@define-color` clássicos do Adwaita e libadwaita; como o `gtk.css` do usuário não tem diretiva de
   `include`, habilitar 1x adicionando `@import url("devil-shell.css");` no topo do `gtk.css` de cada
@@ -476,7 +459,7 @@ niri msg action spawn-sh -- 'echo $PATH > /tmp/p'   # inspecionar o ambiente do 
 ```
 
 Scripts: daemons da sessão em [services/session.sh](services/session.sh) (blueman/swayidle,
-disparado pelo StartupService; o awww-daemon do wallpaper sobe à parte, pelo WallpaperService).
+disparado pelo StartupService); wallpapers e o daemon `skwd-walld` são gerenciados pelo Skwd-wall v2.
 Gravação de tela usa `gpu-screen-recorder` (cristal de Sistema;
 setup único: `sudo setcap cap_sys_admin+ep /usr/bin/gsr-kms-server` — sem isso, e sem pkexec,
 a captura KMS falha; e `pgrep`/`pkill -x` usam o comm truncado `gpu-screen-reco`). Bootstrap da sessão: `spawn-at-startup` no `~/.config/niri/config.kdl`

@@ -171,26 +171,6 @@ Singleton {
     readonly property color  launcherText: Settings.get("launcherText", Theme.text)
     readonly property color  launcherSub: Settings.get("launcherSub", Theme.subtext0)   // texto secundário/dicas
 
-    // ── Papel de parede (modo /bg do lançador; awww) ──
-    readonly property string wallpaperDir: Settings.get("wallpaperDir", Quickshell.env("HOME") + "/Pictures/Wallpapers")  // pasta varrida pelo /bg
-    readonly property string wallpaperMode: Settings.get("wallpaperMode", "fill")   // ajuste (--resize do awww, ver WallpaperService.resizeMode): fill|fit|stretch|center
-    readonly property string wallpaperTransition: Settings.get("wallpaperTransition", "none")   // --transition-type do awww (efeito ao trocar)
-    readonly property bool   wallpaperCarousel: Settings.get("wallpaperCarousel", false)   // troca automática periódica
-    readonly property int    wallpaperCarouselMin: Settings.get("wallpaperCarouselMin", 10)  // intervalo do carrossel (minutos)
-    readonly property int    wallpaperLockBlur: Settings.get("wallpaperLockBlur", 18)  // sigma do blur (ffmpeg gblur) no fundo do gtklock
-
-    // caminho fixo (não é um override do usuário): imagem gerada por WallpaperService a
-    // partir do wallpaper atual borrado, lida pelo gtklock (config.ini -> background=)
-    readonly property string lockBackgroundPath: Quickshell.env("HOME") + "/.cache/quickshell/gtklock-background.png"
-
-    // ── Grade do /bg (o lançador fica maior/retangular nesse modo p/ mostrar as miniaturas) ──
-    readonly property real   launcherBgW: Settings.get("launcherBgW", 900)              // largura do painel no modo /bg
-    readonly property real   launcherBgListMaxH: Settings.get("launcherBgListMaxH", 460) // teto da grade (rola além disso)
-    readonly property real   launcherBgThumbW: Settings.get("launcherBgThumbW", 160)     // largura da miniatura
-    readonly property real   launcherBgThumbH: Settings.get("launcherBgThumbH", 100)     // altura da miniatura
-    readonly property real   launcherBgCellGap: Settings.get("launcherBgCellGap", 12)    // espaço entre células
-    readonly property int    launcherBgNameSize: Settings.get("launcherBgNameSize", 11)  // nome do arquivo (embaixo, menor)
-
     // ── Notificações (topo-centro da tela) ──────────────
     readonly property real   notifWidth: Settings.get("notifWidth", 360)       // largura do toast
     readonly property real   notifTopMargin: Settings.get("notifTopMargin", 12)    // folga do topo da tela

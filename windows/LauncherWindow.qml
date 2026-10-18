@@ -18,7 +18,7 @@ import "root:/"           // Config
 //                  Texto após "/notes " vira o título da nova nota; Delete apaga a nota.
 //   /color-picker  captura a cor de um pixel da tela (grim+slurp+imagemagick) + histórico
 //                  (Enter copia o HEX, Shift+Enter o RGB, Delete remove o item selecionado)
-//   /bg            escolhedor de wallpaper (awww; Tab muda o alvo: todos/por monitor)
+//   /bg            abre o seletor Skwd-wall v2
 //   /theme         escolhedor de paleta do shell (ex.: "/theme CrimsonDevil" já filtra/aplica)
 //   /reload        recarrega o Quickshell        /config  abre as configurações
 //   /lock          bloqueia a tela (gtklock)
@@ -65,7 +65,6 @@ PanelWindow {
         if (q === "/proc" || q.indexOf("/proc ") === 0) return "proc"
         if (q === "/notes" || q.indexOf("/notes ") === 0) return "notes"
         if (q === "/color-picker" || q.indexOf("/color-picker ") === 0) return "color"
-        if (q === "/bg" || q.indexOf("/bg ") === 0) return "bg"
         if (q === "/theme" || q.indexOf("/theme ") === 0) return "theme"
         if (q.length > 0 && q[0] === "/") return "cmds"
         return "apps"
@@ -77,7 +76,6 @@ PanelWindow {
         if (mode === "proc")  return query.length > 6 ? query.substring(6) : ""
         if (mode === "notes") return query.length > 7 ? query.substring(7) : ""   // após "/notes "
         if (mode === "color") return query.length > 14 ? query.substring(14) : ""   // após "/color-picker "
-        if (mode === "bg")    return query.length > 4 ? query.substring(4) : ""   // após "/bg "
         if (mode === "theme") return query.length > 7 ? query.substring(7) : ""   // após "/theme "
         if (mode === "cmds")  return query.substring(1)
         return query
@@ -96,7 +94,7 @@ PanelWindow {
         { cmd: "/proc",   glyph: "⚡", name: "Processos",        desc: "listar e finalizar processos",          complete: true },
         { cmd: "/notes",  glyph: "📝", name: "Notas",            desc: "criar e abrir notas de texto",          complete: true },
         { cmd: "/color-picker", glyph: "💧", name: "Seletor de cor", desc: "capturar um pixel da tela e ver o histórico", complete: true },
-        { cmd: "/bg",     glyph: "🌄", name: "Papel de parede",  desc: "escolher o wallpaper (todos ou por monitor)", complete: true },
+        { cmd: "/bg",     glyph: "🌄", name: "Papel de parede",  desc: "abrir o seletor Skwd-wall v2", complete: false },
         { cmd: "/theme",  glyph: "🎨", name: "Tema",             desc: "trocar a paleta do shell", complete: true },
         { cmd: "/config", glyph: "⚙", name: "Configurações",    desc: "abrir as configurações do shell",       complete: false },
         { cmd: "/reload", glyph: "↻", name: "Recarregar",       desc: "recarregar o Quickshell",               complete: false },
@@ -155,21 +153,6 @@ PanelWindow {
         return (raw / Math.max(1, LauncherService.cpuCount)).toFixed(1) + "%"
     }
 
-    // ── Alvo do /bg (todos os monitores ou um específico) ──
-    property string bgTarget: "*"
-    readonly property var bgTargets: {
-        const mons = niri ? (niri.monitors ?? []) : []
-        const out = [{ key: "*", label: mons.length === 2 ? "Ambos" : "Todos" }]
-        for (let i = 0; i < mons.length; i++)
-            out.push({ key: mons[i].name, label: mons[i].name })
-        return out
-    }
-    function cycleBgTarget() {
-        const ts = bgTargets
-        const i = ts.findIndex(t => t.key === bgTarget)
-        bgTarget = ts[(i + 1) % ts.length].key
-    }
-
     // ── Resultados (kind: header|app|cmd|dir|file|proc|calc) ──
     readonly property var results: {
         if (mode === "apps")  return appResults(modeArg)
@@ -179,7 +162,6 @@ PanelWindow {
         if (mode === "proc")  return procResults(modeArg)
         if (mode === "notes") return noteResults(modeArg)
         if (mode === "color") return colorResults(modeArg)
-        if (mode === "bg")    return bgResults(modeArg)
         if (mode === "theme") return themeResults(modeArg)
         return []
     }
@@ -258,19 +240,6 @@ PanelWindow {
             if (ql !== "" && f.name.toLowerCase().indexOf(ql) < 0) continue
             out.push({ kind: f.isDir ? "dir" : "file", name: f.name, path: f.path,
                        fileType: f.fileType, up: false })
-        }
-        return out
-    }
-    function bgResults(q) {
-        void Settings.data                              // dependência: "atual" muda com a seleção
-        const ql = q.trim().toLowerCase()
-        const cur = WallpaperService.currentFor(bgTarget)
-        const out = []
-        const list = WallpaperService.wallpapers
-        for (let i = 0; i < list.length; i++) {
-            const w = list[i]
-            if (ql !== "" && w.name.toLowerCase().indexOf(ql) < 0) continue
-            out.push({ kind: "bg", name: w.name, path: w.path, sub: w.path === cur ? "atual" : "" })
         }
         return out
     }
@@ -394,13 +363,6 @@ PanelWindow {
         return out
     }
 
-    // ── Grade do /bg (colunas dependem da largura atual do painel) ──
-    readonly property int bgCols: {
-        if (mode !== "bg") return 1
-        const cw = Config.launcherBgThumbW + Config.launcherBgCellGap
-        return Math.max(1, Math.floor(col.width / cw))
-    }
-
     // ── Seleção (pula headers) ──────────────────────────
     property int selIndex: 0
     // pid do item selecionado em /proc — o Timer de 2s reordena/relê a lista sozinho;
@@ -425,8 +387,7 @@ PanelWindow {
         const i = selectableIndex(selIndex + dir, dir >= 0 ? 1 : -1)
         if (i < 0) return
         selIndex = i
-        if (mode === "bg") bgGrid.positionViewAtIndex(selIndex, GridView.Contain)
-        else list.positionViewAtIndex(selIndex, ListView.Contain)
+        list.positionViewAtIndex(selIndex, ListView.Contain)
     }
     onResultsChanged: {
         // /proc: acha o mesmo pid na lista relida; só cai pro topo se o processo já morreu
@@ -439,8 +400,7 @@ PanelWindow {
             }
         }
         selIndex = selectableIndex(0, 1)
-        if (mode === "bg") bgGrid.positionViewAtBeginning()
-        else list.positionViewAtBeginning()
+        list.positionViewAtBeginning()
     }
 
     // ── Ativação (Enter/clique) ─────────────────────────
@@ -451,6 +411,7 @@ PanelWindow {
             LauncherService.launchApp(it.entry)
         } else if (it.kind === "cmd") {
             if (it.complete) setQuery(it.cmd + " ")             // entra no modo
+            else if (it.cmd === "/bg") LauncherService.launchWallpaperManager()
             else if (it.cmd === "/reload") LauncherService.reloadShell()
             else if (it.cmd === "/config") LauncherService.openConfig()
             else if (it.cmd === "/lock") LauncherService.lock()
@@ -482,9 +443,6 @@ PanelWindow {
         } else if (it.kind === "color") {
             LauncherService.copyColor((mods & Qt.ShiftModifier) ? it.rgb : it.hex)
             LauncherService.hide()
-        } else if (it.kind === "bg") {
-            WallpaperService.setFor(bgTarget, it.path)
-            if ((mods & Qt.ShiftModifier) === 0) LauncherService.hide()   // Shift: segue aberto p/ o outro monitor
         } else if (it.kind === "theme") {
             Settings.set("themeShell", it.name)
             LauncherService.hide()
@@ -533,17 +491,13 @@ PanelWindow {
         input.cursorPosition = input.text.length
         LauncherService.cwd = ""
         LauncherService.files = []
-        bgTarget = "*"
         procExpanded = ({})
         input.forceActiveFocus()
     }
-    // entrar no modo /dir pela 1ª vez carrega o $HOME; /proc liga o refresh (Timer);
-    // /bg relê a pasta de wallpapers (pode ter ganhado imagens novas)
+    // entrar no modo /dir pela 1ª vez carrega o $HOME; /proc liga o refresh (Timer)
     onModeChanged: {
         if (mode === "files" && LauncherService.cwd === "")
             LauncherService.listDir(LauncherService.home)
-        if (mode === "bg")
-            WallpaperService.refresh()
         if (mode === "notes")
             LauncherService.refreshNotes()
     }
@@ -569,22 +523,10 @@ PanelWindow {
         }
     }
 
-    function fileUrl(p) {
-        return "file://" + encodeURI(p).replace(/#/g, "%23").replace(/\?/g, "%3F")
-    }
     readonly property string cwdPretty: {
         const h = LauncherService.home
         const c = LauncherService.cwd
         return c.indexOf(h) === 0 ? "~" + c.substring(h.length) : c
-    }
-    readonly property string bgDirPretty: {
-        const h = LauncherService.home
-        const d = Config.wallpaperDir
-        return d.indexOf(h) === 0 ? "~" + d.substring(h.length) : d
-    }
-    readonly property string bgTargetLabel: {
-        const t = bgTargets.find(t => t.key === bgTarget)
-        return t ? t.label : bgTarget
     }
     readonly property int resultCount: {
         let n = 0
@@ -599,7 +541,6 @@ PanelWindow {
         if (mode === "proc")  return "→/← ou Enter abre o app · Shift+Enter finaliza · nos filhos: Enter TERM, Shift+Enter KILL · Tab muda a ordem"
         if (mode === "notes") return "Enter abre no editor · Shift+Enter ou Delete apaga · digite p/ filtrar ou dar título à nova nota"
         if (mode === "color") return "Enter captura/copia o HEX · Shift+Enter copia o RGB · Delete remove do histórico"
-        if (mode === "bg")    return "↑↓←→ navegar · Enter aplica em “" + bgTargetLabel + "” · Shift+Enter sem fechar · Tab muda o alvo"
         if (mode === "theme") return "↑↓ navegar · Enter aplica o tema · digite p/ filtrar"
         if (mode === "calc")  return "Enter usa o resultado na próxima conta"
         return ""
@@ -622,8 +563,7 @@ PanelWindow {
         opacity: win.reveal
         scale: 0.96 + 0.04 * win.reveal
         transformOrigin: Item.Top
-        width: Math.min(parent.width - 80, win.mode === "bg" ? Config.launcherBgW
-                                        : win.notesFull ? Config.launcherNotesW : Config.launcherW)
+        width: Math.min(parent.width - 80, win.notesFull ? Config.launcherNotesW : Config.launcherW)
         Behavior on width {
             enabled: win.reveal === 1
             NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
@@ -668,10 +608,8 @@ PanelWindow {
                     focus: true
                     // teclado do lançador (setas/Enter/Esc/Tab/Backspace especial)
                     Keys.onPressed: (ev) => {
-                        if (ev.key === Qt.Key_Down) { win.moveSel(win.mode === "bg" ? win.bgCols : 1); ev.accepted = true }
-                        else if (ev.key === Qt.Key_Up) { win.moveSel(win.mode === "bg" ? -win.bgCols : -1); ev.accepted = true }
-                        else if (win.mode === "bg" && ev.key === Qt.Key_Right) { win.moveSel(1); ev.accepted = true }
-                        else if (win.mode === "bg" && ev.key === Qt.Key_Left) { win.moveSel(-1); ev.accepted = true }
+                        if (ev.key === Qt.Key_Down) { win.moveSel(1); ev.accepted = true }
+                        else if (ev.key === Qt.Key_Up) { win.moveSel(-1); ev.accepted = true }
                         else if (win.mode === "proc" && ev.key === Qt.Key_Right) {
                             const it = win.results[win.selIndex]
                             if (it && it.isGroup && it.expandable && win.procExpanded[it.pid] !== true)
@@ -704,7 +642,6 @@ PanelWindow {
                             ev.accepted = true
                         } else if (ev.key === Qt.Key_Tab) {
                             if (win.mode === "proc") win.cycleSort()
-                            else if (win.mode === "bg") win.cycleBgTarget()
                             ev.accepted = true
                         } else if (ev.key === Qt.Key_Backspace && win.mode === "files" && win.modeArg === ""
                                    && LauncherService.cwd !== "/" && LauncherService.cwd !== LauncherService.home) {
@@ -739,7 +676,6 @@ PanelWindow {
                         : win.mode === "proc" ? "PROCESSOS"
                         : win.mode === "notes" ? "NOTAS"
                         : win.mode === "color" ? "COR"
-                        : win.mode === "bg" ? "WALLPAPER"
                         : win.mode === "theme" ? "TEMA"
                         : win.mode === "calc" ? "CALC"
                         : "COMANDOS"
@@ -750,78 +686,15 @@ PanelWindow {
                 }
             }
 
-            // ── /dir e /bg: caminho atual / pasta dos wallpapers ──
+            // ── /dir: diretório atual ──
             Text {
-                visible: win.mode === "files" || win.mode === "bg"
+                visible: win.mode === "files"
                 width: col.width
-                text: win.mode === "files" ? win.cwdPretty : win.bgDirPretty
+                text: win.cwdPretty
                 color: Config.launcherSub
                 font.pixelSize: Config.launcherFontSize - 1
                 elide: Text.ElideLeft
                 leftPadding: 6
-            }
-
-            // ── /bg: chips do alvo (todos / cada monitor) + toggle do carrossel ──
-            Item {
-                visible: win.mode === "bg"
-                width: col.width
-                height: 24
-
-                Row {
-                    spacing: 6
-                    leftPadding: 6
-                    Repeater {
-                        model: win.bgTargets
-                        delegate: Rectangle {
-                            required property var modelData
-                            readonly property bool sel: win.bgTarget === modelData.key
-                            width: tgtTxt.implicitWidth + 20
-                            height: 24
-                            radius: 12
-                            color: sel ? Config.accent : Theme.surface0
-                            border.color: sel ? Config.accent : Theme.surface2
-                            border.width: 1
-                            Text {
-                                id: tgtTxt
-                                anchors.centerIn: parent
-                                text: parent.modelData.label
-                                color: parent.sel ? Theme.crust : Config.launcherSub
-                                font.pixelSize: 11
-                                font.bold: parent.sel
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: { win.bgTarget = parent.modelData.key; input.forceActiveFocus() }
-                            }
-                        }
-                    }
-                }
-
-                // carrossel: troca automática periódica (WallpaperService observa o Config)
-                Rectangle {
-                    readonly property bool on: Config.wallpaperCarousel
-                    anchors.right: parent.right
-                    width: carTxt.implicitWidth + 20
-                    height: 24
-                    radius: 12
-                    color: on ? Config.accent : Theme.surface0
-                    border.color: on ? Config.accent : Theme.surface2
-                    border.width: 1
-                    Text {
-                        id: carTxt
-                        anchors.centerIn: parent
-                        text: "Carrossel " + (parent.on ? "" + Config.wallpaperCarouselMin + " min" : "off")
-                        color: parent.on ? Theme.crust : Config.launcherSub
-                        font.pixelSize: 11
-                        font.bold: parent.on
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: { Settings.set("wallpaperCarousel", !parent.on); input.forceActiveFocus() }
-                    }
-                }
             }
 
             // ── /proc: chips de ordenação ──
@@ -934,10 +807,10 @@ PanelWindow {
             }
             Rectangle { visible: win.mode === "proc"; width: col.width; height: 1; color: Config.launcherBorder }
 
-            // ── Lista de resultados (todos os modos exceto /bg, que usa a grade abaixo) ──
+            // ── Lista de resultados ──
             ListView {
                 id: list
-                visible: win.mode !== "bg" && !win.notesFull
+                visible: !win.notesFull
                 width: col.width
                 // altura acompanha o conteúdo até o teto; vazio mantém espaço p/ o aviso
                 height: Math.min(Math.max(contentHeight, win.resultCount === 0 ? 64 : 0), Config.launcherListMaxH)
@@ -948,7 +821,7 @@ PanelWindow {
                     NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
                 }
                 clip: true
-                model: win.mode === "bg" ? [] : win.results
+                model: win.results
                 boundsBehavior: Flickable.StopAtBounds
                 keyNavigationEnabled: false
 
@@ -1175,105 +1048,6 @@ PanelWindow {
                     visible: win.resultCount === 0
                     anchors.centerIn: parent
                     text: win.mode === "files" ? "Nenhuma pasta ou mídia aqui" : "Nada encontrado"
-                    color: Config.launcherSub
-                    font.pixelSize: Config.launcherFontSize
-                }
-            }
-
-            // ── Grade do /bg: cada wallpaper como imagem grande + nome embaixo (menor) ──
-            GridView {
-                id: bgGrid
-                visible: win.mode === "bg"
-                width: col.width
-                cellWidth: Config.launcherBgThumbW + Config.launcherBgCellGap
-                cellHeight: Config.launcherBgThumbH + Config.launcherBgNameSize + 22 + Config.launcherBgCellGap
-                // altura acompanha o conteúdo até o teto; vazio mantém espaço p/ o aviso
-                height: Math.min(Math.max(contentHeight, win.resultCount === 0 ? 64 : 0), Config.launcherBgListMaxH)
-                Behavior on height {
-                    enabled: win.reveal === 1
-                    NumberAnimation { duration: Config.launcherResizeAnim; easing.type: Easing.OutCubic }
-                }
-                clip: true
-                model: win.mode === "bg" ? win.results : []
-                boundsBehavior: Flickable.StopAtBounds
-                keyNavigationEnabled: false
-
-                delegate: Item {
-                    id: cell
-                    required property var modelData
-                    required property int index
-                    readonly property bool selected: index === win.selIndex
-                    readonly property bool current: modelData.sub === "atual"
-                    width: bgGrid.cellWidth - Config.launcherBgCellGap
-                    height: bgGrid.cellHeight - Config.launcherBgCellGap
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 10
-                        color: cell.selected ? Config.launcherSel : "transparent"
-
-                        Column {
-                            anchors.fill: parent
-                            anchors.margins: 6
-                            spacing: 4
-
-                            Item {
-                                width: parent.width
-                                height: Config.launcherBgThumbH
-                                Image {
-                                    anchors.fill: parent
-                                    source: win.fileUrl(cell.modelData.path)
-                                    sourceSize: Qt.size(Config.launcherBgThumbW * 2, Config.launcherBgThumbH * 2)
-                                    fillMode: Image.PreserveAspectCrop
-                                    asynchronous: true
-                                }
-                                Rectangle {   // realce do wallpaper aplicado no momento
-                                    anchors.fill: parent
-                                    color: "transparent"
-                                    radius: 6
-                                    border.width: cell.current ? 2 : 0
-                                    border.color: Config.accent
-                                }
-                            }
-                            Text {
-                                width: parent.width
-                                text: cell.modelData.name ?? ""
-                                color: cell.current ? Config.accent : Config.launcherText
-                                font.pixelSize: Config.launcherBgNameSize
-                                font.bold: cell.current
-                                horizontalAlignment: Text.AlignHCenter
-                                elide: Text.ElideMiddle
-                            }
-                        }
-                    }
-
-                    MouseArea {
-                        id: cellMA
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onPositionChanged: (mouse) => win.hoverSelect(cellMA, mouse.x, mouse.y, cell.index)
-                        onClicked: (mouse) => win.activate(cell.modelData, mouse.modifiers)
-                    }
-                }
-
-                // barra de rolagem fina (mesmo estilo da lista)
-                Rectangle {
-                    visible: bgGrid.contentHeight > bgGrid.height
-                    anchors { right: parent.right; rightMargin: 1 }
-                    width: 4; radius: 2
-                    color: Theme.surface2
-                    height: bgGrid.contentHeight > 0 ? bgGrid.height * (bgGrid.height / bgGrid.contentHeight) : 0
-                    y: (bgGrid.contentHeight > bgGrid.height)
-                       ? (bgGrid.contentY / (bgGrid.contentHeight - bgGrid.height)) * (bgGrid.height - height)
-                       : 0
-                }
-
-                // vazio: nenhuma imagem na pasta configurada
-                Text {
-                    visible: win.resultCount === 0
-                    anchors.centerIn: parent
-                    text: "Nenhuma imagem em " + win.bgDirPretty
                     color: Config.launcherSub
                     font.pixelSize: Config.launcherFontSize
                 }
