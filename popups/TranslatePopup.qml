@@ -234,7 +234,7 @@ except (urllib.error.URLError, TimeoutError, OSError) as error:
             width: root.popupWidth
             height: root.revealed ? root.popupHeight : 0
             clip: true
-            color: Config.trayMenuBg
+            color: root.below ? Config.dracoPopupBg : Config.trayMenuBg
             radius: Config.windowRadius(Config.trayMenuRadius)
             topLeftRadius: 0
             topRightRadius: 0

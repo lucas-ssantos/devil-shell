@@ -74,7 +74,7 @@ PopupWindow {
         clip: true
         // draco: mesma cor da barra, topo RETO (funde na base da barra) e base no raio
         // dela; devil: extensão da cápsula
-        color: root.floating ? Config.dracoBg : Config.capsuleBg
+        color: root.floating ? Config.dracoPopupBg : Config.capsuleBg
         topLeftRadius: 0
         topRightRadius: 0
         bottomLeftRadius: root.floating ? Config.dracoRadius : Config.capsuleRadius

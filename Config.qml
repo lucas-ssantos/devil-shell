@@ -294,6 +294,7 @@ Singleton {
     readonly property real   dracoShadowOpacity: Settings.get("dracoShadowOpacity", 0.55) // força da sombra (0–1)
     readonly property real   dracoBorderW: Settings.get("dracoBorderW", 0)         // borda da barra (px; 0 = sem borda)
     readonly property color  dracoBg: Settings.get("dracoBg", Theme.crust)          // mesma cor da bola (Config.ball)
+    readonly property color  dracoPopupBg: Qt.rgba(dracoBg.r, dracoBg.g, dracoBg.b, dracoBgOpacity)
     readonly property color  dracoBorder: Settings.get("dracoBorder", Theme.surface0)   // borda da barra (se dracoBorderW > 0) e dos popups flutuantes
     readonly property color  dracoShadow: Settings.get("dracoShadow", Theme.shadow)
     readonly property color  dracoCapsuleBg: Settings.get("dracoCapsuleBg", Theme.surface0)       // chips (grupos de widgets)

@@ -116,7 +116,7 @@ PopupWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: root.below ? Config.dracoBg : Config.trayMenuBg
+        color: root.below ? Config.dracoPopupBg : Config.trayMenuBg
         radius: Config.windowRadius(Config.trayMenuRadius)   // no draco, casa com o raio da barra
         // draco (below): topo RETO p/ fundir na base da barra; só a base arredonda
         topLeftRadius: root.below ? 0 : radius

@@ -132,7 +132,7 @@ PopupWindow {
                 width: root.implicitWidth
                 height: root.implicitHeight
                 antialiasing: true
-                property color background: Config.dracoBg
+                property color background: Config.dracoPopupBg
                 property real cornerRadius: Config.dracoRadius
                 onBackgroundChanged: requestPaint()
                 onCornerRadiusChanged: requestPaint()

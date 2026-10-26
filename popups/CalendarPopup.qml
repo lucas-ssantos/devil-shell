@@ -122,7 +122,7 @@ PopupWindow {
             width: root.implicitWidth
             height: root.implicitHeight
             antialiasing: true
-            property color bg: root.floating ? Config.dracoBg : Config.capsuleBg
+            property color bg: root.floating ? Config.dracoPopupBg : Config.capsuleBg
             onBgChanged: requestPaint()
             onWidthChanged: requestPaint()
             onHeightChanged: requestPaint()
