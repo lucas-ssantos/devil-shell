@@ -163,7 +163,7 @@ PopupWindow {
 
                     Column {
                         id: playbackPane
-                        width: (layout.width - layout.spacing) * 0.45
+                        width: layout.width - layout.spacing
                         height: layout.height
                         spacing: 7
                         readonly property real sliderWidth: Math.max(0, width - 24)
@@ -203,7 +203,7 @@ PopupWindow {
                             Column {
                                 id: textColumn
                                 width: Math.max(0, parent.width - coverBox.width - parent.spacing)
-                                leftPadding: 10
+                                leftPadding: 18
                                 // largura útil, já descontado o padding
                                 readonly property real innerWidth: Math.max(0, width - leftPadding - rightPadding)
                                 anchors.verticalCenter: coverBox.verticalCenter
@@ -293,7 +293,8 @@ PopupWindow {
 
                                 Row {
                                     id: controls
-                                    topPadding: 15
+                                    topPadding: 14
+                                    bottomPadding: 6
                                     spacing: 20
                                     // âncoras ignoram o padding da Column: compensa o leftPadding dela
                                     anchors.horizontalCenter: parent.horizontalCenter
@@ -346,6 +347,74 @@ PopupWindow {
                                             enabled: root.harv && root.harv.canGoNext
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: MediaService.harvNext()
+                                        }
+                                    }
+                                }
+
+                                Row {
+                                    id: volumeRow
+                                    width: textColumn.innerWidth
+                                    height: 14
+                                    spacing: 3
+
+                                    Text {
+                                        id: volumeIcon
+                                        text: Config.iconOutput
+                                        color: Config.dracoSub
+                                        font.family: Config.iconFont
+                                        font.pixelSize: Config.dracoIconSize
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    Item {
+                                        id: volumeTrack
+                                        // o que sobra da largura útil depois do ícone, do label e dos gaps
+                                        width: Math.max(0, volumeRow.width - volumeIcon.implicitWidth
+                                            - volumeLabel.width - 2 * volumeRow.spacing)
+                                        height: 7.3
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: height / 2
+                                            color: Config.dracoCapsuleBg
+                                        }
+                                        Rectangle {
+                                            width: parent.width * Math.max(0, Math.min(1, root.volumeLevel))
+                                            height: parent.height
+                                            radius: height / 2
+                                            color: Config.dracoAccent
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            enabled: root.harv && root.harv.volumeSupported
+                                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                            function setVolume(mouseX) {
+                                                root.volumeLevel = Math.max(0, Math.min(1, mouseX / volumeTrack.width))
+                                            }
+                                            onPressed: (mouse) => { root.changingVolume = true; setVolume(mouse.x) }
+                                            onPositionChanged: (mouse) => { if (pressed) setVolume(mouse.x) }
+                                            onReleased: {
+                                                if (root.harv && root.harv.volumeSupported) root.harv.volume = root.volumeLevel
+                                                root.changingVolume = false
+                                            }
+                                            onCanceled: root.changingVolume = false
+                                        }
+                                    }
+                                    Text {
+                                        id: volumeLabel
+                                        leftPadding: 3
+                                        // largura fixa (a do maior valor): a barra não muda de tamanho ao arrastar
+                                        width: volumeSample.advanceWidth + leftPadding
+                                        horizontalAlignment: Text.AlignRight
+                                        text: Math.round(root.volumeLevel * 100) + "%"
+                                        color: Config.dracoSub
+                                        font.pixelSize: Config.dracoTextSize - 2
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        TextMetrics {
+                                            id: volumeSample
+                                            font: volumeLabel.font
+                                            text: "100%"
                                         }
                                     }
                                 }
@@ -402,144 +471,6 @@ PopupWindow {
                                 text: root.formatTime(root.durationSeconds)
                                 color: Config.dracoSub
                                 font.pixelSize: Config.dracoTextSize - 2
-                            }
-                        }
-
-                        Row {
-                            id: volumeRow
-                            width: playbackPane.sliderWidth + volumeIcon.implicitWidth
-                                + volumeLabel.implicitWidth - volumeLabel.leftPadding + 2 * spacing + 1
-                            x: (playbackPane.width - width) / 2 + 5
-                            height: 14
-                            spacing: 3
-
-                            Text {
-                                id: volumeIcon
-                                text: Config.iconOutput
-                                color: Config.dracoSub
-                                font.family: Config.iconFont
-                                font.pixelSize: Config.dracoIconSize
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                            Item {
-                                id: volumeTrack
-                                width: playbackPane.sliderWidth - 14
-                                height: 7.3
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: height / 2
-                                    color: Config.dracoCapsuleBg
-                                }
-                                Rectangle {
-                                    width: parent.width * Math.max(0, Math.min(1, root.volumeLevel))
-                                    height: parent.height
-                                    radius: height / 2
-                                    color: Config.dracoAccent
-                                }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    enabled: root.harv && root.harv.volumeSupported
-                                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                    function setVolume(mouseX) {
-                                        root.volumeLevel = Math.max(0, Math.min(1, mouseX / volumeTrack.width))
-                                    }
-                                    onPressed: (mouse) => { root.changingVolume = true; setVolume(mouse.x) }
-                                    onPositionChanged: (mouse) => { if (pressed) setVolume(mouse.x) }
-                                    onReleased: {
-                                        if (root.harv && root.harv.volumeSupported) root.harv.volume = root.volumeLevel
-                                        root.changingVolume = false
-                                    }
-                                    onCanceled: root.changingVolume = false
-                                }
-                            }
-
-                            Text {
-                                id: volumeLabel
-                                leftPadding: 3
-                                text: Math.round(root.volumeLevel * 100) + "%"
-                                color: Config.dracoSub
-                                font.pixelSize: Config.dracoTextSize - 2
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        width: 1
-                        height: parent.height
-                        color: Config.dracoSub
-                        opacity: 0.35
-                    }
-
-                    Column {
-                        id: lyricsPane
-                        width: layout.width - playbackPane.width - layout.spacing - 1
-                        height: layout.height
-                        spacing: 6
-
-                        Text {
-                            text: "LETRAS"
-                            color: Config.dracoSub
-                            font.pixelSize: Config.dracoTextSize - 1
-                            font.bold: true
-                        }
-
-                        Item {
-                            width: parent.width
-                            height: parent.height - 18
-
-                            Text {
-                                anchors.centerIn: parent
-                                width: parent.width - 12
-                                horizontalAlignment: Text.AlignHCenter
-                                text: !root.harv ? "Aguardando o Harv…"
-                                    : !root.lyricsPayload ? "Buscando letras…"
-                                    : root.lyricsLines.length === 0 ? "Nenhuma letra disponível"
-                                    : ""
-                                color: Config.dracoSub
-                                font.pixelSize: Config.dracoTextSize
-                                wrapMode: Text.Wrap
-                                visible: text.length > 0
-                            }
-
-                            Flickable {
-                                id: lyricsFlick
-                                anchors.fill: parent
-                                clip: true
-                                visible: root.lyricsLines.length > 0
-                                contentWidth: width
-                                contentHeight: lyricsColumn.implicitHeight
-                                contentY: Math.max(0, Math.min(contentHeight - height,
-                                    (root.activeLyricIndex + 0.5) * 36 - height / 2))
-                                Behavior on contentY {
-                                    NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
-                                }
-
-                                Column {
-                                    id: lyricsColumn
-                                    width: lyricsFlick.width
-
-                                    Repeater {
-                                        model: root.lyricsLines
-                                        delegate: Text {
-                                            required property var modelData
-                                            required property int index
-                                            width: lyricsColumn.width
-                                            height: 36
-                                            text: modelData.text
-                                            color: index === root.activeLyricIndex
-                                                ? Config.dracoAccent : Config.dracoSub
-                                            opacity: index === root.activeLyricIndex ? 1 : 0.65
-                                            font.pixelSize: Config.dracoTextSize + (index === root.activeLyricIndex ? 1 : 0)
-                                            font.bold: index === root.activeLyricIndex
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                            elide: Text.ElideRight
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
