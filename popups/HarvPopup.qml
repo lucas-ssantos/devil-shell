@@ -174,6 +174,7 @@ PopupWindow {
                             spacing: 8
 
                             Rectangle {
+                                id: coverBox
                                 width: 128
                                 height: 128
                                 radius: Config.dracoRadius / 2
@@ -200,33 +201,97 @@ PopupWindow {
 
                             //padding do bloco ao lado da imagem
                             Item {
+                                id: coverGap
                                 width: 10
                                 height: 1
                             }
 
                             Column {
-                                width: parent.width - 54 - parent.spacing
+                                // espaço restante = Row - capa - espaçador - 2 gaps do spacing
+                                width: Math.max(0, parent.width - coverBox.width - coverGap.width - 2 * parent.spacing)
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 4
 
-                                Text {
+                                Item {
+                                    id: titleViewport
                                     width: parent.width
-                                    text: root.harv
-                                        ? (root.harv.trackTitle || "Harv")
-                                        : MediaService.harvLaunchError || (MediaService.harvLaunching ? "Iniciando Harv…" : "Harv sem reprodução")
-                                    color: Config.dracoText
-                                    font.pixelSize: Config.dracoTextSize + 1
-                                    font.bold: true
-                                    elide: Text.ElideRight
+                                    height: titleLabel.implicitHeight
+                                    clip: true
+                                    onWidthChanged: if (titleLabel.implicitWidth <= width) titleLabel.x = 0
+
+                                    Text {
+                                        id: titleLabel
+                                        width: implicitWidth
+                                        height: parent.height
+                                        text: root.harv
+                                            ? (root.harv.trackTitle || "Harv")
+                                            : MediaService.harvLaunchError || (MediaService.harvLaunching ? "Iniciando Harv…" : "Harv sem reprodução")
+                                        color: Config.dracoText
+                                        font.pixelSize: Config.dracoTextSize + 1
+                                        font.bold: true
+                                        wrapMode: Text.NoWrap
+                                        onTextChanged: x = 0
+                                        onImplicitWidthChanged: if (implicitWidth <= titleViewport.width) x = 0
+                                    }
+
+                                    SequentialAnimation {
+                                        running: titleLabel.implicitWidth > titleViewport.width
+                                        loops: Animation.Infinite
+                                        PauseAnimation { duration: 700 }
+                                        NumberAnimation {
+                                            target: titleLabel
+                                            property: "x"
+                                            to: Math.min(0, titleViewport.width - titleLabel.implicitWidth)
+                                            duration: Math.max(1000, (titleLabel.implicitWidth - titleViewport.width) * 35)
+                                        }
+                                        PauseAnimation { duration: 900 }
+                                        NumberAnimation {
+                                            target: titleLabel
+                                            property: "x"
+                                            to: 0
+                                            duration: Math.max(1000, (titleLabel.implicitWidth - titleViewport.width) * 35)
+                                        }
+                                    }
                                 }
-                                Text {
+                                Item {
+                                    id: artistViewport
                                     width: parent.width
-                                    text: root.harv
-                                        ? (root.harv.trackArtist || "")
-                                        : (MediaService.harvLaunchError ? "Verifique a instalação do Harv" : "Aguardando o player")
-                                    color: Config.dracoSub
-                                    font.pixelSize: Config.dracoTextSize
-                                    elide: Text.ElideRight
+                                    height: artistLabel.implicitHeight
+                                    clip: true
+                                    onWidthChanged: if (artistLabel.implicitWidth <= width) artistLabel.x = 0
+
+                                    Text {
+                                        id: artistLabel
+                                        width: implicitWidth
+                                        height: parent.height
+                                        text: root.harv
+                                            ? (root.harv.trackArtist || "")
+                                            : (MediaService.harvLaunchError ? "Verifique a instalação do Harv" : "Aguardando o player")
+                                        color: Config.dracoSub
+                                        font.pixelSize: Config.dracoTextSize
+                                        wrapMode: Text.NoWrap
+                                        onTextChanged: x = 0
+                                        onImplicitWidthChanged: if (implicitWidth <= artistViewport.width) x = 0
+                                    }
+
+                                    SequentialAnimation {
+                                        running: artistLabel.implicitWidth > artistViewport.width
+                                        loops: Animation.Infinite
+                                        PauseAnimation { duration: 700 }
+                                        NumberAnimation {
+                                            target: artistLabel
+                                            property: "x"
+                                            to: Math.min(0, artistViewport.width - artistLabel.implicitWidth)
+                                            duration: Math.max(1000, (artistLabel.implicitWidth - artistViewport.width) * 35)
+                                        }
+                                        PauseAnimation { duration: 900 }
+                                        NumberAnimation {
+                                            target: artistLabel
+                                            property: "x"
+                                            to: 0
+                                            duration: Math.max(1000, (artistLabel.implicitWidth - artistViewport.width) * 35)
+                                        }
+                                    }
                                 }
 
                                 Item {
