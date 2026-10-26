@@ -170,7 +170,8 @@ PopupWindow {
 
                         Row {
                             width: parent.width
-                            height: 128
+                            height: coverBox.height + bottomPadding
+                            bottomPadding: 12
                             spacing: 8
 
                             Rectangle {
@@ -199,22 +200,18 @@ PopupWindow {
                                 }
                             }
 
-                            //padding do bloco ao lado da imagem
-                            Item {
-                                id: coverGap
-                                width: 10
-                                height: 1
-                            }
-
                             Column {
-                                // espaço restante = Row - capa - espaçador - 2 gaps do spacing
-                                width: Math.max(0, parent.width - coverBox.width - coverGap.width - 2 * parent.spacing)
-                                anchors.verticalCenter: parent.verticalCenter
+                                id: textColumn
+                                width: Math.max(0, parent.width - coverBox.width - parent.spacing)
+                                leftPadding: 10
+                                // largura útil, já descontado o padding
+                                readonly property real innerWidth: Math.max(0, width - leftPadding - rightPadding)
+                                anchors.verticalCenter: coverBox.verticalCenter
                                 spacing: 4
 
                                 Item {
                                     id: titleViewport
-                                    width: parent.width
+                                    width: textColumn.innerWidth
                                     height: titleLabel.implicitHeight
                                     clip: true
                                     onWidthChanged: if (titleLabel.implicitWidth <= width) titleLabel.x = 0
@@ -255,7 +252,7 @@ PopupWindow {
                                 }
                                 Item {
                                     id: artistViewport
-                                    width: parent.width
+                                    width: textColumn.innerWidth
                                     height: artistLabel.implicitHeight
                                     clip: true
                                     onWidthChanged: if (artistLabel.implicitWidth <= width) artistLabel.x = 0
@@ -294,17 +291,17 @@ PopupWindow {
                                     }
                                 }
 
-                                Item {
-                                    width: 1
-                                    height: 10
-                                }
-
                                 Row {
                                     id: controls
-                                    anchors.horizontalCenter: parent.verticalCenter
+                                    topPadding: 15
                                     spacing: 20
+                                    // âncoras ignoram o padding da Column: compensa o leftPadding dela
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.horizontalCenterOffset: textColumn.leftPadding / 2
 
                                     Text {
+                                        height: playButton.implicitHeight
+                                        verticalAlignment: Text.AlignVCenter
                                         text: Config.iconMediaPrevious
                                         color: Config.dracoText
                                         font.family: Config.iconFont
@@ -319,6 +316,8 @@ PopupWindow {
                                         }
                                     }
                                     Text {
+                                        id: playButton
+                                        verticalAlignment: Text.AlignVCenter
                                         text: root.harv && root.harv.isPlaying
                                             ? Config.iconMediaPause : Config.iconMediaPlay
                                         color: Config.dracoAccent
@@ -334,6 +333,8 @@ PopupWindow {
                                         }
                                     }
                                     Text {
+                                        height: playButton.implicitHeight
+                                        verticalAlignment: Text.AlignVCenter
                                         text: Config.iconMediaNext
                                         color: Config.dracoText
                                         font.family: Config.iconFont
@@ -349,12 +350,6 @@ PopupWindow {
                                     }
                                 }
                             }
-                        }
-
-                        //paddimg no topo das barras
-                        Item {
-                            width: 1
-                            height: 5
                         }
 
                         Item {
@@ -390,22 +385,20 @@ PopupWindow {
                             }
                         }
 
-                        Row {
+                        Item {
                             width: parent.width
                             height: 12
 
                             Text {
                                 id: elapsedTime
+                                anchors.left: parent.left
                                 text: root.formatTime(root.positionSeconds)
                                 color: Config.dracoSub
                                 font.pixelSize: Config.dracoTextSize - 2
                             }
-                            Item {
-                                width: parent.width - elapsedTime.implicitWidth - durationTime.implicitWidth
-                                height: 1
-                            }
                             Text {
                                 id: durationTime
+                                anchors.right: parent.right
                                 text: root.formatTime(root.durationSeconds)
                                 color: Config.dracoSub
                                 font.pixelSize: Config.dracoTextSize - 2
@@ -415,7 +408,7 @@ PopupWindow {
                         Row {
                             id: volumeRow
                             width: playbackPane.sliderWidth + volumeIcon.implicitWidth
-                                + volumeLabel.implicitWidth + 2 * spacing + 1
+                                + volumeLabel.implicitWidth - volumeLabel.leftPadding + 2 * spacing + 1
                             x: (playbackPane.width - width) / 2 + 5
                             height: 14
                             spacing: 3
@@ -462,13 +455,9 @@ PopupWindow {
                                 }
                             }
 
-                            Item {
-                                width: 0.1
-                                height: 1
-                            }
-
                             Text {
                                 id: volumeLabel
+                                leftPadding: 3
                                 text: Math.round(root.volumeLevel * 100) + "%"
                                 color: Config.dracoSub
                                 font.pixelSize: Config.dracoTextSize - 2
