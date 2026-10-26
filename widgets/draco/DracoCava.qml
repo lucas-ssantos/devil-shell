@@ -10,12 +10,12 @@ import "root:/"   // Config (raiz)
 // → simétrico esquerda/direita, com o grave nas PONTAS e o agudo no CENTRO (igual ao rodapé).
 // `segment` fatia esse espectro p/ caber APENAS num vão da barra (não passa por trás dos
 // widgets): "left" = 1ª metade (grave na ponta externa, agudo voltado ao centro), "right" =
-// 2ª metade (espelho), "full" = tudo. Puramente visual — sem MouseArea, p/ o scroll seguir
-// p/ o fundo da barra (troca de ws).
+// 2ª metade (espelho), "full" = tudo.
 Item {
     id: viz
     property var levels: []
     property string segment: "full"   // "left" | "right" | "full"
+    signal clicked()
 
     // não repinta invisível (modo devil); ao reaparecer, pinta 1x
     onLevelsChanged: if (visible) cv.requestPaint()
@@ -101,6 +101,13 @@ Item {
                 roundedBar(g, x, cy - half, bw, half * 2, rad)
                 g.fill()
             }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            cursorShape: Qt.PointingHandCursor
+            onClicked: viz.clicked()
         }
     }
 }

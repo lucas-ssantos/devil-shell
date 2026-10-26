@@ -1,12 +1,13 @@
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.SystemTray
+import Quickshell.Io
 import QtQuick
 import "root:/capsules/draco"   // DracoCapsule
 import "root:/widgets/draco"    // DracoCava
-import "root:/popups"           // CalendarPopup, TempPopup, RamPopup, TranslatePopup
+import "root:/popups"           // CalendarPopup, TempPopup, RamPopup, HarvPopup, TranslatePopup
 import "root:/menus"            // TrayMenu, AudioDevices
-import "root:/services"         // AudioService, CaptureService, IdleService, LauncherService, SensorsService, Settings
+import "root:/services"         // AudioService, CaptureService, IdleService, LauncherService, MediaService, SensorsService, Settings
 import "root:/"                 // Config (raiz)
 
 // Barra do modo DRACO (uma por monitor): substitui bola/cristais/cápsulas por uma barra
@@ -140,7 +141,7 @@ PanelWindow {
         }
     }
     function popupTouchesEdge(side) {
-        const popups = [calendarPopup, tempPopup, ramPopup, trayMenu, audioDevices, translatePopup]
+        const popups = [calendarPopup, tempPopup, ramPopup, harvPopup, trayMenu, audioDevices, translatePopup]
         for (let i = 0; i < popups.length; i++) {
             const popup = popups[i]
             if (!popup.visible) continue
@@ -155,6 +156,7 @@ PanelWindow {
         if (calendarPopup !== exceptPopup) calendarPopup.close()
         if (tempPopup !== exceptPopup) tempPopup.close()
         if (ramPopup !== exceptPopup) ramPopup.close()
+        if (harvPopup !== exceptPopup) harvPopup.close()
         if (trayMenu !== exceptPopup) trayMenu.close()
         if (audioDevices !== exceptPopup) audioDevices.visible = false
         if (translatePopup !== exceptPopup) translatePopup.visible = false
@@ -188,6 +190,16 @@ PanelWindow {
         const a = anchorOf(rightChip, audioDevices)
         audioDevices.openAt(kind, a.x, a.y)
     }
+    function toggleHarvPopup() {
+        if (harvPopup.visible) {
+            harvPopup.close()
+            return
+        }
+
+        closePopups(harvPopup)
+        harvPopup.openAt(panel.x + panel.width / 2, panel.y + panel.height)
+        if (!MediaService.harvPlayer) MediaService.startHarv()
+    }
     function toggleTranslation() {
         if (Date.now() - bar.translationClosedAt < 250) {
             translatePopup.visible = false
@@ -208,6 +220,7 @@ PanelWindow {
     CalendarPopup { id: calendarPopup; ctx: bar; floating: true }
     TempPopup     { id: tempPopup;     ctx: bar; floating: true }
     RamPopup      { id: ramPopup;      ctx: bar; floating: true }
+    HarvPopup     { id: harvPopup;     ctx: bar }
     TrayMenu      { id: trayMenu;      ctx: bar; below: true }
     AudioDevices  { id: audioDevices;  ctx: bar; below: true }
     TranslatePopup { id: translatePopup; ctx: bar; below: true }
@@ -333,14 +346,14 @@ PanelWindow {
 
         // ══ Visualizador CAVA: forma de onda APENAS nos vãos (chip central ↔ chips laterais) ══
         // Não passa por trás dos widgets. Metade do espectro em cada vão; o chip central
-        // fica no lugar da quebra do meio. Puramente visual (o scroll segue p/ o MouseArea
-        // acima). Some se o vão ficar estreito demais (título de janela longo no centro).
+        // fica no lugar da quebra do meio. Some se o vão ficar estreito demais (título de janela longo no centro).
         DracoCava {
             id: cavaLeft
             visible: Config.dracoCavaEnabled && bar.shown && width >= Config.dracoCavaMinW
             levels: bar.levels
             segment: "left"
             height: parent.height
+            onClicked: bar.toggleHarvPopup()
             anchors {
                 left: leftChip.right; right: centerChip.left
                 leftMargin: Config.dracoPad; rightMargin: Config.dracoPad
@@ -353,6 +366,7 @@ PanelWindow {
             levels: bar.levels
             segment: "right"
             height: parent.height
+            onClicked: bar.toggleHarvPopup()
             anchors {
                 left: centerChip.right; right: rightChip.left
                 leftMargin: Config.dracoPad; rightMargin: Config.dracoPad
