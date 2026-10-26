@@ -198,6 +198,12 @@ PopupWindow {
                                 }
                             }
 
+                            //padding do bloco ao lado da imagem
+                            Item {
+                                width: 10
+                                height: 1
+                            }
+
                             Column {
                                 width: parent.width - 54 - parent.spacing
                                 anchors.verticalCenter: parent.verticalCenter
@@ -222,7 +228,12 @@ PopupWindow {
                                     font.pixelSize: Config.dracoTextSize
                                     elide: Text.ElideRight
                                 }
-                                
+
+                                Item {
+                                    width: 1
+                                    height: 10
+                                }
+
                                 Row {
                                     id: controls
                                     anchors.horizontalCenter: parent.verticalCenter
@@ -273,6 +284,12 @@ PopupWindow {
                                     }
                                 }
                             }
+                        }
+
+                        //paddimg no topo das barras
+                        Item {
+                            width: 1
+                            height: 5
                         }
 
                         Item {
@@ -379,10 +396,12 @@ PopupWindow {
                                     onCanceled: root.changingVolume = false
                                 }
                             }
+
                             Item {
                                 width: 0.1
                                 height: 1
                             }
+
                             Text {
                                 id: volumeLabel
                                 text: Math.round(root.volumeLevel * 100) + "%"
