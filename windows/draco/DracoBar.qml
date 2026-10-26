@@ -152,6 +152,9 @@ PanelWindow {
         }
         return false
     }
+    readonly property bool popupOpen: calendarPopup.visible || tempPopup.visible || ramPopup.visible
+                                     || harvPopup.visible || trayMenu.visible || audioDevices.visible
+                                     || translatePopup.visible
     function closePopups(exceptPopup) {
         if (calendarPopup !== exceptPopup) calendarPopup.close()
         if (tempPopup !== exceptPopup) tempPopup.close()
@@ -265,6 +268,7 @@ PanelWindow {
             property real  topRad: Config.dracoMarginTop > 0 ? Config.dracoRadius : 0
             property bool popupLeft: bar.popupTouchesEdge("left")
             property bool popupRight: bar.popupTouchesEdge("right")
+            property bool popupOpen: bar.popupOpen
             property color edge: Config.dracoBorder
             property real  edgeW: Config.dracoBorderW
             onBgChanged: requestPaint()
@@ -277,6 +281,7 @@ PanelWindow {
             onTopRadChanged: requestPaint()
             onPopupLeftChanged: requestPaint()
             onPopupRightChanged: requestPaint()
+            onPopupOpenChanged: requestPaint()
             onEdgeChanged: requestPaint()
             onEdgeWChanged: requestPaint()
             onWidthChanged: requestPaint()
@@ -309,7 +314,7 @@ PanelWindow {
                 const rbR = popupRight ? 0 : Math.max(0, Math.min(rad, w / 2, h / 2))
                 const rt = Math.max(0, Math.min(topRad, w / 2, h / 2))
                 // 1) sombra: forma opaca com shadow; depois a forma é recortada -> sobra só o halo
-                if (blur > 0 && shA > 0) {
+                if (!popupOpen && blur > 0 && shA > 0) {
                     g.save()
                     g.shadowColor = Qt.rgba(sh.r, sh.g, sh.b, shA)
                     g.shadowBlur = blur
