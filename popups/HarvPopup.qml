@@ -390,11 +390,12 @@ PopupWindow {
                                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                             function setVolume(mouseX) {
                                                 root.volumeLevel = Math.max(0, Math.min(1, mouseX / volumeTrack.width))
+                                                if (root.harv && root.harv.volumeSupported)
+                                                    root.harv.volume = root.volumeLevel
                                             }
                                             onPressed: (mouse) => { root.changingVolume = true; setVolume(mouse.x) }
                                             onPositionChanged: (mouse) => { if (pressed) setVolume(mouse.x) }
                                             onReleased: {
-                                                if (root.harv && root.harv.volumeSupported) root.harv.volume = root.volumeLevel
                                                 root.changingVolume = false
                                             }
                                             onCanceled: root.changingVolume = false
