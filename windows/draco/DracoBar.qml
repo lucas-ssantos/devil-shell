@@ -37,7 +37,8 @@ PanelWindow {
     // visibilidade gerida pela TRANSIÇÃO de modo (ver abaixo)
     visible: false
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    // pega o teclado SÓ enquanto há popup aberto (p/ o ESC fechar); fora disso não rouba
+    WlrLayershell.keyboardFocus: bar.popupOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
     // a surface vai de ponta a ponta no topo: a barra (fração da largura) fica centralizada
     // dentro dela e a sombra cabe nas laterais/embaixo. Começa na BORDA da tela (sem margem)
@@ -45,16 +46,23 @@ PanelWindow {
     anchors { top: true; left: true; right: true }
     // faixa extra p/ a sombra (embaixo): desfoque + deslocamento
     readonly property real shadowPad: Config.dracoShadowBlur > 0 ? Config.dracoShadowBlur + Config.dracoShadowOffsetY + 2 : 0
-    implicitHeight: Config.dracoMarginTop + Config.dracoBarH + shadowPad
+    readonly property real barSurfaceH: Config.dracoMarginTop + Config.dracoBarH + shadowPad
+    // com um popup aberto a surface cresce até a tela inteira p/ capturar o clique FORA
+    // (o niri não fecha sozinho xdg_popup de uma layer-shell); fechado, volta a ser só a barra
+    implicitHeight: bar.popupOpen && bar.screen ? bar.screen.height : bar.barSurfaceH
     // reserva folga do topo + barra + folga extra enquanto a barra está em cena (shown); a zona
     // cai junto com o deslizar de saída → as janelas do niri voltam a subir. Escondida → nada.
     // A faixa da sombra NÃO é reservada: ela cai sobre o gap/janelas, como uma sombra de verdade.
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: shown ? Math.round(Config.dracoMarginTop + Config.dracoBarH + Config.dracoGap) : 0
-    // só a barra recebe input; as laterais e a faixa da sombra são click-through
+    // só a barra recebe input; as laterais e a faixa da sombra são click-through.
+    // Com popup aberto, a surface inteira vira catcher (clique fora fecha — ver o
+    // MouseArea de fundo logo abaixo do `panel`).
     mask: Region {
-        x: Math.round(panel.x); y: Math.round(panel.y)
-        width: Math.round(panel.width); height: Math.round(panel.height)
+        x: bar.popupOpen ? 0 : Math.round(panel.x)
+        y: bar.popupOpen ? 0 : Math.round(panel.y)
+        width: bar.popupOpen ? bar.width : Math.round(panel.width)
+        height: bar.popupOpen ? bar.height : Math.round(panel.height)
     }
 
     // ── Transição de modo (Config.isDraco) ──
@@ -228,6 +236,26 @@ PanelWindow {
     AudioDevices  { id: audioDevices;  ctx: bar; below: true }
     TranslatePopup { id: translatePopup; ctx: bar; below: true }
 
+    // ── Fechar popups por clique FORA / ESC ──
+    // Os PopupWindow usam `grabFocus`, mas o niri não trata esse grab em popups de uma
+    // layer-shell: nem o clique fora fecha nem o teclado chega neles. Com um popup
+    // aberto a surface da barra cobre a tela (ver `implicitHeight`/`mask`) e este
+    // MouseArea de fundo captura o clique fora — fica atrás do `panel`, então clique
+    // nos widgets continua chegando neles normalmente.
+    MouseArea {
+        anchors.fill: parent
+        z: -1
+        enabled: bar.popupOpen
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onClicked: bar.closePopups()
+    }
+    // ESC fecha todos: a keyboardFocus da janela só fica Exclusive com popup aberto
+    Item {
+        anchors.fill: parent
+        focus: bar.popupOpen
+        Keys.onEscapePressed: bar.closePopups()
+    }
+
     // chip: fundo discreto de um GRUPO de widgets (esquerda / centro / direita); os filhos
     // declarados dentro dele caem na Row interna
     component Chip: Rectangle {
@@ -342,11 +370,13 @@ PanelWindow {
             }
         }
 
-        // scroll no fundo (e nos widgets que não consomem a roda) → workspace deste monitor
+        // scroll no fundo (e nos widgets que não consomem a roda) → workspace deste monitor;
+        // com popup aberto, clique no fundo da barra também fecha tudo
         MouseArea {
             anchors.fill: parent
-            acceptedButtons: Qt.NoButton
+            acceptedButtons: bar.popupOpen ? (Qt.LeftButton | Qt.RightButton) : Qt.NoButton
             onWheel: (w) => bar.switchWorkspace(w.angleDelta.y > 0 ? -1 : 1)   // cima = anterior
+            onClicked: bar.closePopups()
         }
 
         // ══ Visualizador CAVA: forma de onda APENAS nos vãos (chip central ↔ chips laterais) ══

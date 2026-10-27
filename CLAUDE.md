@@ -223,6 +223,10 @@ shell / Barra Draco" da SettingsWindow também troca.
   abaixo da barra com `dracoPopupGap`, 4 cantos `dracoRadius`, borda, fundo `dracoBg`) e
   `TrayMenu/AudioDevices` ganharam `below: true` (abrem ABAIXO do ponto em vez de acima). O anchor
   fica alguns px fora da surface da barra (o gap) e o niri posiciona normalmente.
+  Com popup aberto a DracoBar cresce a surface até a tela inteira (`implicitHeight`/`mask`), pega o
+  teclado (`WlrLayershell.keyboardFocus: Exclusive`) e fecha todos por um MouseArea de fundo (clique
+  fora) ou pelo item focado no ESC — o niri não dispensa sozinho xdg_popup de layer-shell, então o
+  `grabFocus` dos PopupWindow não basta.
 - **Cantos arredondados casando com a barra (`Config.dracoRadius`) no modo draco:** tanto as
   janelas do SHELL quanto as janelas do NIRI seguem o mesmo raio da barra.
   - Shell: `Config.windowRadius(own)` — no draco devolve `dracoRadius`, no devil devolve o
