@@ -204,9 +204,13 @@ PopupWindow {
                                         id: titleLabel
                                         width: implicitWidth
                                         height: parent.height
-                                        text: root.player
-                                            ? (root.player.trackTitle || "YouTube Music")
-                                            : MediaService.ytmLaunchError || (MediaService.ytmLaunching ? "Abrindo YouTube Music…" : "YouTube Music sem reprodução")
+                                        text: {
+                                            if (root.player && root.player.trackTitle) return root.player.trackTitle
+                                            if (MediaService.ytmBridgeConnected) return "YouTube Music"
+                                            if (MediaService.ytmLaunching) return "Abrindo YouTube Music…"
+                                            if (MediaService.ytmLaunchError) return MediaService.ytmLaunchError
+                                            return "YouTube Music sem reprodução"
+                                        }
                                         color: Config.dracoText
                                         font.pixelSize: Config.dracoTextSize + 1
                                         font.bold: true
@@ -245,9 +249,12 @@ PopupWindow {
                                         id: artistLabel
                                         width: implicitWidth
                                         height: parent.height
-                                        text: root.player
-                                            ? (root.player.trackArtist || "")
-                                            : (MediaService.ytmLaunchError ? "Abra o YTM no Zen e dê play" : "Aguardando o player")
+                                        text: {
+                                            if (root.player && root.player.trackArtist) return root.player.trackArtist
+                                            if (MediaService.ytmStatusHint) return MediaService.ytmStatusHint
+                                            if (root.player) return "Aguardando o player"
+                                            return "Abra o YTM no Zen e dê play"
+                                        }
                                         color: Config.dracoSub
                                         font.pixelSize: Config.dracoTextSize
                                         wrapMode: Text.NoWrap
@@ -273,6 +280,15 @@ PopupWindow {
                                             duration: Math.max(1000, (artistLabel.implicitWidth - artistViewport.width) * 35)
                                         }
                                     }
+
+                                    // Atalho para instalar o userscript quando a aba do YTM já
+                                    // existe mas a ponte ainda não conectou.
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        enabled: MediaService.ytmNeedsUserscript
+                                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                        onClicked: MediaService.openYtmBridgeScript()
+                                    }
                                 }
 
                                 Row {
@@ -291,12 +307,12 @@ PopupWindow {
                                         color: Config.dracoText
                                         font.family: Config.iconFont
                                         font.pixelSize: Config.dracoIconSize + 2
-                                        opacity: root.player && root.player.canGoPrevious ? 1 : 0.45
+                                        opacity: MediaService.ytmCanPrevious ? 1 : 0.45
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -6
-                                            enabled: root.player && root.player.canGoPrevious
-                                            cursorShape: Qt.PointingHandCursor
+                                            enabled: MediaService.ytmCanPrevious
+                                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                             onClicked: root.previousTrack()
                                         }
                                     }
@@ -308,12 +324,13 @@ PopupWindow {
                                         color: Config.dracoAccent
                                         font.family: Config.iconFont
                                         font.pixelSize: Config.dracoIconSize + 4
-                                        opacity: root.player ? 1 : 0.45
+                                        // Sem player ainda, o clique deve abrir/tocar o YTM.
+                                        opacity: (MediaService.ytmCanToggle || !root.player) ? 1 : 0.45
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -6
-                                            enabled: root.player && root.player.canTogglePlaying
-                                            cursorShape: Qt.PointingHandCursor
+                                            enabled: MediaService.ytmCanToggle || !root.player
+                                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                             onClicked: MediaService.ytmToggle()
                                         }
                                     }
@@ -324,12 +341,12 @@ PopupWindow {
                                         color: Config.dracoText
                                         font.family: Config.iconFont
                                         font.pixelSize: Config.dracoIconSize + 2
-                                        opacity: root.player && root.player.canGoNext ? 1 : 0.45
+                                        opacity: MediaService.ytmCanNext ? 1 : 0.45
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -6
-                                            enabled: root.player && root.player.canGoNext
-                                            cursorShape: Qt.PointingHandCursor
+                                            enabled: MediaService.ytmCanNext
+                                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                             onClicked: MediaService.ytmNext()
                                         }
                                     }
@@ -370,12 +387,12 @@ PopupWindow {
                                         }
                                         MouseArea {
                                             anchors.fill: parent
-                                            enabled: root.player && root.player.volumeSupported
+                                            enabled: MediaService.ytmVolumeSupported
                                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                             function setVolume(mouseX) {
                                                 root.volumeLevel = Math.max(0, Math.min(1, mouseX / volumeTrack.width))
-                                                if (root.player && root.player.volumeSupported)
-                                                    root.player.volume = root.volumeLevel
+                                                if (MediaService.ytmVolumeSupported)
+                                                    MediaService.ytmSetVolume(root.volumeLevel)
                                             }
                                             onPressed: (mouse) => { root.changingVolume = true; setVolume(mouse.x) }
                                             onPositionChanged: (mouse) => { if (pressed) setVolume(mouse.x) }
@@ -427,12 +444,13 @@ PopupWindow {
                             MouseArea {
                                 id: progressTrack
                                 anchors.fill: parent
-                                enabled: root.player && root.player.canSeek && root.durationSeconds > 0
+                                enabled: MediaService.ytmCanSeek && root.durationSeconds > 0
                                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 onPressed: (mouse) => { root.seeking = true; root.seekAt(mouse.x) }
                                 onPositionChanged: (mouse) => { if (pressed) root.seekAt(mouse.x) }
                                 onReleased: {
-                                    if (root.player && root.player.canSeek) root.player.position = root.positionSeconds
+                                    if (MediaService.ytmCanSeek)
+                                        MediaService.ytmSeek(root.positionSeconds)
                                     root.seeking = false
                                 }
                                 onCanceled: root.seeking = false

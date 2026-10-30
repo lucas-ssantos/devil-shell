@@ -209,7 +209,9 @@ PanelWindow {
 
         closePopups(ytmPopup)
         ytmPopup.openAt(panel.x + panel.width / 2, panel.y + panel.height)
-        if (!MediaService.ytmPlayer) MediaService.startYtm()
+        // Só abre uma aba se não houver nenhuma do YTM (o serviço consulta o
+        // session store do Zen antes de lançar o navegador).
+        MediaService.startYtmIfNeeded()
     }
     function toggleTranslation() {
         if (Date.now() - bar.translationClosedAt < 250) {

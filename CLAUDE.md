@@ -103,8 +103,9 @@ settings.default.json "padrão de fábrica" lido pelo botão Restaurar padrão
 themes/               Theme (seletor) + paletas (CrimsonDevil, DragonBlanc, InfernalRose)
 services/             singletons/escopos não-visuais (niri, áudio, captura, mídia, clima,
                       sensores, notificações, PolkitService, PortalService, StartupService,
-                      IdleService, LauncherService, Settings,
-                      ThemeExport, ModeService (modo devil/draco + IPC)) + session.sh
+                      IdleService, LauncherService, Settings, YtmBridgeService,
+                      ThemeExport, ModeService (modo devil/draco + IPC)) + session.sh,
+                      ytm_bridge.py e ytm_bridge.user.js (ponte do YouTube Music)
 cava/                 infra compartilhada do CAVA: CavaService, CavaBars, CavaWindow
                       (rodapé, presente nos DOIS modos) + cava.conf
 windows/              janelas COMPARTILHADAS pelos dois modos: NotificationWindow, PolkitWindow,
@@ -150,7 +151,9 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
    [NiriService.qml](services/NiriService.qml) (estado do niri), [AudioService.qml](services/AudioService.qml)
    (Pipewire), [CaptureService.qml](services/CaptureService.qml) (gravação de tela),
    [CavaService.qml](cava/CavaService.qml) (níveis do cava), [MediaService.qml](services/MediaService.qml) (MPRIS;
-   player dedicado do YouTube Music no Zen),
+   player dedicado do YouTube Music no Zen + fallback para a ponte),
+   [YtmBridgeService.qml](services/YtmBridgeService.qml) (ponte HTTP local com a aba do YTM:
+   sobe o Python, faz polling de `/state` e envia comandos),
    [WeatherService.qml](services/WeatherService.qml) (wttr.in),
    [NotificationService.qml](services/NotificationService.qml) (servidor freedesktop),
    [PolkitService.qml](services/PolkitService.qml) (agente polkit — pedidos de autenticação),
@@ -230,13 +233,31 @@ shell / Barra Draco" da SettingsWindow também troca.
   fora) ou pelo item focado no ESC — o niri não dispensa sozinho xdg_popup de layer-shell, então o
   `grabFocus` dos PopupWindow não basta.
 - **Popup do YouTube Music (`YouTubeMusicPopup`):** aberto pelo clique na onda do CAVA, controla a aba do
-  YTM no **Zen Browser Flatpak**. O Zen (Firefox) publica UMA Media Session por navegador via MPRIS
-  (`Identity` "Mozilla zen", URL em `xesam:url`); `MediaService.ytmPlayer` filtra por identidade
-  Zen/Firefox **e** URL contendo `music.youtube.com` — assim um YouTube comum na mesma instância não é
-  controlado. Play/pause/anterior/próxima/seek/volume usam `MediaService.ytm*`; sem player,
-  `startYtm()` abre `music.youtube.com` no Zen (`niri msg action spawn-sh` + `flatpak run`, fallback
-  `xdg-open`) e, após ~20 s sem MPRIS, mostra o aviso para dar play. Dimensões em
-  `Config.dracoYtmPopupW/H` (fallback nas antigas `dracoHarvPopupW/H`).
+  YTM no **Zen Browser Flatpak**. Há duas camadas:
+  1. **Ponte local (preferida):** [YtmBridgeService.qml](services/YtmBridgeService.qml) sobe
+     [ytm_bridge.py](services/ytm_bridge.py) em `127.0.0.1:26541` e faz polling de `/state`;
+     [ytm_bridge.user.js](services/ytm_bridge.user.js), instalado no **Tampermonkey** do Zen,
+     publica o estado da aba e executa os comandos. O Python lê o `zen-sessions.jsonlz4` (mozLz4)
+     para saber se já existe uma aba do `music.youtube.com` aberta — inclusive antes de o
+     userscript conectar — e é isso que evita abrir uma segunda aba. Os comandos são
+     play/pause/toggle/next/previous/seek/volume; se não houver faixa carregada, o userscript
+     tenta retomar a fila, clicar no play de um item da home ou ir para a home para iniciar alguma
+     música. `MediaService` expõe um player sintético (`ytmBridgePlayer`) com a mesma interface do
+     MprisPlayer usada pelo popup; `ytmToggle/ytmPrevious/ytmNext/ytmSeek/ytmSetVolume` roteiam
+     para a ponte quando ela está conectada.
+  2. **Fallback MPRIS:** sem o userscript, o Zen (Firefox) publica UMA Media Session por navegador
+     (`Identity` "Mozilla zen", URL em `xesam:url`); `MediaService.ytmMprisPlayer` filtra por
+     identidade Zen/Firefox **e** URL contendo `music.youtube.com` — um YouTube comum na mesma
+     instância não é controlado. Esse caminho só alcança a Media Session ativa; por isso a ponte
+     é a preferida.
+  `startYtmIfNeeded()` (chamado ao abrir o popup e pelo play) só lança `music.youtube.com` no Zen
+  (`niri msg action spawn-sh` + `flatpak run`, fallback `xdg-open`) se `ytmTabKnown()` for falso
+  (nem ponte, nem aba no session store, nem MPRIS). Se a aba existe mas a ponte não conectou, o
+  popup **não** abre outra: mostra “Instale o userscript — clique aqui”, que abre
+  `http://127.0.0.1:26541/ytm_bridge.user.js` no Zen (o Tampermonkey intercepta). O play guarda
+  `ytmPendingPlay` e dispara assim que a ponte/MPRIS aparecer, então “tocar” com música pausada
+  retoma e sem faixa inicia alguma. Dimensões em `Config.dracoYtmPopupW/H` (fallback nas antigas
+  `dracoHarvPopupW/H`).
 - **Cantos arredondados casando com a barra (`Config.dracoRadius`) no modo draco:** tanto as
   janelas do SHELL quanto as janelas do NIRI seguem o mesmo raio da barra.
   - Shell: `Config.windowRadius(own)` — no draco devolve `dracoRadius`, no devil devolve o

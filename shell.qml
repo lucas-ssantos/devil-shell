@@ -30,6 +30,7 @@ Scope {
         StartupService.start()
         ThemeExport.init()
         ModeService.init()
+        YtmBridgeService.init()
     }
 
     // ── Dados (data-driven) ──

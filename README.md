@@ -39,7 +39,9 @@ e as janelas do niri ficam abaixo dela, com gap.
   **Direita:** saída e microfone (esquerdo = mudo, scroll = volume, direito = dispositivos) ·
   gravação de tela · lock/idle · configurações (direito = tradutor) · bandeja (esquerdo foca, direito abre o menu).
   Scroll no fundo da barra troca o workspace. Clique na onda do CAVA abre o **popup do YouTube
-  Music** (play/pause, anterior/próxima, seek e volume da aba do YTM no Zen Browser Flatpak, via MPRIS).
+  Music** (play/pause, anterior/próxima, seek e volume da aba do YTM no Zen Browser Flatpak). Uma
+  ponte local controla a aba que já está aberta — sem duplicar — e só abre uma nova se não houver
+  nenhuma; o play também retoma a faixa pausada ou inicia alguma música.
   O modo fica salvo (`shellMode` no `settings.json`).
   Nesse modo, as janelas do niri e as janelas do shell (lançador, configurações, notificações,
   autenticação, menus) ganham cantos arredondados no mesmo raio da barra (`dracoRadius`); dá
@@ -82,7 +84,7 @@ o resto do shell (cada `Process` falha isolado, só aquele recurso fica inerte).
 | **[Quickshell](https://quickshell.org)** | runtime QML do shell (Wayland/`wlroots`, Pipewire, DBus, SystemTray, Polkit, Mpris). Comando `qs`. Normalmente compilado da fonte / repositório próprio (não está no `apt`). |
 | **[Niri](https://github.com/YaLTeR/niri)** | o compositor; o shell inteiro gira em torno do IPC `niri msg` (`event-stream`, `workspaces`/`windows`/`outputs`, `action spawn-sh`, `focus-*`, `screenshot`, `power-*-monitors`, `load-config-file`). |
 | **coreutils / sh / grep / sed / gawk / findutils / procps** | usados o tempo todo em scripts inline (`sh -c`, `find`, `awk`, `sed`, `cat`, `ps`, `pgrep`/`pkill`, `kill`) por praticamente todo serviço — já vêm em qualquer instalação base do Debian. |
-| **python3** | interpretador dos dois helpers Python do projeto: o patch do `layout` do niri em `ThemeExport.qml` ([`niriLayoutPatchPy()`](services/ThemeExport.qml)) e o seletor de arquivos/pastas ([`services/portal-pick.py`](services/portal-pick.py), usado pela janela de configurações). Sem `python3` no PATH, os dois recursos pulam silenciosamente. |
+| **python3** | interpretador dos helpers Python do projeto: o patch do `layout` do niri em `ThemeExport.qml` ([`niriLayoutPatchPy()`](services/ThemeExport.qml)), o seletor de arquivos/pastas ([`services/portal-pick.py`](services/portal-pick.py), usado pela janela de configurações) e a ponte do YouTube Music ([`services/ytm_bridge.py`](services/ytm_bridge.py)). Sem `python3` no PATH, os dois primeiros pulam silenciosamente e o popup do YTM fica só no fallback MPRIS. O `python3-lz4` acelera a leitura do session store, mas há um descompressor LZ4 puro embutido. |
 | **python3-gi** (PyGObject, módulos `GLib`/`Gio`) | só para o `portal-pick.py` — fala com o `xdg-desktop-portal` via DBus (`Gio.bus_get_sync`). |
 | **Uma Nerd Font** | ícones dos cristais/cápsulas/notificações/lançador (`Config.iconFont`). O padrão de fábrica é **JetBrainsMono Nerd Font**, mas qualquer Nerd Font serve — é só trocar `Config.iconFont`/`iconFont` no `settings.json`. |
 
@@ -98,7 +100,7 @@ o resto do shell (cada `Process` falha isolado, só aquele recurso fica inerte).
 | **Foco de janela pela bandeja/notificação** | nenhuma dependência extra — só `niri msg --json windows` + `action focus-window` (já cobertos pelo núcleo). |
 | **Bandeja (system tray)** | apps que exponham **StatusNotifierItem** (Discord/Vesktop, Steam…); para tray icons **XEmbed puro** (ex.: launchers de jogos via Proton/Wine) é preciso o proxy **xembedsniproxy** rodando (subido pelo `session.sh`). |
 | **Sensores** (`SensorsService` → popups de RAM/temperatura/CPU/VRAM) | nada além de coreutils/awk — lê direto `/sys/class/hwmon` (drivers de kernel `k10temp`/`amdgpu`; ajuste o `case` se a CPU/GPU for outra), `/proc/stat`, `/proc/meminfo` e `/sys/class/drm/card0/device/mem_info_vram_*` (exclusivo do driver `amdgpu`). |
-| **Popup do YouTube Music** (`YouTubeMusicPopup`, clique na onda do CAVA no modo Draco) | **Zen Browser via Flatpak** (`app.zen_browser.zen`) com a aba `music.youtube.com` tocando — o popup usa o **MPRIS nativo** do Zen/Firefox (a Media Session da aba) e abre/foca o YTM por `niri msg action spawn-sh` + `flatpak run`. Sem uma Media Session ativa (antes do primeiro play) o player não existe e o popup avisa para abrir o YTM e dar play. |
+| **Popup do YouTube Music** (`YouTubeMusicPopup`, clique na onda do CAVA no modo Draco) | **Zen Browser via Flatpak** (`app.zen_browser.zen`) com a aba `music.youtube.com`, **Tampermonkey** e o userscript `services/ytm_bridge.user.js` instalado (ver abaixo) — a ponte local (`services/ytm_bridge.py`, subida pelo próprio shell) detecta a aba aberta pelo `zen-sessions.jsonlz4` e controla o player pelo userscript, mesmo em segundo plano. Sem o userscript, o popup cai no **MPRIS nativo** do Zen/Firefox (só a Media Session ativa) e, se a aba existir, não abre outra: mostra o atalho de instalação. O `python3-lz4` é opcional (há um descompressor LZ4 puro embutido). |
 | **Clima** (`WeatherService`, cápsula do topo) | **curl** + rede até `wttr.in`. |
 | **Tradução** (clique direito na engrenagem do cristal Sistema) | **DeepL API Free** (até 500 mil caracteres/mês). Requer uma chave em `DeepLAPI=...` no `.env` ao lado de `shell.qml`, Python 3 e internet; o texto enviado é processado pelo DeepL. O `.env` é ignorado pelo Git. |
 | **Gravação de tela** | **gpu-screen-recorder** (setup único de capability, ver abaixo) + **procps** (`pgrep`/`pkill`, para detectar/parar gravação ativa). |
@@ -109,6 +111,20 @@ o resto do shell (cada `Process` falha isolado, só aquele recurso fica inerte).
 | **Janela de configurações — campos de pasta/imagem** (seletor de arquivo) | **xdg-desktop-portal** + backend **xdg-desktop-portal-gtk** registrado para `org.freedesktop.portal.FileChooser` (o backend `gnome` falha sob Niri, ver `~/.config/xdg-desktop-portal/portals.conf`) — além de python3-gi acima. |
 | **Sessão** (`session.sh`, subido pelo `StartupService`) | **blueman-applet** (applet Bluetooth; atualmente comentado no script), **swayidle** + **gtklock** (idle/lock/dpms, via `ext-session-lock-v1`). |
 | **Export de temas** (`ThemeExport`, cristal Sistema → engrenagem) | **kitty** (relê tema com `SIGUSR1`) e **Vesktop** como alvos opcionais de tema; **glib2.0-bin**/**libglib2.0-bin** (`gsettings`, chave `org.gnome.desktop.interface` — precisa do schema `gsettings-desktop-schemas`) pra sincronizar `color-scheme`/`accent-color` com libadwaita; **flatpak** + a extensão `org.gtk.Gtk3theme.adw-gtk3-dark` (instalação manual única, ver comando abaixo) pra corrigir o fundo hardcoded do diálogo nativo GTK3 do `xdg-desktop-portal-gtk`; **systemd** (`systemctl --user restart xdg-desktop-portal-gtk.service`) pra recarregar esse backend. Tudo isso é melhor-esforço: os comandos são precedidos de `command -v` e falham silenciosamente se o binário não existir. |
+
+### 🎵 Popup do YouTube Music: instalar o userscript
+
+O popup controla a aba do YTM por uma ponte local, composta por:
+
+- **`services/ytm_bridge.py`** — servidor em `127.0.0.1:26541`; o shell o inicia sozinho.
+  Além da fila de comandos, lê o `zen-sessions.jsonlz4` do Zen para saber se já existe
+  uma aba do `music.youtube.com` aberta (assim o popup não abre outra).
+- **`services/ytm_bridge.user.js`** — userscript que roda dentro da aba do YTM pelo
+  **Tampermonkey**, publica o estado da faixa e executa play/pause/anterior/próxima/seek/volume.
+
+Com o shell rodando, abra **`http://127.0.0.1:26541/ytm_bridge.user.js`** no Zen (ou clique no
+aviso “Instale o userscript — clique aqui” no próprio popup) e confirme a instalação no
+Tampermonkey. O servidor também serve o script nessa URL justamente para facilitar.
 
 Instalação no Debian (exemplo; nomes podem variar):
 
@@ -204,10 +220,11 @@ singletons). Detalhes no [CLAUDE.md](CLAUDE.md).
 shell.qml        ponto de entrada (liga serviços, dados e janelas por monitor)
 Config.qml       config central (singleton) — todos os valores ajustáveis
 themes/          Theme (seletor) + paletas CrimsonDevil, DragonBlanc, InfernalRose (os hex)
-services/        NiriService, AudioService, CaptureService, MediaService, WeatherService,
-                 SensorsService, NotificationService, PolkitService, PortalService,
-                 StartupService, IdleService, LauncherService,
-                 Settings, ThemeExport, ModeService (devil/draco) + session.sh
+services/        NiriService, AudioService, CaptureService, MediaService, YtmBridgeService,
+                 WeatherService, SensorsService, NotificationService, PolkitService,
+                 PortalService, StartupService, IdleService, LauncherService,
+                 Settings, ThemeExport, ModeService (devil/draco) + session.sh,
+                 ytm_bridge.py e ytm_bridge.user.js (ponte do YouTube Music)
 cava/            CavaService, CavaWindow, CavaBars + cava.conf   (rodapé, nos dois modos)
 windows/         janelas compartilhadas: NotificationWindow (toasts), PolkitWindow,
                  SettingsWindow, LauncherWindow (lançador)
