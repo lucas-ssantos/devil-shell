@@ -5,7 +5,7 @@ import Quickshell.Io
 import QtQuick
 import "root:/capsules/draco"   // DracoCapsule
 import "root:/widgets/draco"    // DracoCava
-import "root:/popups"           // CalendarPopup, TempPopup, RamPopup, HarvPopup, TranslatePopup
+import "root:/popups"           // CalendarPopup, TempPopup, RamPopup, YouTubeMusicPopup, TranslatePopup
 import "root:/menus"            // TrayMenu, AudioDevices
 import "root:/services"         // AudioService, CaptureService, IdleService, LauncherService, MediaService, SensorsService, Settings
 import "root:/"                 // Config (raiz)
@@ -149,7 +149,7 @@ PanelWindow {
         }
     }
     function popupTouchesEdge(side) {
-        const popups = [calendarPopup, tempPopup, ramPopup, harvPopup, trayMenu, audioDevices, translatePopup]
+        const popups = [calendarPopup, tempPopup, ramPopup, ytmPopup, trayMenu, audioDevices, translatePopup]
         for (let i = 0; i < popups.length; i++) {
             const popup = popups[i]
             if (!popup.visible) continue
@@ -161,13 +161,13 @@ PanelWindow {
         return false
     }
     readonly property bool popupOpen: calendarPopup.visible || tempPopup.visible || ramPopup.visible
-                                     || harvPopup.visible || trayMenu.visible || audioDevices.visible
+                                     || ytmPopup.visible || trayMenu.visible || audioDevices.visible
                                      || translatePopup.visible
     function closePopups(exceptPopup) {
         if (calendarPopup !== exceptPopup) calendarPopup.close()
         if (tempPopup !== exceptPopup) tempPopup.close()
         if (ramPopup !== exceptPopup) ramPopup.close()
-        if (harvPopup !== exceptPopup) harvPopup.close()
+        if (ytmPopup !== exceptPopup) ytmPopup.close()
         if (trayMenu !== exceptPopup) trayMenu.close()
         if (audioDevices !== exceptPopup) audioDevices.visible = false
         if (translatePopup !== exceptPopup) translatePopup.visible = false
@@ -201,15 +201,15 @@ PanelWindow {
         const a = anchorOf(rightChip, audioDevices)
         audioDevices.openAt(kind, a.x, a.y)
     }
-    function toggleHarvPopup() {
-        if (harvPopup.visible) {
-            harvPopup.close()
+    function toggleYtmPopup() {
+        if (ytmPopup.visible) {
+            ytmPopup.close()
             return
         }
 
-        closePopups(harvPopup)
-        harvPopup.openAt(panel.x + panel.width / 2, panel.y + panel.height)
-        if (!MediaService.harvPlayer) MediaService.startHarv()
+        closePopups(ytmPopup)
+        ytmPopup.openAt(panel.x + panel.width / 2, panel.y + panel.height)
+        if (!MediaService.ytmPlayer) MediaService.startYtm()
     }
     function toggleTranslation() {
         if (Date.now() - bar.translationClosedAt < 250) {
@@ -231,7 +231,7 @@ PanelWindow {
     CalendarPopup { id: calendarPopup; ctx: bar; floating: true }
     TempPopup     { id: tempPopup;     ctx: bar; floating: true }
     RamPopup      { id: ramPopup;      ctx: bar; floating: true }
-    HarvPopup     { id: harvPopup;     ctx: bar }
+    YouTubeMusicPopup { id: ytmPopup;  ctx: bar }
     TrayMenu      { id: trayMenu;      ctx: bar; below: true }
     AudioDevices  { id: audioDevices;  ctx: bar; below: true }
     TranslatePopup { id: translatePopup; ctx: bar; below: true }
@@ -388,7 +388,7 @@ PanelWindow {
             levels: bar.levels
             segment: "left"
             height: parent.height
-            onClicked: bar.toggleHarvPopup()
+            onClicked: bar.toggleYtmPopup()
             anchors {
                 left: leftChip.right; right: centerChip.left
                 leftMargin: Config.dracoPad; rightMargin: Config.dracoPad
@@ -401,7 +401,7 @@ PanelWindow {
             levels: bar.levels
             segment: "right"
             height: parent.height
-            onClicked: bar.toggleHarvPopup()
+            onClicked: bar.toggleYtmPopup()
             anchors {
                 left: centerChip.right; right: rightChip.left
                 leftMargin: Config.dracoPad; rightMargin: Config.dracoPad

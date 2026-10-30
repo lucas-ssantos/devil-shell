@@ -118,7 +118,7 @@ widgets/draco/        visuais "burros" só do Draco: DracoCava (visualizador emb
 capsules/devil/       Capsule (cápsula retrátil do topo), ClockCapsule (relógio/RAM/CPU)
 capsules/draco/       DracoCapsule (widget "chapado" dos chips da DracoBar)
 popups/               popups flutuantes COMPARTILHADOS (TopCapsules no Devil, DracoBar no
-                      Draco): CalendarPopup, TempPopup, RamPopup
+                      Draco): CalendarPopup, TempPopup, RamPopup, YouTubeMusicPopup
 menus/                menus de clique-direito COMPARTILHADOS: TrayMenu, AudioDevices
 fields/               SettingsField (uma linha editável da SettingsWindow)
 ```
@@ -149,7 +149,8 @@ Ao **mover** um arquivo entre pastas, reveja os imports dele E de quem o usa.
 1. **Serviços** (singletons/scopes globais em `services/` e `cava/`):
    [NiriService.qml](services/NiriService.qml) (estado do niri), [AudioService.qml](services/AudioService.qml)
    (Pipewire), [CaptureService.qml](services/CaptureService.qml) (gravação de tela),
-   [CavaService.qml](cava/CavaService.qml) (níveis do cava), [MediaService.qml](services/MediaService.qml) (MPRIS),
+   [CavaService.qml](cava/CavaService.qml) (níveis do cava), [MediaService.qml](services/MediaService.qml) (MPRIS;
+   player dedicado do YouTube Music no Zen),
    [WeatherService.qml](services/WeatherService.qml) (wttr.in),
    [NotificationService.qml](services/NotificationService.qml) (servidor freedesktop),
    [PolkitService.qml](services/PolkitService.qml) (agente polkit — pedidos de autenticação),
@@ -215,7 +216,8 @@ shell / Barra Draco" da SettingsWindow também troca.
   monitor com ícone do app via `DesktopEntries.heuristicLookup`; sem janela, cápsulas dos workspaces —
   mín. `dracoWsMin`, fantasmas só visuais; clique troca) e direita (saída/mic: esquerdo mudo, scroll
   volume, direito AudioDevices; gravação DESTE monitor; lâmpada do idle; engrenagem; bandeja: esquerdo
-  foca a janela, direito TrayMenu). Scroll no fundo da barra troca workspace (wrap 1↔N). A DracoCapsule
+  foca a janela, direito TrayMenu). Scroll no fundo da barra troca workspace (wrap 1↔N). Clique na onda
+  do CAVA (`DracoCava`) abre/fecha o `YouTubeMusicPopup` (`toggleYtmPopup`). A DracoCapsule
   tem ícone/imagem + texto, 2º par opcional e sinais clicked/rightClicked/wheel (sem `wheelEnabled` a
   roda passa p/ o fundo). Aqui a interação é por MouseArea por widget (layout estático) — o hit-test
   geométrico é só da ShellWindow.
@@ -227,6 +229,14 @@ shell / Barra Draco" da SettingsWindow também troca.
   teclado (`WlrLayershell.keyboardFocus: Exclusive`) e fecha todos por um MouseArea de fundo (clique
   fora) ou pelo item focado no ESC — o niri não dispensa sozinho xdg_popup de layer-shell, então o
   `grabFocus` dos PopupWindow não basta.
+- **Popup do YouTube Music (`YouTubeMusicPopup`):** aberto pelo clique na onda do CAVA, controla a aba do
+  YTM no **Zen Browser Flatpak**. O Zen (Firefox) publica UMA Media Session por navegador via MPRIS
+  (`Identity` "Mozilla zen", URL em `xesam:url`); `MediaService.ytmPlayer` filtra por identidade
+  Zen/Firefox **e** URL contendo `music.youtube.com` — assim um YouTube comum na mesma instância não é
+  controlado. Play/pause/anterior/próxima/seek/volume usam `MediaService.ytm*`; sem player,
+  `startYtm()` abre `music.youtube.com` no Zen (`niri msg action spawn-sh` + `flatpak run`, fallback
+  `xdg-open`) e, após ~20 s sem MPRIS, mostra o aviso para dar play. Dimensões em
+  `Config.dracoYtmPopupW/H` (fallback nas antigas `dracoHarvPopupW/H`).
 - **Cantos arredondados casando com a barra (`Config.dracoRadius`) no modo draco:** tanto as
   janelas do SHELL quanto as janelas do NIRI seguem o mesmo raio da barra.
   - Shell: `Config.windowRadius(own)` — no draco devolve `dracoRadius`, no devil devolve o

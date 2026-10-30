@@ -38,7 +38,9 @@ e as janelas do niri ficam abaixo dela, com gap.
   ativa do monitor (com ícone do app); sem janela, cápsulas dos workspaces (clique troca).
   **Direita:** saída e microfone (esquerdo = mudo, scroll = volume, direito = dispositivos) ·
   gravação de tela · lock/idle · configurações (direito = tradutor) · bandeja (esquerdo foca, direito abre o menu).
-  Scroll no fundo da barra troca o workspace. O modo fica salvo (`shellMode` no `settings.json`).
+  Scroll no fundo da barra troca o workspace. Clique na onda do CAVA abre o **popup do YouTube
+  Music** (play/pause, anterior/próxima, seek e volume da aba do YTM no Zen Browser Flatpak, via MPRIS).
+  O modo fica salvo (`shellMode` no `settings.json`).
   Nesse modo, as janelas do niri e as janelas do shell (lançador, configurações, notificações,
   autenticação, menus) ganham cantos arredondados no mesmo raio da barra (`dracoRadius`); dá
   pra desligar só o arredondamento das janelas do niri em "Arredondar também as janelas do niri".
@@ -96,6 +98,7 @@ o resto do shell (cada `Process` falha isolado, só aquele recurso fica inerte).
 | **Foco de janela pela bandeja/notificação** | nenhuma dependência extra — só `niri msg --json windows` + `action focus-window` (já cobertos pelo núcleo). |
 | **Bandeja (system tray)** | apps que exponham **StatusNotifierItem** (Discord/Vesktop, Steam…); para tray icons **XEmbed puro** (ex.: launchers de jogos via Proton/Wine) é preciso o proxy **xembedsniproxy** rodando (subido pelo `session.sh`). |
 | **Sensores** (`SensorsService` → popups de RAM/temperatura/CPU/VRAM) | nada além de coreutils/awk — lê direto `/sys/class/hwmon` (drivers de kernel `k10temp`/`amdgpu`; ajuste o `case` se a CPU/GPU for outra), `/proc/stat`, `/proc/meminfo` e `/sys/class/drm/card0/device/mem_info_vram_*` (exclusivo do driver `amdgpu`). |
+| **Popup do YouTube Music** (`YouTubeMusicPopup`, clique na onda do CAVA no modo Draco) | **Zen Browser via Flatpak** (`app.zen_browser.zen`) com a aba `music.youtube.com` tocando — o popup usa o **MPRIS nativo** do Zen/Firefox (a Media Session da aba) e abre/foca o YTM por `niri msg action spawn-sh` + `flatpak run`. Sem uma Media Session ativa (antes do primeiro play) o player não existe e o popup avisa para abrir o YTM e dar play. |
 | **Clima** (`WeatherService`, cápsula do topo) | **curl** + rede até `wttr.in`. |
 | **Tradução** (clique direito na engrenagem do cristal Sistema) | **DeepL API Free** (até 500 mil caracteres/mês). Requer uma chave em `DeepLAPI=...` no `.env` ao lado de `shell.qml`, Python 3 e internet; o texto enviado é processado pelo DeepL. O `.env` é ignorado pelo Git. |
 | **Gravação de tela** | **gpu-screen-recorder** (setup único de capability, ver abaixo) + **procps** (`pgrep`/`pkill`, para detectar/parar gravação ativa). |
@@ -213,7 +216,7 @@ windows/         janelas compartilhadas: NotificationWindow (toasts), PolkitWind
 widgets/devil/   MenuBall, Crystal, GothicCorners, AudioMenu, CavaRing (anel em volta da bola)
 widgets/draco/   DracoCava (visualizador embutido na barra)
 capsules/devil/  Capsule, ClockCapsule            capsules/draco/  DracoCapsule
-popups/          CalendarPopup, TempPopup, RamPopup, TranslatePopup (compartilhados)
+popups/          CalendarPopup, TempPopup, RamPopup, YouTubeMusicPopup, TranslatePopup (compartilhados)
 menus/           TrayMenu, AudioDevices               (compartilhados)
 fields/          SettingsField (linha editável da SettingsWindow)
 ```

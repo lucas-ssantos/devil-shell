@@ -284,8 +284,9 @@ Singleton {
     readonly property real   dracoTitleMaxW: Settings.get("dracoTitleMaxW", 520)   // largura máx do título da janela (corta com …)
     readonly property int    dracoWsMin: Settings.get("dracoWsMin", 3)             // mínimo de cápsulas de workspace (completa c/ fantasmas)
     readonly property real   dracoPopupGap: Settings.get("dracoPopupGap", 0)       // folga barra → popups (calendário/sistema/temperatura/menus); 0 = colados na barra, "brotando" dela como no modo devil
-    readonly property real   dracoHarvPopupW: Settings.get("dracoHarvPopupW", 340)
-    readonly property real   dracoHarvPopupH: Settings.get("dracoHarvPopupH", 200)
+    // popup do YouTube Music: chaves novas com fallback nas antigas (dracoHarvPopupW/H)
+    readonly property real   dracoYtmPopupW: Settings.get("dracoYtmPopupW", Settings.get("dracoHarvPopupW", 340))
+    readonly property real   dracoYtmPopupH: Settings.get("dracoYtmPopupH", Settings.get("dracoHarvPopupH", 200))
     readonly property string dracoClockFormat: Settings.get("dracoClockFormat", "HH:mm")
     readonly property int    dracoAnim: Settings.get("dracoAnim", 160)             // hover/troca de estado (ms)
     readonly property real   dracoBgOpacity: Settings.get("dracoBgOpacity", 0.85)  // opacidade do fundo da barra (0–1)

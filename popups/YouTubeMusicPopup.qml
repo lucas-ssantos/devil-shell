@@ -16,24 +16,8 @@ PopupWindow {
     property bool previousRestartPending: false
     property double previousRestartDeadline: 0
 
-    readonly property var harv: MediaService.harvPlayer
-    readonly property real durationSeconds: harv ? harv.length : 0
-    readonly property var lyricsPayload: {
-        if (!harv) return null
-        const encoded = harv.metadata["x-harv:lyrics"]
-        return encoded ? JSON.parse(encoded) : null
-    }
-    readonly property var lyricsLines: lyricsPayload && lyricsPayload.ready ? lyricsPayload.lines : []
-    readonly property int activeLyricIndex: {
-        if (lyricsLines.length === 0) return -1
-        if (lyricsLines.length === 1 || lyricsLines[0].time === lyricsLines[1].time) return 0
-        let active = 0
-        for (let i = 1; i < lyricsLines.length; i++) {
-            if (positionSeconds < lyricsLines[i].time) break
-            active = i
-        }
-        return active
-    }
+    readonly property var player: MediaService.ytmPlayer
+    readonly property real durationSeconds: player ? player.length : 0
 
     function openAt(x, y) {
         hideTimer.stop()
@@ -50,33 +34,33 @@ PopupWindow {
     }
 
     function syncPlayer() {
-        if (!harv) return
+        if (!player) return
         if (previousRestartPending && !seeking) {
-            if (harv.position <= 3.0) {
+            if (player.position <= 3.0) {
                 previousRestartPending = false
                 positionSeconds = 0
             } else if (Date.now() >= previousRestartDeadline) {
                 previousRestartPending = false
-                positionSeconds = harv.position
+                positionSeconds = player.position
             }
         } else if (!seeking) {
-            positionSeconds = harv.position
+            positionSeconds = player.position
         }
-        if (!changingVolume) volumeLevel = harv.volume
+        if (!changingVolume) volumeLevel = player.volume
     }
 
     function previousTrack() {
-        if (!harv) return
-        if (harv.position > 3.0) {
+        if (!player) return
+        if (player.position > 3.0) {
             positionSeconds = 0
             previousRestartPending = true
             previousRestartDeadline = Date.now() + 2000
         }
-        MediaService.harvPrevious()
+        MediaService.ytmPrevious()
     }
 
     function seekAt(x) {
-        if (!harv || !harv.canSeek || durationSeconds <= 0) return
+        if (!player || !player.canSeek || durationSeconds <= 0) return
         const ratio = Math.max(0, Math.min(1, x / progressTrack.width))
         positionSeconds = ratio * durationSeconds
     }
@@ -102,7 +86,7 @@ PopupWindow {
         visible = true
         close()
     }
-    onHarvChanged: syncPlayer()
+    onPlayerChanged: syncPlayer()
 
     anchor.window: ctx
     anchor.rect.x: px - root.implicitWidth / 2
@@ -110,8 +94,8 @@ PopupWindow {
     anchor.rect.width: 1
     anchor.rect.height: 1
 
-    implicitWidth: Config.dracoHarvPopupW
-    implicitHeight: Config.dracoHarvPopupH
+    implicitWidth: Config.dracoYtmPopupW
+    implicitHeight: Config.dracoYtmPopupH
     color: "transparent"
     visible: false
     grabFocus: visible && revealProgress > 0
@@ -185,7 +169,7 @@ PopupWindow {
                                 Image {
                                     id: cover
                                     anchors.fill: parent
-                                    source: root.harv ? root.harv.trackArtUrl : ""
+                                    source: root.player ? root.player.trackArtUrl : ""
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true
                                     visible: status === Image.Ready
@@ -220,9 +204,9 @@ PopupWindow {
                                         id: titleLabel
                                         width: implicitWidth
                                         height: parent.height
-                                        text: root.harv
-                                            ? (root.harv.trackTitle || "Harv")
-                                            : MediaService.harvLaunchError || (MediaService.harvLaunching ? "Iniciando Harv…" : "Harv sem reprodução")
+                                        text: root.player
+                                            ? (root.player.trackTitle || "YouTube Music")
+                                            : MediaService.ytmLaunchError || (MediaService.ytmLaunching ? "Abrindo YouTube Music…" : "YouTube Music sem reprodução")
                                         color: Config.dracoText
                                         font.pixelSize: Config.dracoTextSize + 1
                                         font.bold: true
@@ -261,9 +245,9 @@ PopupWindow {
                                         id: artistLabel
                                         width: implicitWidth
                                         height: parent.height
-                                        text: root.harv
-                                            ? (root.harv.trackArtist || "")
-                                            : (MediaService.harvLaunchError ? "Verifique a instalação do Harv" : "Aguardando o player")
+                                        text: root.player
+                                            ? (root.player.trackArtist || "")
+                                            : (MediaService.ytmLaunchError ? "Abra o YTM no Zen e dê play" : "Aguardando o player")
                                         color: Config.dracoSub
                                         font.pixelSize: Config.dracoTextSize
                                         wrapMode: Text.NoWrap
@@ -307,11 +291,11 @@ PopupWindow {
                                         color: Config.dracoText
                                         font.family: Config.iconFont
                                         font.pixelSize: Config.dracoIconSize + 2
-                                        opacity: root.harv && root.harv.canGoPrevious ? 1 : 0.45
+                                        opacity: root.player && root.player.canGoPrevious ? 1 : 0.45
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -6
-                                            enabled: root.harv && root.harv.canGoPrevious
+                                            enabled: root.player && root.player.canGoPrevious
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: root.previousTrack()
                                         }
@@ -319,18 +303,18 @@ PopupWindow {
                                     Text {
                                         id: playButton
                                         verticalAlignment: Text.AlignVCenter
-                                        text: root.harv && root.harv.isPlaying
+                                        text: root.player && root.player.isPlaying
                                             ? Config.iconMediaPause : Config.iconMediaPlay
                                         color: Config.dracoAccent
                                         font.family: Config.iconFont
                                         font.pixelSize: Config.dracoIconSize + 4
-                                        opacity: root.harv ? 1 : 0.45
+                                        opacity: root.player ? 1 : 0.45
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -6
-                                            enabled: root.harv && root.harv.canTogglePlaying
+                                            enabled: root.player && root.player.canTogglePlaying
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: MediaService.harvToggle()
+                                            onClicked: MediaService.ytmToggle()
                                         }
                                     }
                                     Text {
@@ -340,13 +324,13 @@ PopupWindow {
                                         color: Config.dracoText
                                         font.family: Config.iconFont
                                         font.pixelSize: Config.dracoIconSize + 2
-                                        opacity: root.harv && root.harv.canGoNext ? 1 : 0.45
+                                        opacity: root.player && root.player.canGoNext ? 1 : 0.45
                                         MouseArea {
                                             anchors.fill: parent
                                             anchors.margins: -6
-                                            enabled: root.harv && root.harv.canGoNext
+                                            enabled: root.player && root.player.canGoNext
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: MediaService.harvNext()
+                                            onClicked: MediaService.ytmNext()
                                         }
                                     }
                                 }
@@ -386,12 +370,12 @@ PopupWindow {
                                         }
                                         MouseArea {
                                             anchors.fill: parent
-                                            enabled: root.harv && root.harv.volumeSupported
+                                            enabled: root.player && root.player.volumeSupported
                                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                             function setVolume(mouseX) {
                                                 root.volumeLevel = Math.max(0, Math.min(1, mouseX / volumeTrack.width))
-                                                if (root.harv && root.harv.volumeSupported)
-                                                    root.harv.volume = root.volumeLevel
+                                                if (root.player && root.player.volumeSupported)
+                                                    root.player.volume = root.volumeLevel
                                             }
                                             onPressed: (mouse) => { root.changingVolume = true; setVolume(mouse.x) }
                                             onPositionChanged: (mouse) => { if (pressed) setVolume(mouse.x) }
@@ -443,12 +427,12 @@ PopupWindow {
                             MouseArea {
                                 id: progressTrack
                                 anchors.fill: parent
-                                enabled: root.harv && root.harv.canSeek && root.durationSeconds > 0
+                                enabled: root.player && root.player.canSeek && root.durationSeconds > 0
                                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 onPressed: (mouse) => { root.seeking = true; root.seekAt(mouse.x) }
                                 onPositionChanged: (mouse) => { if (pressed) root.seekAt(mouse.x) }
                                 onReleased: {
-                                    if (root.harv && root.harv.canSeek) root.harv.position = root.positionSeconds
+                                    if (root.player && root.player.canSeek) root.player.position = root.positionSeconds
                                     root.seeking = false
                                 }
                                 onCanceled: root.seeking = false
